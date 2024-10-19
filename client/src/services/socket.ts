@@ -4,7 +4,7 @@ let socket: Socket | null = null;
 
 export const initSocket = () => {
   if (!socket) {
-    socket = io('https://mysteria-backend.onrender.com', {
+    socket = io('https://mysteria-game.onrender.com', {
       transports: ['websocket'],
     });
 

@@ -18,7 +18,7 @@ npm install -g vercel
 cd client
 touch vercel.json
 
-vercel --prod
+vercel --prod --force
 
 
 touch render.yaml
@@ -38,3 +38,17 @@ touch .gitignore
 git add .gitignore
 git commit -m "Add .gitignore"
 git push
+
+cd client
+vercel --prod
+
+git add .
+git commit -m "Update CORS settings and client configuration"
+git push
+
+git add client/vercel.json
+git commit -m "Update Vercel configuration"
+
+git push
+
+
