@@ -1,7 +1,7 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import GameScene from './components/GameScene';
+import GameScene from './components/GameScene.js';
 import config from './config';
 
 function App() {
