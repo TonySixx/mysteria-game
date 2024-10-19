@@ -51,4 +51,9 @@ git commit -m "Update Vercel configuration"
 
 git push
 
-
+cd client
+npm install
+git add .
+git commit -m "Update build configuration for Vercel"
+git push
+vercel --prod
