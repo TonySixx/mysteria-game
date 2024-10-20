@@ -739,9 +739,19 @@ function GameScene() {
   const attack = (attackerIndex, targetIndex, isHero = false, isAI = false) => (state) => {
     const newState = { ...state };
     const attacker = isAI ? newState.players[1].field[attackerIndex] : newState.players[0].field[attackerIndex];
-    const defender = isHero 
-      ? (isAI ? newState.players[0].hero : newState.players[1].hero)
-      : (isAI ? newState.players[0].field[targetIndex] : newState.players[1].field[targetIndex]);
+    let defender;
+
+    if (isHero) {
+      defender = isAI ? newState.players[0].hero : newState.players[1].hero;
+    } else {
+      defender = isAI ? newState.players[0].field[targetIndex] : newState.players[1].field[targetIndex];
+    }
+
+    // Kontrola, zda útočník a obránce existují
+    if (!attacker || !defender) {
+      console.error('Útočník nebo obránce neexistuje:', { attacker, defender, attackerIndex, targetIndex, isHero, isAI });
+      return newState;  // Vrátíme nezměněný stav
+    }
 
     const attackerPosition = isAI 
       ? { x: `calc(50% + ${attackerIndex * 10}% - 20px)`, y: '25%' }
@@ -752,13 +762,11 @@ function GameScene() {
         ? { x: `calc(10% + ${targetIndex * 10}% - 20px)`, y: '55%' }
         : { x: `calc(50% + ${targetIndex * 10}% - 20px)`, y: '25%' };
 
-    if (isHero) {
-      defender.health -= attacker.attack;
-      addVisualFeedback('damage', attacker.attack, defenderPosition);
-    } else {
-      defender.health -= attacker.attack;
+    defender.health -= attacker.attack;
+    addVisualFeedback('damage', attacker.attack, defenderPosition);
+    
+    if (!isHero) {
       attacker.health -= defender.attack;
-      addVisualFeedback('damage', attacker.attack, defenderPosition);
       
       // Přidáme zpoždění pro zobrazení poškození útočníka
       setTimeout(() => {
@@ -828,25 +836,51 @@ function GameScene() {
 
   const performAITurn = (state) => {
     let updatedState = { ...state };
+    console.log(`AI začíná tah s ${updatedState.players[1].mana} manou.`);
 
     // Nejprve použijeme The Coin, pokud je k dispozici a je to výhodné
     const coinIndex = updatedState.players[1].hand.findIndex(card => card.name === 'The Coin');
     if (coinIndex !== -1 && updatedState.players[1].mana < 10 && updatedState.players[1].hand.some(card => card.manaCost === updatedState.players[1].mana + 1)) {
       updatedState = playCoin(1, updatedState);
+      console.log('AI použilo The Coin.');
+      console.log(`AI nyní má ${updatedState.players[1].mana} many.`);
     }
 
-    // Seřadíme karty v ruce podle priority
-    const sortedHand = [...updatedState.players[1].hand].sort((a, b) => {
-      // Prioritizujeme karty s Taunt
+    // Rozdělíme karty na jednotky a kouzla
+    const units = updatedState.players[1].hand.filter(card => card.type === 'unit');
+    const spells = updatedState.players[1].hand.filter(card => card.type === 'spell');
+
+    // Seřadíme jednotky podle priority
+    const sortedUnits = units.sort((a, b) => {
       if (a.hasTaunt && !b.hasTaunt) return -1;
       if (!a.hasTaunt && b.hasTaunt) return 1;
-      // Pak podle poměru útoku a many
       return (b.attack / b.manaCost) - (a.attack / a.manaCost);
     });
 
-    // Hrajeme karty podle priority
-    sortedHand.forEach((card, index) => {
-      if (card.manaCost <= updatedState.players[1].mana) {
+    // Nejprve se pokusíme vyložit jednotky
+    sortedUnits.forEach((card) => {
+      if (card.manaCost <= updatedState.players[1].mana && updatedState.players[1].field.length < 7) {
+        console.log(`AI se pokouší vyložit jednotku: ${card.name}`);
+        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+      }
+    });
+
+    // Pokud máme dostatek many a méně než 3 jednotky na poli, pokusíme se vyložit další jednotku
+    if (updatedState.players[1].mana >= 3 && updatedState.players[1].field.length < 3) {
+      const affordableUnit = sortedUnits.find(card => card.manaCost <= updatedState.players[1].mana);
+      if (affordableUnit) {
+        console.log(`AI se pokouší vyložit další jednotku: ${affordableUnit.name}`);
+        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(affordableUnit));
+      }
+    }
+
+    // Nyní zvážíme použití kouzel
+    spells.forEach((card) => {
+      // Použijeme kouzlo pouze pokud máme alespoň 2 jednotky na poli nebo je to kouzlo léčení a máme méně než 15 zdraví
+      if (card.manaCost <= updatedState.players[1].mana && 
+          (updatedState.players[1].field.length >= 2 || 
+           (card.effect.includes('Restore') && updatedState.players[1].hero.health < 15))) {
+        console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
         updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
       }
     });
@@ -858,7 +892,19 @@ function GameScene() {
     const nextPlayer = 0;
     updatedState = startNextTurn(updatedState, nextPlayer);
 
+    console.log(`AI končí tah s ${updatedState.players[1].mana} manou.`);
     return updatedState;
+  };
+
+  const playAICard = (state, cardIndex) => {
+    const card = state.players[1].hand[cardIndex];
+    console.log(`AI hraje kartu: ${card.name}`);
+    console.log(`AI má před zahráním ${state.players[1].mana} many.`);
+    
+    const newState = playCardCommon(state, 1, cardIndex);
+    
+    console.log(`AI má po zahrání ${newState.players[1].mana} many.`);
+    return checkGameOver(newState);
   };
 
   const performAIAttacks = (state) => {
@@ -866,6 +912,8 @@ function GameScene() {
     const aiField = updatedState.players[1].field;
     const playerField = updatedState.players[0].field;
     const playerHero = updatedState.players[0].hero;
+
+    console.log('AI začíná útočit.');
 
     // Seřadíme jednotky AI podle priority útoku
     const sortedAIUnits = aiField.sort((a, b) => {
@@ -877,11 +925,13 @@ function GameScene() {
       if (!attacker.hasAttacked && !attacker.frozen) {
         const target = chooseTarget(playerField, playerHero, attacker);
         if (target) {
+          console.log(`AI útočí jednotkou ${attacker.name} (útok: ${attacker.attack}) na ${target.isHero ? 'hrdinu' : `jednotku ${playerField[target.index].name}`}`);
           updatedState = attack(index, target.index, target.isHero, true)(updatedState);
         }
       }
     });
 
+    console.log('AI dokončilo útok.');
     return updatedState;
   };
 
@@ -917,11 +967,6 @@ function GameScene() {
 
     // Pokud není jiná možnost, útočíme na hrdinu
     return { index: null, isHero: true };
-  };
-
-  const playAICard = (state, cardIndex) => {
-    const newState = playCardCommon(state, 1, cardIndex);
-    return checkGameOver(newState);
   };
 
   const onDragEnd = (result) => {
