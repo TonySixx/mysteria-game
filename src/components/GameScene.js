@@ -330,14 +330,6 @@ const CardDescription = styled.div`
      1px  1px 0 #000; // Vytvoříme erný obrys pomocí text-shadow
 `;
 
-const CastButton = styled.button`
-  background-color: #4444ff;
-
-  &:hover {
-    background-color: #6666ff;
-  }
-`;
-
 const ManaCost = styled.div`
   position: absolute;
   top: -10px;
@@ -437,7 +429,7 @@ const HeartIcon = styled.span`
   font-size: 12px;
 `;
 
-function CardDisplay({ card, onClick, canAttack, isTargetable, isSelected, isInHand, isDragging }) {
+const CardDisplay = ({ card, onClick, canAttack, isTargetable, isSelected, isInHand, isDragging }) => {
   if (!card) return null;
 
   return (
@@ -465,7 +457,6 @@ function CardDisplay({ card, onClick, canAttack, isTargetable, isSelected, isInH
           )}
         </CardStats>
         <CardDescription>{card.effect}</CardDescription>
-        {card.type === 'spell' && isInHand && <CastButton onClick={onClick}>Seslat</CastButton>}
       </CardContent>
       {card.frozen && (
         <FrozenOverlay>
@@ -914,7 +905,19 @@ function GameScene() {
       if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
         // Logika pro hraní karty z ruky na pole
         const cardIndex = source.index;
-        return playCard(cardIndex)(newState);
+        const card = currentPlayer.hand[cardIndex];
+        
+        if (card.type === 'spell') {
+          // Pokud je to kouzlo, zahrajeme ho přímo
+          return playCard(cardIndex)(newState);
+        } else if (card.type === 'unit') {
+          // Pokud je to jednotka, zahrajeme ji na pole
+          return playCard(cardIndex)(newState);
+        }
+      } else if (source.droppableId === 'hand' && (destination.droppableId === 'opponentHero' || destination.droppableId.startsWith('opponentCard-'))) {
+        // Pokus o útok kartou z ruky
+        addNotification('Nelze útočit kartou, která není vyložena na herním poli', 'warning');
+        return newState;
       } else if (source.droppableId === 'playerField') {
         const attackerIndex = source.index;
         const attacker = currentPlayer.field[attackerIndex];
@@ -1106,34 +1109,26 @@ function GameScene() {
               {...provided.droppableProps}
             >
               {gameState.players[0].hand.map((card, index) => (
-                card.type === 'unit' ? (
-                  <Draggable key={card.id} draggableId={card.id} index={index}>
-                    {(provided, snapshot) => (
-                      <DraggableCardWrapper
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        style={{
-                          ...provided.draggableProps.style,
-                          opacity: snapshot.isDragging ? 0 : 1,
-                        }}
-                      >
-                        <CardDisplay
-                          card={card}
-                          isInHand={true}
-                          isDragging={snapshot.isDragging}
-                        />
-                      </DraggableCardWrapper>
-                    )}
-                  </Draggable>
-                ) : (
-                  <CardDisplay
-                    key={card.id}
-                    card={card}
-                    isInHand={true}
-                    onClick={() => handlePlayCard(index)}
-                  />
-                )
+                <Draggable key={card.id} draggableId={card.id} index={index}>
+                  {(provided, snapshot) => (
+                    <DraggableCardWrapper
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      style={{
+                        ...provided.draggableProps.style,
+                        opacity: snapshot.isDragging ? 0 : 1,
+                      }}
+                    >
+                      <CardDisplay
+                        card={card}
+                        isInHand={true}
+                        isDragging={snapshot.isDragging}
+                        onClick={card.type === 'spell' ? () => handlePlayCard(index) : undefined}
+                      />
+                    </DraggableCardWrapper>
+                  )}
+                </Draggable>
               ))}
               {provided.placeholder}
             </HandArea>
