@@ -851,6 +851,7 @@ function GameScene() {
     setGameState((prevState) => {
       const newState = { ...prevState };
       const currentPlayer = newState.players[0];
+      const opponentPlayer = newState.players[1];
 
       if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
         // Logika pro hraní karty z ruky na pole
@@ -864,13 +865,27 @@ function GameScene() {
           return newState;
         }
 
+        const opponentTauntUnits = opponentPlayer.field.filter(unit => unit.hasTaunt);
+
         if (destination.droppableId === 'opponentHero') {
           // Útok na hrdinu
-          return attack(attackerIndex, null, true)(newState);
+          if (opponentTauntUnits.length === 0) {
+            return attack(attackerIndex, null, true)(newState);
+          } else {
+            console.log('Nelze útočit na hrdinu, když je na poli jednotka s Taunt');
+            return newState;
+          }
         } else if (destination.droppableId.startsWith('opponentCard-')) {
           // Útok na nepřátelskou jednotku
           const targetIndex = parseInt(destination.droppableId.split('-')[1]);
-          return attack(attackerIndex, targetIndex)(newState);
+          const targetUnit = opponentPlayer.field[targetIndex];
+          
+          if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
+            return attack(attackerIndex, targetIndex)(newState);
+          } else {
+            console.log('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt');
+            return newState;
+          }
         }
       }
 
@@ -948,7 +963,7 @@ function GameScene() {
               >
                 <HeroDisplay
                   hero={gameState.players[1].hero}
-                  isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && opponentTauntUnits.length === 0}
+                  isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && gameState.players[1].field.every(card => !card.hasTaunt)}
                 />
                 {provided.placeholder}
               </HeroArea>
@@ -968,7 +983,7 @@ function GameScene() {
                   >
                     <CardDisplay
                       card={card}
-                      isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && (opponentTauntUnits.length === 0 || card.hasTaunt)}
+                      isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && (gameState.players[1].field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
                     />
                     {provided.placeholder}
                   </div>
