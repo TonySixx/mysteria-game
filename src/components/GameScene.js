@@ -238,6 +238,20 @@ const CardComponent = styled.div`
   `}
 
   ${props => props.$isFrozen && frozenStyle}
+
+  ${(props) => props.$canAttack && !props.$isInHand && css`
+    box-shadow: 0 0 10px 3px #00ff00;
+    &:hover {
+      box-shadow: 0 0 15px 5px #00ff00;
+    }
+  `}
+
+  ${(props) => props.$isTargetable && css`
+    box-shadow: 0 0 10px 3px #ff0000;
+    &:hover {
+      box-shadow: 0 0 15px 5px #ff0000;
+    }
+  `}
 `;
 
 const CardContent = styled.div`
@@ -311,25 +325,10 @@ const CardDescription = styled.div`
     -1px -1px 0 #000,  
      1px -1px 0 #000,
     -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
+     1px  1px 0 #000; // Vytvoříme erný obrys pomocí text-shadow
 `;
 
-const AttackButton = styled.button`
-  background-color: #ff4444;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  padding: 2px 5px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background-color: #ff6666;
-  }
-`;
-
-const CastButton = styled(AttackButton)`
+const CastButton = styled.button`
   background-color: #4444ff;
 
   &:hover {
@@ -406,14 +405,14 @@ const HeroImage = styled.img.withConfig({
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 4px solid ${(props) => (props.isTargetable ? '#ff9900' : '#ffd700')};
-  box-shadow: 0 0 10px ${(props) => (props.isTargetable ? 'rgba(255, 153, 0, 0.7)' : 'rgba(255, 215, 0, 0.5)')};
+  border: 4px solid #ffd700;
+  box-shadow: ${(props) => props.isTargetable ? '0 0 10px 3px #ff0000' : '0 0 10px rgba(255, 215, 0, 0.5)'};
   transition: all 0.3s ease;
 
   ${(props) => props.isTargetable && `
     &:hover {
       transform: scale(1.05);
-      box-shadow: 0 0 15px rgba(255, 153, 0, 0.9);
+      box-shadow: 0 0 15px 5px #ff0000;
     }
   `}
 `;
@@ -436,7 +435,7 @@ const HeartIcon = styled.span`
   font-size: 12px;
 `;
 
-function CardDisplay({ card, onClick, canAttack, onAttack, isTargetable, isSelected, isInHand, isDragging }) {
+function CardDisplay({ card, onClick, canAttack, isTargetable, isSelected, isInHand, isDragging }) {
   if (!card) return null;
 
   return (
@@ -464,11 +463,6 @@ function CardDisplay({ card, onClick, canAttack, onAttack, isTargetable, isSelec
           )}
         </CardStats>
         <CardDescription>{card.effect}</CardDescription>
-        {canAttack && card.type === 'unit' && (
-          <AttackButton onClick={(e) => { e.stopPropagation(); onAttack(); }}>
-            Útok
-          </AttackButton>
-        )}
         {card.type === 'spell' && isInHand && <CastButton onClick={onClick}>Seslat</CastButton>}
       </CardContent>
       {card.frozen && (
@@ -690,63 +684,38 @@ function GameScene() {
     return checkGameOver(newState);
   };
 
-  const attack = (attackerIndex, targetIndex, targetIsHero = false) => {
-    setGameState((prevState) => {
-      const currentPlayerIndex = prevState.currentPlayer;
-      const opponentPlayerIndex = (prevState.currentPlayer + 1) % 2;
+  const attack = (attackerIndex, targetIndex, isHero = false) => (state) => {
+    const newState = { ...state };
+    const attacker = newState.players[0].field[attackerIndex];
+    const defender = isHero ? newState.players[1].hero : newState.players[1].field[targetIndex];
 
-      const currentPlayer = { ...prevState.players[currentPlayerIndex] };
-      const opponentPlayer = { ...prevState.players[opponentPlayerIndex] };
+    if (isHero) {
+      defender.health -= attacker.attack;
+    } else {
+      defender.health -= attacker.attack;
+      attacker.health -= defender.attack;
 
-      const attacker = { ...currentPlayer.field[attackerIndex] };
-
-      if (attacker.hasAttacked || attacker.frozen) {
-        return prevState; // Jednotka už zaútočila v tomto kole nebo je zmrazená
+      // Odstranění zničených jednotek
+      if (defender.health <= 0) {
+        newState.players[1].field = newState.players[1].field.filter((_, index) => index !== targetIndex);
       }
-
-      const opponentTauntUnits = opponentPlayer.field.filter((unit) => unit.hasTaunt);
-
-      // Kontrola Taunt
-      if (opponentTauntUnits.length > 0) {
-        if (targetIsHero) {
-          // Nemůžete útočit na hrdinu, pokud má protivník Taunt jednotky
-          return prevState;
-        }
-        const targetUnit = opponentPlayer.field[targetIndex];
-        if (!targetUnit.hasTaunt) {
-          // Nemůžete útočit na jednotky bez Tauntu, pokud má protivník Taunt jednotky
-          return prevState;
-        }
+      if (attacker.health <= 0) {
+        newState.players[0].field = newState.players[0].field.filter((_, index) => index !== attackerIndex);
       }
+    }
 
-      attacker.hasAttacked = true;
+    attacker.hasAttacked = true;
 
-      if (targetIsHero) {
-        opponentPlayer.hero.health -= attacker.attack;
-      } else {
-        const target = { ...opponentPlayer.field[targetIndex] };
-        target.health -= attacker.attack;
-        attacker.health -= target.attack;
+    // Kontrola konce hry
+    if (newState.players[1].hero.health <= 0) {
+      newState.gameOver = true;
+      newState.winner = 'Player';
+    } else if (newState.players[0].hero.health <= 0) {
+      newState.gameOver = true;
+      newState.winner = 'AI';
+    }
 
-        opponentPlayer.field = opponentPlayer.field
-          .map((unit, index) => (index === targetIndex ? target : unit))
-          .filter((unit) => unit.health > 0);
-      }
-
-      currentPlayer.field = currentPlayer.field
-        .map((unit, index) => (index === attackerIndex ? attacker : unit))
-        .filter((unit) => unit.health > 0);
-
-      const updatedPlayers = [...prevState.players];
-      updatedPlayers[currentPlayerIndex] = currentPlayer;
-      updatedPlayers[opponentPlayerIndex] = opponentPlayer;
-
-      return checkGameOver({
-        ...prevState,
-        players: updatedPlayers,
-      });
-    });
-    setSelectedAttackerIndex(null);
+    return newState;
   };
 
   const checkGameOver = (state) => {
@@ -875,7 +844,6 @@ function GameScene() {
   const onDragEnd = (result) => {
     const { source, destination } = result;
 
-    // Pokud karta nebyla přetažena na platné místo, nic neděláme
     if (!destination) {
       return;
     }
@@ -884,48 +852,26 @@ function GameScene() {
       const newState = { ...prevState };
       const currentPlayer = newState.players[0];
 
-      if (source.droppableId === 'hand' && destination.droppableId === 'field') {
+      if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
+        // Logika pro hraní karty z ruky na pole
         const cardIndex = source.index;
-        const movedCard = currentPlayer.hand[cardIndex];
-        
-        // Kontrola, zda se jedná o jednotku
-        if (movedCard.type !== 'unit') {
-          // Pokud to není jednotka, vrátíme kartu zpět do ruky
+        return playCard(cardIndex)(newState);
+      } else if (source.droppableId === 'playerField') {
+        const attackerIndex = source.index;
+        const attacker = currentPlayer.field[attackerIndex];
+
+        if (attacker.hasAttacked || attacker.frozen) {
           return newState;
         }
 
-        // Kontrola many
-        if (movedCard.manaCost > currentPlayer.mana) {
-          // Pokud nemáme dostatek many, vrátíme kartu zpět do ruky
-          return newState;
+        if (destination.droppableId === 'opponentHero') {
+          // Útok na hrdinu
+          return attack(attackerIndex, null, true)(newState);
+        } else if (destination.droppableId.startsWith('opponentCard-')) {
+          // Útok na nepřátelskou jednotku
+          const targetIndex = parseInt(destination.droppableId.split('-')[1]);
+          return attack(attackerIndex, targetIndex)(newState);
         }
-
-        // Odstraníme kartu z ruky
-        currentPlayer.hand.splice(cardIndex, 1);
-
-        // Přidáme kartu na správné místo na poli
-        currentPlayer.field.splice(destination.index, 0, movedCard);
-
-        // Aktualizujeme manu
-        currentPlayer.mana -= movedCard.manaCost;
-
-        // Aplikujeme efekt karty při zahrání
-        if (movedCard.effect === 'Deals 2 damage when played') {
-          newState.players[1].hero.health -= 2;
-        }
-        if (movedCard.effect === 'Freeze enemy when played') {
-          const opponentField = newState.players[1].field;
-          if (opponentField.length > 0) {
-            const randomIndex = Math.floor(Math.random() * opponentField.length);
-            opponentField[randomIndex] = { 
-              ...opponentField[randomIndex], 
-              frozen: true,
-              frozenTurns: 2
-            };
-          }
-        }
-
-        return checkGameOver(newState);
       }
 
       return newState;
@@ -991,56 +937,57 @@ function GameScene() {
         </PlayerInfo>
 
         <BattleArea>
-          <HeroArea>
-            <HeroDisplay
-              hero={gameState.players[1].hero}
-              onClick={() => {
-                if (selectedAttackerIndex !== null) {
-                  if (opponentTauntUnits.length === 0) {
-                    attack(selectedAttackerIndex, 0, true);
-                    setSelectedAttackerIndex(null);
-                  }
-                }
-              }}
-              isTargetable={selectedAttackerIndex !== null && opponentTauntUnits.length === 0}
-            />
-          </HeroArea>
+          <Droppable droppableId="opponentHero" direction="horizontal">
+            {(provided, snapshot) => (
+              <HeroArea
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                style={{
+                  background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
+                }}
+              >
+                <HeroDisplay
+                  hero={gameState.players[1].hero}
+                  isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && opponentTauntUnits.length === 0}
+                />
+                {provided.placeholder}
+              </HeroArea>
+            )}
+          </Droppable>
 
           <FieldArea>
             {gameState.players[1].field.map((card, index) => (
-              <CardDisplay
-                key={`player1-field-${card.id}`}
-                card={card}
-                onClick={() => {
-                  if (selectedAttackerIndex !== null) {
-                    const targetUnit = gameState.players[1].field[index];
-                    if (opponentTauntUnits.length > 0) {
-                      if (targetUnit.hasTaunt) {
-                        attack(selectedAttackerIndex, index);
-                        setSelectedAttackerIndex(null);
-                      }
-                    } else {
-                      attack(selectedAttackerIndex, index);
-                      setSelectedAttackerIndex(null);
-                    }
-                  }
-                }}
-                isTargetable={
-                  selectedAttackerIndex !== null &&
-                  (opponentTauntUnits.length === 0 || card.hasTaunt)
-                }
-              />
+              <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
+                    }}
+                  >
+                    <CardDisplay
+                      card={card}
+                      isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && (opponentTauntUnits.length === 0 || card.hasTaunt)}
+                    />
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
             ))}
           </FieldArea>
 
-          <Droppable droppableId="field" direction="horizontal">
-            {(provided) => (
+          <Droppable droppableId="playerField" direction="horizontal">
+            {(provided, snapshot) => (
               <FieldArea
                 ref={provided.innerRef}
                 {...provided.droppableProps}
+                style={{
+                  background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
+                }}
               >
                 {gameState.players[0].field.map((card, index) => (
-                  <Draggable key={card.id} draggableId={card.id} index={index}>
+                  <Draggable key={card.id} draggableId={card.id} index={index} isDragDisabled={card.hasAttacked || card.frozen}>
                     {(provided, snapshot) => (
                       <div
                         ref={provided.innerRef}
@@ -1050,8 +997,7 @@ function GameScene() {
                         <CardDisplay
                           card={card}
                           canAttack={gameState.currentPlayer === 0 && !card.hasAttacked && !card.frozen}
-                          onAttack={() => setSelectedAttackerIndex(index)}
-                          isSelected={selectedAttackerIndex === index}
+                          isDragging={snapshot.isDragging}
                         />
                       </div>
                     )}
