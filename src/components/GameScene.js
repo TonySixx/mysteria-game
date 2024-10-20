@@ -541,16 +541,20 @@ const playCardCommon = (state, playerIndex, cardIndex) => {
 };
 
 function GameScene() {
-  const [gameState, setGameState] = useState({
-    players: [
-      { hero: new Hero('Player', 30, null, playerHeroImage), deck: [], hand: [], field: [], mana: 1 },
-      { hero: new Hero('AI', 30, null, aiHeroImage), deck: [], hand: [], field: [], mana: 1 },
-    ],
-    currentPlayer: 0,
-    turn: 1,
-    gameOver: false,
-    winner: null,
-    isAIOpponent: true,
+  const [gameState, setGameState] = useState(() => {
+    const initialState = {
+      players: [
+        { hero: new Hero('Player', 30, null, playerHeroImage), deck: [], hand: [], field: [], mana: 0 },
+        { hero: new Hero('AI', 30, null, aiHeroImage), deck: [], hand: [], field: [], mana: 0 },
+      ],
+      currentPlayer: Math.random() < 0.5 ? 0 : 1, // Náhodný začínající hráč
+      turn: 1,
+      gameOver: false,
+      winner: null,
+      isAIOpponent: true,
+    };
+
+    return initialState;
   });
 
   const [selectedAttackerIndex, setSelectedAttackerIndex] = useState(null);
@@ -577,6 +581,8 @@ function GameScene() {
         { id: 6, name: 'Earth Golem', manaCost: 5, attack: 4, health: 8, effect: 'Taunt', image: earthGolem },
         { id: 7, name: 'Lightning Bolt', manaCost: 2, effect: 'Deal 3 damage', image: lightningBolt },
         { id: 8, name: 'Arcane Intellect', manaCost: 3, effect: 'Draw 2 cards', image: arcaneIntellect },
+        { id: 9, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
+        { id: 10, name: 'Fire Elemental', manaCost: 4, attack: 5, health: 6, effect: 'Deals 2 damage when played', image: fireElemental },
       ];
 
       // Duplikujeme balíček pro každého hráče a přiřadíme unikátní ID
@@ -599,22 +605,30 @@ function GameScene() {
     const [player1Deck, player2Deck] = initializeDeck();
 
     setGameState((prevState) => {
-      return {
+      const startingPlayer = prevState.currentPlayer;
+      const updatedState = {
         ...prevState,
         players: prevState.players.map((player, index) => {
           const deck = [...(index === 0 ? player1Deck : player2Deck)].sort(() => Math.random() - 0.5);
-          const hand = deck.splice(0, index === 0 ? 3 : 4);
-          if (index === 1) {
-            hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal this turn only.', coinImage));
-          }
+          const hand = deck.splice(0, 3); // Oba hráči začínají se 3 kartami
+          if (index !== startingPlayer) {
+            hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal.', coinImage));  
+          }     
           return {
             ...player,
             deck,
             hand,
-            mana: index === 0 ? 1 : 0, // První hráč začíná s 1 manou, druhý s 0
+            mana: index === startingPlayer ? 1 : 0,
           };
         }),
       };
+
+      // Pokud AI začíná, provedeme jeho tah
+      if (startingPlayer === 1) {
+        return performAITurn(updatedState);
+      }
+
+      return updatedState;
     });
   }, []);
 
@@ -648,13 +662,13 @@ function GameScene() {
     };
   };
 
-  const playCoin = (playerIndex) => {
-    setGameState((prevState) => {
-      const updatedPlayers = [...prevState.players];
-      updatedPlayers[playerIndex].mana += 1;
-      updatedPlayers[playerIndex].hand = updatedPlayers[playerIndex].hand.filter(card => card.name !== 'The Coin');
-      return { ...prevState, players: updatedPlayers };
-    });
+  const playCoin = (playerIndex, state) => {
+    const updatedPlayers = [...state.players];
+    const currentPlayer = {...updatedPlayers[playerIndex]};
+    currentPlayer.mana += 1;
+    currentPlayer.hand = currentPlayer.hand.filter(card => card.name !== 'The Coin');
+    updatedPlayers[playerIndex] = currentPlayer;
+    return { ...state, players: updatedPlayers };
   };
 
   const playCard = (cardIndex) => (prevState) => {
@@ -753,8 +767,14 @@ function GameScene() {
 
   const performAITurn = (state) => {
     let updatedState = { ...state };
-debugger;
-    // AI hraje karty
+
+    // Nejprve zkontrolujeme, zda AI má The Coin a může ho použít
+    const coinIndex = updatedState.players[1].hand.findIndex(card => card.name === 'The Coin');
+    if (coinIndex !== -1) {
+      updatedState = playCoin(1, updatedState);
+    }
+
+    // Zbytek AI logiky zůstává stejný
     updatedState.players[1].hand.forEach((card, index) => {
       if (card.manaCost <= updatedState.players[1].mana) {
         updatedState = playAICard(updatedState, index);
@@ -892,7 +912,22 @@ debugger;
   };
 
   const handlePlayCard = (cardIndex) => {
-    setGameState((prevState) => playCard(cardIndex)(prevState));
+    setGameState((prevState) => {
+      const currentPlayerIndex = prevState.currentPlayer;
+      const currentPlayer = prevState.players[currentPlayerIndex];
+      const card = currentPlayer.hand[cardIndex];
+      
+      if (!card) {
+        console.error('Pokus o zahrání neexistující karty');
+        return prevState;
+      }
+      
+      if (card.name === 'The Coin') {
+        return playCoin(currentPlayerIndex, prevState);
+      }
+      
+      return playCard(cardIndex)(prevState);
+    });
   };
 
   if (gameState.gameOver) {
