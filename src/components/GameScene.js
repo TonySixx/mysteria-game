@@ -8,6 +8,8 @@ import arcaneIntellect from '../assets/images/arcane-intellect.png';
 import fireElemental from '../assets/images/fire-elemental.png';
 import shieldBearer from '../assets/images/shield-bearer.png';
 import waterElemental from '../assets/images/water-elemental.png';
+import coinImage from '../assets/images/mana-coin.png';
+
 
 
 
@@ -339,45 +341,56 @@ function GameScene() {
     setGameState((prevState) => {
       return {
         ...prevState,
-        players: prevState.players.map((player, index) => ({
-          ...player,
-          deck: [...(index === 0 ? player1Deck : player2Deck)].sort(() => Math.random() - 0.5),
-          hand: (index === 0 ? player1Deck : player2Deck).slice(0, 3),
-        })),
+        players: prevState.players.map((player, index) => {
+          const deck = [...(index === 0 ? player1Deck : player2Deck)].sort(() => Math.random() - 0.5);
+          const hand = deck.splice(0, index === 0 ? 3 : 4);
+          if (index === 1) {
+            hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal this turn only.', coinImage));
+          }
+          return {
+            ...player,
+            deck,
+            hand,
+            mana: index === 0 ? 1 : 0, // První hráč začíná s 1 manou, druhý s 0
+          };
+        }),
       };
     });
   }, []);
 
   const startNextTurn = (state, nextPlayer) => {
     const newTurn = state.turn + 1;
-
+  
     let updatedPlayers = state.players.map((player, index) => {
-      let updatedPlayer = {
-        ...player,
-        mana: Math.min(10, newTurn),
-        field: player.field.map((unit) => ({ ...unit, hasAttacked: false })),
-      };
-
-      // Přidáme kartu do ruky nového hráče na začátku jeho tahu
-      if (index === nextPlayer && updatedPlayer.deck.length > 0) {
-        const drawnCardIndex = Math.floor(Math.random() * updatedPlayer.deck.length);
-        const drawnCard = updatedPlayer.deck[drawnCardIndex];
-        updatedPlayer = {
-          ...updatedPlayer,
-          hand: [...updatedPlayer.hand, drawnCard],
-          deck: updatedPlayer.deck.filter((_, i) => i !== drawnCardIndex),
-        };
+      let updatedPlayer = { ...player };
+      if (index === nextPlayer) {
+        updatedPlayer.mana = Math.min(10, player.mana + 1);
       }
-
+      updatedPlayer.field = updatedPlayer.field.map((unit) => ({ ...unit, hasAttacked: false }));
       return updatedPlayer;
     });
-
+  
+    // Přidání karty do ruky nového hráče
+    if (updatedPlayers[nextPlayer].deck.length > 0) {
+      const drawnCard = updatedPlayers[nextPlayer].deck.pop();
+      updatedPlayers[nextPlayer].hand.push(drawnCard);
+    }
+  
     return {
       ...state,
       currentPlayer: nextPlayer,
       turn: newTurn,
       players: updatedPlayers,
     };
+  };
+
+  const playCoin = (playerIndex) => {
+    setGameState((prevState) => {
+      const updatedPlayers = [...prevState.players];
+      updatedPlayers[playerIndex].mana += 1;
+      updatedPlayers[playerIndex].hand = updatedPlayers[playerIndex].hand.filter(card => card.name !== 'The Coin');
+      return { ...prevState, players: updatedPlayers };
+    });
   };
 
   const playCard = (cardIndex) => {
@@ -438,18 +451,18 @@ function GameScene() {
     setGameState((prevState) => {
       const currentPlayerIndex = prevState.currentPlayer;
       const opponentPlayerIndex = (prevState.currentPlayer + 1) % 2;
-
+  
       const currentPlayer = { ...prevState.players[currentPlayerIndex] };
       const opponentPlayer = { ...prevState.players[opponentPlayerIndex] };
-
+  
       const attacker = { ...currentPlayer.field[attackerIndex] };
-
+  
       if (attacker.hasAttacked) {
         return prevState; // Jednotka už zaútočila v tomto kole
       }
-
+  
       const opponentTauntUnits = opponentPlayer.field.filter((unit) => unit.hasTaunt);
-
+  
       // Kontrola Taunt
       if (opponentTauntUnits.length > 0) {
         if (targetIsHero) {
@@ -462,29 +475,29 @@ function GameScene() {
           return prevState;
         }
       }
-
+  
       attacker.hasAttacked = true;
-
+  
       if (targetIsHero) {
         opponentPlayer.hero.health -= attacker.attack;
       } else {
         const target = { ...opponentPlayer.field[targetIndex] };
         target.health -= attacker.attack;
         attacker.health -= target.attack;
-
+  
         opponentPlayer.field = opponentPlayer.field
           .map((unit, index) => (index === targetIndex ? target : unit))
           .filter((unit) => unit.health > 0);
-
-        currentPlayer.field = currentPlayer.field
-          .map((unit, index) => (index === attackerIndex ? attacker : unit))
-          .filter((unit) => unit.health > 0);
       }
-
+  
+      currentPlayer.field = currentPlayer.field
+        .map((unit, index) => (index === attackerIndex ? attacker : unit))
+        .filter((unit) => unit.health > 0);
+  
       const updatedPlayers = [...prevState.players];
       updatedPlayers[currentPlayerIndex] = currentPlayer;
       updatedPlayers[opponentPlayerIndex] = opponentPlayer;
-
+  
       return checkGameOver({
         ...prevState,
         players: updatedPlayers,
