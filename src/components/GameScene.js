@@ -508,7 +508,11 @@ const playCardCommon = (state, playerIndex, cardIndex) => {
       const opponentField = opponentPlayer.field;
       if (opponentField.length > 0) {
         const randomIndex = Math.floor(Math.random() * opponentField.length);
-        opponentField[randomIndex] = { ...opponentField[randomIndex], frozen: true };
+        opponentField[randomIndex] = { 
+          ...opponentField[randomIndex], 
+          frozen: true,
+          frozenTurns: 2  // Zmrazení na 2 kola
+        };
         console.log(`Zmrazena nepřátelská karta na pozici ${randomIndex}`);
       } else {
         console.log('Žádná nepřátelská karta k zmrazení');
@@ -640,11 +644,21 @@ function GameScene() {
       if (index === nextPlayer) {
         updatedPlayer.mana = Math.min(10, player.mana + 1);
       }
-      updatedPlayer.field = updatedPlayer.field.map((unit) => ({
-        ...unit,
-        hasAttacked: false,
-        frozen: false, // Rozmrazení všech karet na začátku tahu
-      }));
+      updatedPlayer.field = updatedPlayer.field.map((unit) => {
+        let updatedUnit = { ...unit };
+        updatedUnit.hasAttacked = false;
+        
+        // Pokud je jednotka zmrazená, snížíme počet kol zmrazení o 1
+        if (updatedUnit.frozen) {
+          updatedUnit.frozenTurns = (updatedUnit.frozenTurns || 1) - 1;
+          if (updatedUnit.frozenTurns <= 0) {
+            updatedUnit.frozen = false;
+            delete updatedUnit.frozenTurns;
+          }
+        }
+        
+        return updatedUnit;
+      });
       return updatedPlayer;
     });
 
@@ -886,8 +900,32 @@ function GameScene() {
           return newState;
         }
 
-        // Použijeme funkci playCard pro zahrání karty
-        return playCard(cardIndex)(newState);
+        // Odstraníme kartu z ruky
+        currentPlayer.hand.splice(cardIndex, 1);
+
+        // Přidáme kartu na správné místo na poli
+        currentPlayer.field.splice(destination.index, 0, movedCard);
+
+        // Aktualizujeme manu
+        currentPlayer.mana -= movedCard.manaCost;
+
+        // Aplikujeme efekt karty při zahrání
+        if (movedCard.effect === 'Deals 2 damage when played') {
+          newState.players[1].hero.health -= 2;
+        }
+        if (movedCard.effect === 'Freeze enemy when played') {
+          const opponentField = newState.players[1].field;
+          if (opponentField.length > 0) {
+            const randomIndex = Math.floor(Math.random() * opponentField.length);
+            opponentField[randomIndex] = { 
+              ...opponentField[randomIndex], 
+              frozen: true,
+              frozenTurns: 2
+            };
+          }
+        }
+
+        return checkGameOver(newState);
       }
 
       return newState;
@@ -1011,7 +1049,7 @@ function GameScene() {
                       >
                         <CardDisplay
                           card={card}
-                          canAttack={gameState.currentPlayer === 0 && !card.hasAttacked}
+                          canAttack={gameState.currentPlayer === 0 && !card.hasAttacked && !card.frozen}
                           onAttack={() => setSelectedAttackerIndex(index)}
                           isSelected={selectedAttackerIndex === index}
                         />
