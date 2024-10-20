@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import earthGolem from '../assets/images/earth-golem.png';
-import fireball from '../assets/images/fireball.png';   
+import fireball from '../assets/images/fireball.png';
 import healingTouch from '../assets/images/healing-touch.png';
 import lightningBolt from '../assets/images/lightning-bolt.png';
 import arcaneIntellect from '../assets/images/arcane-intellect.png';
@@ -9,6 +9,9 @@ import fireElemental from '../assets/images/fire-elemental.png';
 import shieldBearer from '../assets/images/shield-bearer.png';
 import waterElemental from '../assets/images/water-elemental.png';
 import coinImage from '../assets/images/mana-coin.png';
+import cardTexture from '../assets/images/card-texture.png';
+import playerHeroImage from '../assets/images/player-hero.png';
+import aiHeroImage from '../assets/images/ai-hero.png';
 
 
 
@@ -48,10 +51,11 @@ class SpellCard extends Card {
 
 // Třída pro hrdinu
 class Hero {
-  constructor(name, health = 30, specialAbility = null) {
+  constructor(name, health = 30, specialAbility = null, image) {
     this.name = name;
     this.health = health;
     this.specialAbility = specialAbility;
+    this.image = image;
   }
 }
 
@@ -59,7 +63,8 @@ const GameBoard = styled.div`
   position: relative;
   width: 100%;
   height: 100vh;
-  background: linear-gradient(to bottom, #1a1a1a, #000000);
+  background: url('/background.png') no-repeat center center fixed;
+  background-size: cover;
   color: #ffd700;
   font-family: 'Cinzel', serif;
   overflow: hidden;
@@ -73,7 +78,15 @@ const PlayerArea = styled.div`
   align-items: center;
   justify-content: space-between;
   flex: 1;
-  padding: 20px 0;
+  padding: 10px 0;
+`;
+
+const BattleArea = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  justify-content: space-between;
 `;
 
 const HeroArea = styled.div`
@@ -81,7 +94,7 @@ const HeroArea = styled.div`
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 100px;
+  height: 150px;
 `;
 
 const FieldArea = styled.div`
@@ -92,17 +105,19 @@ const FieldArea = styled.div`
   width: 100%;
   padding: 10px 0;
   box-sizing: border-box;
-  min-height: 180px;
+  min-height: 150px;
 `;
 
 const HandArea = styled.div`
+  position: fixed;
+  bottom: -40px; // Změněno z -80px na -40px, aby byly karty částečně viditelné
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  width: 100%;
+  gap: 5px;
   padding: 10px 0;
-  box-sizing: border-box;
+  perspective: 1000px;
 `;
 
 const PlayerInfo = styled.div`
@@ -110,7 +125,29 @@ const PlayerInfo = styled.div`
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 0 0px;
+  padding: 10px 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+`;
+
+const DeckAndManaContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const DeckContainer = styled.div`
+  width: 40px;
+  height: 60px;
+  background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
+  border: 2px solid #ffd700;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 `;
 
 const ManaInfo = styled.div`
@@ -129,6 +166,7 @@ const EndTurnButton = styled.button`
   font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
+  margin-right: 36px;
 
   &:hover {
     transform: scale(1.05);
@@ -136,26 +174,14 @@ const EndTurnButton = styled.button`
   }
 `;
 
-const DeckContainer = styled.div`
-  width: 40px;
-  height: 60px;
-  background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
-  border: 2px solid #ffd700;
-  border-radius: 5px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #ffd700;
-  font-size: 14px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-`;
-
 function HeroDisplay({ hero, onClick, isTargetable }) {
   return (
     <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
-      <HeroName>{hero.name}</HeroName>
-      <HeroHealth>HP: {hero.health}</HeroHealth>
+      <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
+      <HeroHealth>
+        <HeartIcon>❤️</HeartIcon>
+        {hero.health}
+      </HeroHealth>
     </HeroComponent>
   );
 }
@@ -163,31 +189,47 @@ function HeroDisplay({ hero, onClick, isTargetable }) {
 const HeroComponent = styled.div.withConfig({
   shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
 })`
-  width: 100px;
-  height: 80px;
-  background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
-  border: 2px solid ${(props) => (props.isTargetable ? '#ffd700' : '#000')};
-  border-radius: 5px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 5px;
+  width: 120px;
+  height: 120px;
+  position: relative;
   cursor: ${(props) => (props.isTargetable ? 'pointer' : 'default')};
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 `;
 
-const HeroName = styled.div`
-  font-weight: bold;
-  text-align: center;
-  font-size: 18px;
-  color: #ffd700;
+const HeroImage = styled.img.withConfig({
+  shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
+})`
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid ${(props) => (props.isTargetable ? '#ff9900' : '#ffd700')};
+  box-shadow: 0 0 10px ${(props) => (props.isTargetable ? 'rgba(255, 153, 0, 0.7)' : 'rgba(255, 215, 0, 0.5)')};
+  transition: all 0.3s ease;
+
+  ${(props) => props.isTargetable && `
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px rgba(255, 153, 0, 0.9);
+    }
+  `}
 `;
 
 const HeroHealth = styled.div`
-  font-size: 24px;
-  text-align: center;
-  color: #ff4444;
-  text-shadow: 0 0 5px #ff4444;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+`;
+
+const HeartIcon = styled.span`
+  margin-right: 2px;
+  font-size: 12px;
 `;
 
 function CardDisplay({ card, onClick, canAttack, onAttack, isTargetable, isSelected, isInHand }) {
@@ -195,70 +237,87 @@ function CardDisplay({ card, onClick, canAttack, onAttack, isTargetable, isSelec
 
   return (
     <CardComponent
-      type={card.type}
+      $type={card.type}
       onClick={onClick}
-      canAttack={canAttack}
-      isTargetable={isTargetable}
-      isSelected={isSelected}
-      isInHand={isInHand}
+      $canAttack={canAttack}
+      $isTargetable={isTargetable}
+      $isSelected={isSelected}
+      $isInHand={isInHand}
     >
-      <CardImage src={card.image} alt={card.name} />
+      <ManaCost>{card.manaCost}</ManaCost>
+      <CardImage style={{ borderRadius: '4px', border: '1px solid #000000' }} src={card.image} alt={card.name} />
       {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
-      <CardName>{card.name}</CardName>
-      <CardStats>
-        <span>🔮 {card.manaCost}</span>
-        {card.type === 'unit' && (
-          <>
-            <span>⚔️ {card.attack}</span>
-            <span>❤️ {card.health}</span>
-          </>
+      <CardContent>
+        <CardName>{card.name}</CardName>
+        <CardStats>
+          {card.type === 'unit' && (
+            <>
+              <span>⚔️ {card.attack}</span>
+              <span>❤️ {card.health}</span>
+            </>
+          )}
+        </CardStats>
+        <CardDescription>{card.effect}</CardDescription>
+        {canAttack && card.type === 'unit' && (
+          <AttackButton onClick={(e) => { e.stopPropagation(); onAttack(); }}>
+            Útok
+          </AttackButton>
         )}
-      </CardStats>
-      {canAttack && card.type === 'unit' && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAttack();
-          }}
-        >
-          Útok
-        </button>
-      )}
-      {card.type === 'spell' && <button onClick={onClick}>Seslat</button>}
+        {card.type === 'spell' && isInHand && <CastButton onClick={onClick}>Seslat</CastButton>}
+      </CardContent>
     </CardComponent>
   );
 }
 
-const CardComponent = styled.div.withConfig({
-  shouldForwardProp: (prop) =>
-    !['canAttack', 'isTargetable', 'isSelected', 'type', 'isInHand'].includes(prop),
-})`
- width: ${(props) => (props.isInHand ? '110px' : '149px')};
-  height: ${(props) => (props.isInHand ? '165px' : '224px')};
-  background-color: ${(props) => (props.type === 'unit' ? '#4a4a4a' : '#3a3a3a')};
-  border: 2px solid
-    ${(props) => (props.isSelected ? '#ffd700' : props.isTargetable ? '#ff9900' : '#000')};
+const CardComponent = styled.div`
+  width: ${(props) => (props.$isInHand ? '120px' : '140px')};
+  height: ${(props) => (props.$isInHand ? '180px' : '200px')};
+  border: 2px solid ${(props) => (props.$isSelected ? '#ffd700' : props.$isTargetable ? '#ff9900' : '#000')};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 5px;
-  cursor: ${(props) => (props.canAttack || props.isTargetable ? 'pointer' : 'default')};
+  cursor: ${(props) => (props.$canAttack || props.$isTargetable ? 'pointer' : 'default')};
   position: relative;
-  transition: transform 0.3s;
+  transition: all 0.3s;
   transform-style: preserve-3d;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  flex-shrink: 0;
-
-  &:hover {
-    transform: ${(props) =>
-      props.isInHand ? 'translateY(-10px)' : 'translateY(-5px) rotateY(-5deg)'};
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  overflow: visible;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url(${cardTexture});
+    background-size: 130%;
+    background-position: center;
+    filter: grayscale(50%);
+    z-index: -1;
   }
+  
+  ${(props) => props.$isInHand && `
+    transform: translateY(35%) rotate(${-10 + Math.random() * 20}deg);
+    &:hover {
+      transform: translateY(-80px) rotate(0deg) scale(1.2);
+      z-index: 20;
+    }
+  `}
+`;
+
+const CardContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
 `;
 
 const CardImage = styled.img`
   width: 100%;
-  height: 60%;
+  height: 50%;
   object-fit: cover;
   border-radius: 4px;
   margin-bottom: 2px;
@@ -281,20 +340,95 @@ const CardName = styled.div`
   text-align: center;
   font-size: 14px;
   margin-bottom: 5px;
+  color: white; // Změníme barvu na bílou
+  text-shadow: 
+    -1px -1px 0 #000,  
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
 `;
+
 
 const CardStats = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 16px;
+  font-weight: bold;
+  color: white;
+    text-shadow: 
+    -1px -1px 0 #000,  
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
+`;
+
+
+const CardDescription = styled.div`
+  font-family: 'Arial', sans-serif;
+  font-size: 11px;
+  text-align: center;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: white; // Bílý text
+  text-shadow: 
+    -1px -1px 0 #000,  
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
+`;
+
+const AttackButton = styled.button`
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: #ff6666;
+  }
+`;
+
+const CastButton = styled(AttackButton)`
+  background-color: #4444ff;
+
+  &:hover {
+    background-color: #6666ff;
+  }
+`;
+
+const ManaCost = styled.div`
+  position: absolute;
+  top: -10px;
+  left: -10px;
+  width: 30px;
+  height: 30px;
+  background-color: #4fc3f7;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 16px;
+  border: 2px solid #2196f3;
+  box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
+  z-index: 10;
 `;
 
 function GameScene() {
   const [gameState, setGameState] = useState({
     players: [
-      { hero: new Hero('Player'), deck: [], hand: [], field: [], mana: 1 },
-      { hero: new Hero('AI'), deck: [], hand: [], field: [], mana: 1 },
+      { hero: new Hero('Player', 30, null, playerHeroImage), deck: [], hand: [], field: [], mana: 1 },
+      { hero: new Hero('AI', 30, null, aiHeroImage), deck: [], hand: [], field: [], mana: 1 },
     ],
     currentPlayer: 0,
     turn: 1,
@@ -360,7 +494,7 @@ function GameScene() {
 
   const startNextTurn = (state, nextPlayer) => {
     const newTurn = state.turn + 1;
-  
+
     let updatedPlayers = state.players.map((player, index) => {
       let updatedPlayer = { ...player };
       if (index === nextPlayer) {
@@ -369,13 +503,13 @@ function GameScene() {
       updatedPlayer.field = updatedPlayer.field.map((unit) => ({ ...unit, hasAttacked: false }));
       return updatedPlayer;
     });
-  
+
     // Přidání karty do ruky nového hráče
     if (updatedPlayers[nextPlayer].deck.length > 0) {
       const drawnCard = updatedPlayers[nextPlayer].deck.pop();
       updatedPlayers[nextPlayer].hand.push(drawnCard);
     }
-  
+
     return {
       ...state,
       currentPlayer: nextPlayer,
@@ -451,18 +585,18 @@ function GameScene() {
     setGameState((prevState) => {
       const currentPlayerIndex = prevState.currentPlayer;
       const opponentPlayerIndex = (prevState.currentPlayer + 1) % 2;
-  
+
       const currentPlayer = { ...prevState.players[currentPlayerIndex] };
       const opponentPlayer = { ...prevState.players[opponentPlayerIndex] };
-  
+
       const attacker = { ...currentPlayer.field[attackerIndex] };
-  
+
       if (attacker.hasAttacked) {
         return prevState; // Jednotka už zaútočila v tomto kole
       }
-  
+
       const opponentTauntUnits = opponentPlayer.field.filter((unit) => unit.hasTaunt);
-  
+
       // Kontrola Taunt
       if (opponentTauntUnits.length > 0) {
         if (targetIsHero) {
@@ -475,29 +609,29 @@ function GameScene() {
           return prevState;
         }
       }
-  
+
       attacker.hasAttacked = true;
-  
+
       if (targetIsHero) {
         opponentPlayer.hero.health -= attacker.attack;
       } else {
         const target = { ...opponentPlayer.field[targetIndex] };
         target.health -= attacker.attack;
         attacker.health -= target.attack;
-  
+
         opponentPlayer.field = opponentPlayer.field
           .map((unit, index) => (index === targetIndex ? target : unit))
           .filter((unit) => unit.health > 0);
       }
-  
+
       currentPlayer.field = currentPlayer.field
         .map((unit, index) => (index === attackerIndex ? attacker : unit))
         .filter((unit) => unit.health > 0);
-  
+
       const updatedPlayers = [...prevState.players];
       updatedPlayers[currentPlayerIndex] = currentPlayer;
       updatedPlayers[opponentPlayerIndex] = opponentPlayer;
-  
+
       return checkGameOver({
         ...prevState,
         players: updatedPlayers,
@@ -682,22 +816,28 @@ function GameScene() {
   return (
     <GameBoard>
       <PlayerInfo>
-        <HeroDisplay
-          hero={gameState.players[1].hero}
-          onClick={() => {
-            if (selectedAttackerIndex !== null) {
-              if (opponentTauntUnits.length === 0) {
-                attack(selectedAttackerIndex, 0, true);
-                setSelectedAttackerIndex(null);
-              }
-            }
-          }}
-          isTargetable={selectedAttackerIndex !== null && opponentTauntUnits.length === 0}
-        />
-        <DeckContainer>{gameState.players[1].deck.length}</DeckContainer>
+        <DeckAndManaContainer>
+          <DeckContainer>{gameState.players[1].deck.length}</DeckContainer>
+          <ManaInfo>🔮 {gameState.players[1].mana}</ManaInfo>
+        </DeckAndManaContainer>
       </PlayerInfo>
 
-      <PlayerArea>
+      <BattleArea>
+        <HeroArea>
+          <HeroDisplay
+            hero={gameState.players[1].hero}
+            onClick={() => {
+              if (selectedAttackerIndex !== null) {
+                if (opponentTauntUnits.length === 0) {
+                  attack(selectedAttackerIndex, 0, true);
+                  setSelectedAttackerIndex(null);
+                }
+              }
+            }}
+            isTargetable={selectedAttackerIndex !== null && opponentTauntUnits.length === 0}
+          />
+        </HeroArea>
+
         <FieldArea>
           {gameState.players[1].field.map((card, index) => (
             <CardDisplay
@@ -738,7 +878,19 @@ function GameScene() {
             />
           ))}
         </FieldArea>
-      </PlayerArea>
+
+        <HeroArea>
+          <HeroDisplay hero={gameState.players[0].hero} />
+        </HeroArea>
+      </BattleArea>
+
+      <PlayerInfo>
+        <DeckAndManaContainer>
+          <DeckContainer>{gameState.players[0].deck.length}</DeckContainer>
+          <ManaInfo>🔮 {gameState.players[0].mana}</ManaInfo>
+        </DeckAndManaContainer>
+        <EndTurnButton onClick={endTurn}>Ukončit tah</EndTurnButton>
+      </PlayerInfo>
 
       <HandArea>
         {gameState.players[0].hand.map((card, index) => (
@@ -750,13 +902,6 @@ function GameScene() {
           />
         ))}
       </HandArea>
-
-      <PlayerInfo>
-        <HeroDisplay hero={gameState.players[0].hero} />
-        <ManaInfo>Mana: {gameState.players[0].mana}</ManaInfo>
-        <EndTurnButton onClick={endTurn}>Ukončit tah</EndTurnButton>
-        <DeckContainer>{gameState.players[0].deck.length}</DeckContainer>
-      </PlayerInfo>
     </GameBoard>
   );
 }
