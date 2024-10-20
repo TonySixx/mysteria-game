@@ -14,6 +14,7 @@ import cardTexture from '../assets/images/card-texture.png';
 import playerHeroImage from '../assets/images/player-hero.png';
 import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
+import { VisualFeedbackContainer } from './VisualFeedback';
 
 
 
@@ -556,6 +557,7 @@ function GameScene() {
   });
 
   const [selectedAttackerIndex, setSelectedAttackerIndex] = useState(null);
+  const [visualFeedbacks, setVisualFeedbacks] = useState([]);
 
   useEffect(() => {
     const handleContextMenu = (e) => {
@@ -679,28 +681,84 @@ function GameScene() {
     return { ...state, players: updatedPlayers };
   };
 
+  const addVisualFeedback = (type, value, position) => {
+    setVisualFeedbacks(prev => [...prev, { type, value, position }]);
+    setTimeout(() => {
+      setVisualFeedbacks(prev => prev.slice(1));
+    }, 2500);
+  };
+
   const playCard = (cardIndex) => (prevState) => {
     const newState = playCardCommon(prevState, prevState.currentPlayer, cardIndex);
+    const playedCard = prevState.players[prevState.currentPlayer].hand[cardIndex];
+
+    if (playedCard.type === 'spell') {
+      const spellPosition = { x: '50%', y: '50%' };
+      
+      switch (playedCard.effect) {
+        case 'Restore 8 health':
+          addVisualFeedback('heal', 8, { x: '10%', y: '80%' });
+          break;
+        case 'Deal 6 damage':
+          addVisualFeedback('damage', 6, { x: '50%', y: '10%' });
+          break;
+        case 'Deal 3 damage':
+          addVisualFeedback('damage', 3, { x: '50%', y: '10%' });
+          break;
+        case 'Draw 2 cards':
+          addVisualFeedback('draw', 2, spellPosition);
+          break;
+        default:
+          addVisualFeedback('spell', playedCard.name, spellPosition);
+      }
+    }
+
     return checkGameOver(newState);
   };
 
-  const attack = (attackerIndex, targetIndex, isHero = false) => (state) => {
+  const attack = (attackerIndex, targetIndex, isHero = false, isAI = false) => (state) => {
     const newState = { ...state };
-    const attacker = newState.players[0].field[attackerIndex];
-    const defender = isHero ? newState.players[1].hero : newState.players[1].field[targetIndex];
+    const attacker = isAI ? newState.players[1].field[attackerIndex] : newState.players[0].field[attackerIndex];
+    const defender = isHero 
+      ? (isAI ? newState.players[0].hero : newState.players[1].hero)
+      : (isAI ? newState.players[0].field[targetIndex] : newState.players[1].field[targetIndex]);
+
+    const attackerPosition = isAI 
+      ? { x: `calc(50% + ${attackerIndex * 10}% - 20px)`, y: '25%' }
+      : { x: `calc(10% + ${attackerIndex * 10}% - 20px)`, y: '55%' };
+    const defenderPosition = isHero
+      ? { x: 'calc(50% - 20px)', y: isAI ? '75%' : '15%' }
+      : isAI
+        ? { x: `calc(10% + ${targetIndex * 10}% - 20px)`, y: '55%' }
+        : { x: `calc(50% + ${targetIndex * 10}% - 20px)`, y: '25%' };
 
     if (isHero) {
       defender.health -= attacker.attack;
+      addVisualFeedback('damage', attacker.attack, defenderPosition);
     } else {
       defender.health -= attacker.attack;
       attacker.health -= defender.attack;
+      addVisualFeedback('damage', attacker.attack, defenderPosition);
+      
+      // Přidáme zpoždění pro zobrazení poškození útočníka
+      setTimeout(() => {
+        addVisualFeedback('damage', defender.attack, attackerPosition);
+      }, 100);
 
       // Odstranění zničených jednotek
       if (defender.health <= 0) {
-        newState.players[1].field = newState.players[1].field.filter((_, index) => index !== targetIndex);
+        if (isAI) {
+          newState.players[0].field = newState.players[0].field.filter((_, index) => index !== targetIndex);
+        } else {
+          newState.players[1].field = newState.players[1].field.filter((_, index) => index !== targetIndex);
+        }
       }
       if (attacker.health <= 0) {
-        newState.players[0].field = newState.players[0].field.filter((_, index) => index !== attackerIndex);
+        if (isAI) {
+          newState.players[1].field = newState.players[1].field.filter((_, index) => index !== attackerIndex);
+        } else {
+          newState.players[0].field = newState.players[0].field.filter((_, index) => index !== attackerIndex);
+        }
       }
     }
 
@@ -809,36 +867,15 @@ function GameScene() {
     if (opponentTauntUnits.length > 0) {
       // Útok na náhodnou nepřátelskou jednotku s Tauntem
       const tauntIndex = opponentPlayer.field.findIndex((unit) => unit.hasTaunt);
-      const target = opponentPlayer.field[tauntIndex];
-
-      target.health -= attacker.attack;
-      attacker.health -= target.attack;
-
-      opponentPlayer.field = opponentPlayer.field.filter((unit) => unit.health > 0);
-      currentPlayer.field = currentPlayer.field.filter((unit) => unit.health > 0);
+      return attack(attackerIndex, tauntIndex, false, true)(state);
     } else if (opponentPlayer.field.length > 0) {
       // Útok na náhodnou nepřátelskou jednotku
       const targetIndex = Math.floor(Math.random() * opponentPlayer.field.length);
-      const target = opponentPlayer.field[targetIndex];
-
-      target.health -= attacker.attack;
-      attacker.health -= target.attack;
-
-      opponentPlayer.field = opponentPlayer.field.filter((unit) => unit.health > 0);
-      currentPlayer.field = currentPlayer.field.filter((unit) => unit.health > 0);
+      return attack(attackerIndex, targetIndex, false, true)(state);
     } else {
       // Útok na hrdinu
-      opponentPlayer.hero.health -= attacker.attack;
+      return attack(attackerIndex, null, true, true)(state);
     }
-
-    const updatedPlayers = [...state.players];
-    updatedPlayers[currentPlayerIndex] = currentPlayer;
-    updatedPlayers[opponentPlayerIndex] = opponentPlayer;
-
-    return checkGameOver({
-      ...state,
-      players: updatedPlayers,
-    });
   };
 
   const onDragEnd = (result) => {
@@ -1076,6 +1113,7 @@ function GameScene() {
             </HandArea>
           )}
         </Droppable>
+        <VisualFeedbackContainer feedbacks={visualFeedbacks} />
       </GameBoard>
     </DragDropContext>
   );
