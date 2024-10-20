@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import earthGolem from '../assets/images/earth-golem.png';
@@ -15,6 +15,7 @@ import playerHeroImage from '../assets/images/player-hero.png';
 import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
 import { VisualFeedbackContainer } from './VisualFeedback';
+import { Notification } from './Notification';
 
 
 
@@ -558,6 +559,8 @@ function GameScene() {
 
   const [selectedAttackerIndex, setSelectedAttackerIndex] = useState(null);
   const [visualFeedbacks, setVisualFeedbacks] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const notificationIdRef = useRef(0);
 
   useEffect(() => {
     const handleContextMenu = (e) => {
@@ -681,23 +684,41 @@ function GameScene() {
     return { ...state, players: updatedPlayers };
   };
 
-  const addVisualFeedback = (type, value, position) => {
-    setVisualFeedbacks(prev => [...prev, { type, value, position }]);
+  const addVisualFeedback = useCallback((type, value, position) => {
+    const id = Date.now(); // Vytvoříme unikátní ID pro každou zpětnou vazbu
+    setVisualFeedbacks(prev => [...prev, { id, type, value, position }]);
+    
     setTimeout(() => {
-      setVisualFeedbacks(prev => prev.slice(1));
+      setVisualFeedbacks(prev => prev.filter(feedback => feedback.id !== id));
     }, 2500);
-  };
+  }, []);
+
+  const addNotification = useCallback((message, type = 'info') => {
+    const id = notificationIdRef.current++;
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000); // Změněno z 3000 na 5000 pro delší zobrazení
+  }, []);
 
   const playCard = (cardIndex) => (prevState) => {
-    const newState = playCardCommon(prevState, prevState.currentPlayer, cardIndex);
-    const playedCard = prevState.players[prevState.currentPlayer].hand[cardIndex];
+    const currentPlayerIndex = prevState.currentPlayer;
+    const currentPlayer = prevState.players[currentPlayerIndex];
+    const playedCard = currentPlayer.hand[cardIndex];
+
+    if (!playedCard || currentPlayer.mana < playedCard.manaCost) {
+      addNotification(`Nedostatek many pro zahrání karty ${playedCard.name}`, 'warning');
+      return prevState;
+    }
+
+    const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex);
 
     if (playedCard.type === 'spell') {
       const spellPosition = { x: '50%', y: '50%' };
       
       switch (playedCard.effect) {
         case 'Restore 8 health':
-          addVisualFeedback('heal', 8, { x: '10%', y: '80%' });
+          addVisualFeedback('heal', 8, { x: '50%', y: '80%' });
           break;
         case 'Deal 6 damage':
           addVisualFeedback('damage', 6, { x: '50%', y: '10%' });
@@ -909,7 +930,7 @@ function GameScene() {
           if (opponentTauntUnits.length === 0) {
             return attack(attackerIndex, null, true)(newState);
           } else {
-            console.log('Nelze útočit na hrdinu, když je na poli jednotka s Taunt');
+            addNotification('Nelze útočit na hrdinu, když je na poli jednotka s Taunt', 'warning');
             return newState;
           }
         } else if (destination.droppableId.startsWith('opponentCard-')) {
@@ -920,7 +941,7 @@ function GameScene() {
           if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
             return attack(attackerIndex, targetIndex)(newState);
           } else {
-            console.log('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt');
+            addNotification('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt', 'warning');
             return newState;
           }
         }
@@ -954,12 +975,17 @@ function GameScene() {
       const card = currentPlayer.hand[cardIndex];
       
       if (!card) {
-        console.error('Pokus o zahrání neexistující karty');
+        addNotification('Pokus o zahrání neexistující karty', 'warning');
         return prevState;
       }
       
       if (card.name === 'The Coin') {
         return playCoin(currentPlayerIndex, prevState);
+      }
+      
+      if (currentPlayer.mana < card.manaCost) {
+        addNotification(`Nedostatek many pro zahrání karty ${card.name}`, 'warning');
+        return prevState;
       }
       
       return playCard(cardIndex)(prevState);
@@ -1114,6 +1140,7 @@ function GameScene() {
           )}
         </Droppable>
         <VisualFeedbackContainer feedbacks={visualFeedbacks} />
+        <Notification notifications={notifications} />
       </GameBoard>
     </DragDropContext>
   );

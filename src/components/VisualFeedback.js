@@ -86,12 +86,10 @@ export const VisualFeedback = ({ type, value, position }) => {
   );
 };
 
-export const VisualFeedbackContainer = ({ feedbacks }) => {
-  return (
-    <>
-      {feedbacks.map((feedback, index) => (
-        <VisualFeedback key={index} {...feedback} />
-      ))}
-    </>
-  );
-};
+export const VisualFeedbackContainer = ({ feedbacks }) => (
+  <>
+    {feedbacks.map(feedback => (
+      <VisualFeedback key={feedback.id} {...feedback} />
+    ))}
+  </>
+);
