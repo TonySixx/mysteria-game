@@ -22,6 +22,7 @@ import glacialBurst from '../assets/images/glacial-burst.png';
 import radiantProtector from '../assets/images/radiant-protector.png';
 import infernoWave from '../assets/images/inferno-wave.png';
 import { addSpellVisualFeedback, addVisualFeedback } from '../utils/visualFeedbackUtils';
+import cardBackImage from '../assets/images/card-back.png';
 
 
 
@@ -448,8 +449,25 @@ const HeartIcon = styled.span`
   font-size: 12px;
 `;
 
-const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging }) => {
+const CardBack = styled.div`
+  width: 100%;
+  height: 100%;
+  background-image: url(${cardBackImage});
+  background-size: cover;
+  background-position: center;
+  border-radius: 8px;
+`;
+
+const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
   if (!card) return null;
+
+  if (isOpponentCard) {
+    return (
+      <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
+        <CardBack />
+      </CardComponent>
+    );
+  }
 
   return (
     <CardComponent
@@ -1127,7 +1145,11 @@ function GameScene() {
     );
   };
 
-
+  const OpponentHandArea = styled(HandArea)`
+    top: 10px;
+    bottom: auto;
+    transform: translateX(-50%) rotate(180deg);
+  `;
 
   if (gameState.gameOver) {
     return (
@@ -1150,6 +1172,17 @@ function GameScene() {
             <ManaInfo>🔮 {gameState.players[1].mana}</ManaInfo>
           </DeckAndManaContainer>
         </PlayerInfo>
+
+        <OpponentHandArea>
+          {gameState.players[1].hand.map((card, index) => (
+            <CardDisplay
+              key={`opponent-card-${index}`}
+              card={card}
+              isInHand={true}
+              isOpponentCard={true}
+            />
+          ))}
+        </OpponentHandArea>
 
         <BattleArea>
           <Droppable droppableId="opponentHero" direction="horizontal">
