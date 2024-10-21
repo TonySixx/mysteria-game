@@ -16,6 +16,12 @@ import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
 import { VisualFeedbackContainer } from './VisualFeedback';
 import { Notification } from './Notification';
+import nimbleSprite from '../assets/images/nimble-sprite.png';
+import arcaneFamiliar from '../assets/images/arcane-familiar.png';
+import glacialBurst from '../assets/images/glacial-burst.png';
+import radiantProtector from '../assets/images/radiant-protector.png';
+import infernoWave from '../assets/images/inferno-wave.png';
+import { addSpellVisualFeedback, addVisualFeedback } from '../utils/visualFeedbackUtils';
 
 
 
@@ -39,9 +45,10 @@ class UnitCard extends Card {
     this.health = health;
     this.effect = effect;
     this.hasAttacked = false;
-    this.hasTaunt = effect === 'Taunt';
+    this.hasTaunt = effect && effect.includes('Taunt');
+    this.hasDivineShield = effect && effect.includes('Divine Shield');
     this.image = image;
-    this.frozen = false; // Přidáno
+    this.frozen = false;
   }
 }
 
@@ -308,7 +315,7 @@ const CardStats = styled.div`
     -1px -1px 0 #000,  
      1px -1px 0 #000,
     -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
+     1px  1px 0 #000; // Vytvoříme čern obrys pomocí text-shadow
 `;
 
 
@@ -369,6 +376,18 @@ const FrozenOverlay = styled.div`
   font-size: 50px;
   text-shadow: 1px 1px 2px black;
   pointer-events: none;
+`;
+
+
+const DivineShieldOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 215, 0, 0.3);
+  pointer-events: none;
+  display: ${props => props.$isInHand ? 'none' : 'block'};
 `;
 
 function HeroDisplay({ hero, onClick, isTargetable }) {
@@ -445,6 +464,7 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
       <ManaCost>{card.manaCost}</ManaCost>
       <CardImage style={{ borderRadius: '4px', border: '1px solid #000000' }} src={card.image} alt={card.name} />
       {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
+      {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
         <CardName>{card.name}</CardName>
         <CardStats>
@@ -466,7 +486,7 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
   );
 }
 
-const playCardCommon = (state, playerIndex, cardIndex) => {
+const playCardCommon = (state, playerIndex, cardIndex, setVisualFeedbacksSetter) => {
   const currentPlayerIndex = playerIndex;
   const opponentPlayerIndex = (playerIndex + 1) % 2;
 
@@ -481,7 +501,7 @@ const playCardCommon = (state, playerIndex, cardIndex) => {
 
   // Speciální případ pro "The Coin"
   if (playedCard.name === 'The Coin') {
-    return playCoin(currentPlayerIndex, state);
+    return playCoin(currentPlayerIndex, state, setVisualFeedbacksSetter);
   }
 
   if (currentPlayer.mana < playedCard.manaCost) {
@@ -494,23 +514,34 @@ const playCardCommon = (state, playerIndex, cardIndex) => {
   if (playedCard.type === 'unit') {
     const newUnit = { ...playedCard, hasAttacked: false, frozen: false };
     currentPlayer.field = [...currentPlayer.field, newUnit];
-    
+
     // Aplikujeme efekt karty při zahrání
-    if (playedCard.effect === 'Deals 2 damage when played') {
-      opponentPlayer.hero.health -= 2;
-    }
-    if (playedCard.effect === 'Freeze enemy when played') {
-      const opponentField = opponentPlayer.field;
-      if (opponentField.length > 0) {
-        const randomIndex = Math.floor(Math.random() * opponentField.length);
-        opponentField[randomIndex] = { 
-          ...opponentField[randomIndex], 
-          frozen: true,
-          frozenTurns: 2  // Zmrazení na 2 kola
-        };
-        console.log(`Zmrazena nepřátelská karta na pozici ${randomIndex}`);
-      } else {
-        console.log('Žádná nepřátelská karta k zmrazení');
+    if (playedCard.effect) {
+      if (playedCard.effect.includes('Deals 2 damage when played')) {
+        opponentPlayer.hero.health -= 2;
+      }
+      if (playedCard.effect.includes('Freeze enemy when played')) {
+        const opponentField = opponentPlayer.field;
+        if (opponentField.length > 0) {
+          const randomIndex = Math.floor(Math.random() * opponentField.length);
+          opponentField[randomIndex] = {
+            ...opponentField[randomIndex],
+            frozen: true,
+            frozenTurns: 2
+          };
+        }
+      }
+      if (playedCard.effect.includes('Draw a card when played')) {
+        if (currentPlayer.deck.length > 0) {
+          const drawnCard = currentPlayer.deck.pop();
+          if (currentPlayer.hand.length < 10) {
+            currentPlayer.hand.push(drawnCard);
+          } else {
+            // Karta se "spálí", pokud má hráč již 10 karet v ruce
+            const spellPosition = { x: '50%', y: '50%' };
+            addVisualFeedback('burn', drawnCard.name, spellPosition, setVisualFeedbacksSetter);
+          }
+        }
       }
     }
   } else if (playedCard.type === 'spell') {
@@ -523,11 +554,42 @@ const playCardCommon = (state, playerIndex, cardIndex) => {
       opponentPlayer.hero.health -= 3;
     } else if (playedCard.effect === 'Draw 2 cards') {
       const cardsToDraw = Math.min(2, currentPlayer.deck.length);
-      const drawnCards = currentPlayer.deck.slice(0, cardsToDraw);
-      currentPlayer.hand = [...currentPlayer.hand, ...drawnCards];
-      currentPlayer.deck = currentPlayer.deck.slice(cardsToDraw);
+      for (let i = 0; i < cardsToDraw; i++) {
+        const drawnCard = currentPlayer.deck.pop();
+        if (currentPlayer.hand.length < 10) {
+          currentPlayer.hand.push(drawnCard);
+        } else {
+          // Karta se "spálí", pokud má hráč již 10 karet v ruce
+          const spellPosition = { x: '50%', y: '50%' };
+          addVisualFeedback('burn', drawnCard.name, spellPosition, setVisualFeedbacksSetter);
+        }
+      }
+    } else if (playedCard.effect === 'Freeze all enemy minions') {
+      opponentPlayer.field = opponentPlayer.field.map(unit => ({
+        ...unit,
+        frozen: true,
+        frozenTurns: 2
+      }));
+    } else if (playedCard.effect === 'Deal 4 damage to all enemy minions') {
+      opponentPlayer.field = opponentPlayer.field.map(unit => ({
+        ...unit,
+        health: unit.health - 4
+      })).filter(unit => unit.health > 0);
     }
   }
+
+  // Přidáme vizuální zpětnou vazbu pro zahranou kartu
+  addSpellVisualFeedback(playedCard, setVisualFeedbacksSetter);
+
+  // Aplikujeme efekt Arcane Familiar
+  currentPlayer.field = currentPlayer.field.map(unit => {
+    const spellPosition = { x: '50%', y: '50%' };
+    if (unit.effect && unit.effect.includes('Gain +1 attack for each spell cast') && playedCard.type === 'spell') {
+      addVisualFeedback('spell', 'Gain +1 attack', spellPosition, setVisualFeedbacksSetter);
+      return { ...unit, attack: unit.attack + 1 };
+    }
+    return unit;
+  });
 
   const updatedPlayers = [...state.players];
   updatedPlayers[currentPlayerIndex] = currentPlayer;
@@ -539,12 +601,16 @@ const playCardCommon = (state, playerIndex, cardIndex) => {
   };
 };
 
-const playCoin = (playerIndex, state) => {
+const playCoin = (playerIndex, state, setVisualFeedbacksSetter) => {
   const updatedPlayers = [...state.players];
-  const currentPlayer = {...updatedPlayers[playerIndex]};
+  const currentPlayer = { ...updatedPlayers[playerIndex] };
   currentPlayer.mana += 1;
   currentPlayer.hand = currentPlayer.hand.filter(card => card.name !== 'The Coin');
   updatedPlayers[playerIndex] = currentPlayer;
+
+  const spellPosition = { x: '50%', y: '50%' };
+  addVisualFeedback('spell', 'Gain 1 Mana Crystal', spellPosition, setVisualFeedbacksSetter);
+
   return { ...state, players: updatedPlayers };
 };
 
@@ -592,8 +658,15 @@ function GameScene() {
         { id: 6, name: 'Earth Golem', manaCost: 5, attack: 4, health: 8, effect: 'Taunt', image: earthGolem },
         { id: 7, name: 'Lightning Bolt', manaCost: 2, effect: 'Deal 3 damage', image: lightningBolt },
         { id: 8, name: 'Arcane Intellect', manaCost: 3, effect: 'Draw 2 cards', image: arcaneIntellect },
-        { id: 9, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
-        { id: 10, name: 'Fire Elemental', manaCost: 4, attack: 5, health: 6, effect: 'Deals 2 damage when played', image: fireElemental },
+        { id: 9, name: 'Nimble Sprite', manaCost: 1, attack: 1, health: 2, effect: 'Draw a card when played', image: nimbleSprite },
+        { id: 10, name: 'Arcane Familiar', manaCost: 1, attack: 1, health: 3, effect: 'Gain +1 attack for each spell cast', image: arcaneFamiliar },
+        { id: 11, name: 'Glacial Burst', manaCost: 3, effect: 'Freeze all enemy minions', image: glacialBurst },
+        { id: 12, name: 'Radiant Protector', manaCost: 6, attack: 4, health: 5, effect: 'Taunt, Divine Shield', image: radiantProtector },
+        { id: 13, name: 'Inferno Wave', manaCost: 7, effect: 'Deal 4 damage to all enemy minions', image: infernoWave },
+        { id: 14, name: 'Arcane Familiar', manaCost: 1, attack: 1, health: 3, effect: 'Gain +1 attack for each spell cast', image: arcaneFamiliar },
+        { id: 15, name: 'Nimble Sprite', manaCost: 1, attack: 1, health: 2, effect: 'Draw a card when played', image: nimbleSprite },
+        { id: 16, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
+
       ];
 
       // Duplikujeme balíček pro každého hráče a přiřadíme unikátní ID
@@ -623,8 +696,8 @@ function GameScene() {
           const deck = [...(index === 0 ? player1Deck : player2Deck)].sort(() => Math.random() - 0.5);
           const hand = deck.splice(0, 3); // Oba hráči začínají se 3 kartami
           if (index !== startingPlayer) {
-            hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal.', coinImage));  
-          }     
+            hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal', coinImage));
+          }
           return {
             ...player,
             deck,
@@ -654,7 +727,7 @@ function GameScene() {
       updatedPlayer.field = updatedPlayer.field.map((unit) => {
         let updatedUnit = { ...unit };
         updatedUnit.hasAttacked = false;
-        
+
         // Pokud je jednotka zmrazená, snížíme počet kol zmrazení o 1
         if (updatedUnit.frozen) {
           updatedUnit.frozenTurns = (updatedUnit.frozenTurns || 1) - 1;
@@ -663,7 +736,7 @@ function GameScene() {
             delete updatedUnit.frozenTurns;
           }
         }
-        
+
         return updatedUnit;
       });
       return updatedPlayer;
@@ -672,7 +745,12 @@ function GameScene() {
     // Přidání karty do ruky nového hráče
     if (updatedPlayers[nextPlayer].deck.length > 0) {
       const drawnCard = updatedPlayers[nextPlayer].deck.pop();
-      updatedPlayers[nextPlayer].hand.push(drawnCard);
+      if (updatedPlayers[nextPlayer].hand.length < 10) {
+        updatedPlayers[nextPlayer].hand.push(drawnCard);
+      } else {
+        // Karta se "spálí", pokud má hráč již 10 karet v ruce
+        addNotification(`Karta "${drawnCard.name}" byla spálena, protože máte plnou ruku`, 'warning');
+      }
     }
 
     return {
@@ -683,20 +761,13 @@ function GameScene() {
     };
   };
 
-  const addVisualFeedback = useCallback((type, value, position) => {
-    const id = Date.now(); // Vytvoříme unikátní ID pro každou zpětnou vazbu
-    setVisualFeedbacks(prev => [...prev, { id, type, value, position }]);
-    
-    setTimeout(() => {
-      setVisualFeedbacks(prev => prev.filter(feedback => feedback.id !== id));
-    }, 2500);
-  }, []);
 
   const addNotification = useCallback((message, type = 'info') => {
     const id = notificationIdRef.current++;
     setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
+    var timer = setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
+      clearTimeout(timer);
     }, 5000); // Změněno z 3000 na 5000 pro delší zobrazení
   }, []);
 
@@ -710,31 +781,12 @@ function GameScene() {
       return prevState;
     }
 
-    const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex);
-
-    if (playedCard.type === 'spell') {
-      const spellPosition = { x: '50%', y: '50%' };
-      
-      switch (playedCard.effect) {
-        case 'Restore 8 health':
-          addVisualFeedback('heal', 8, { x: '50%', y: '80%' });
-          break;
-        case 'Deal 6 damage':
-          addVisualFeedback('damage', 6, { x: '50%', y: '10%' });
-          break;
-        case 'Deal 3 damage':
-          addVisualFeedback('damage', 3, { x: '50%', y: '10%' });
-          break;
-        case 'Draw 2 cards':
-          addVisualFeedback('draw', 2, spellPosition);
-          break;
-        default:
-          addVisualFeedback('spell', playedCard.name, spellPosition);
-      }
-    }
+    const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex, setVisualFeedbacks);
 
     return checkGameOver(newState);
   };
+
+
 
   const attack = (attackerIndex, targetIndex, isHero = false, isAI = false) => (state) => {
     const newState = { ...state };
@@ -753,7 +805,7 @@ function GameScene() {
       return newState;  // Vrátíme nezměněný stav
     }
 
-    const attackerPosition = isAI 
+    const attackerPosition = isAI
       ? { x: `calc(50% + ${attackerIndex * 10}% - 20px)`, y: '25%' }
       : { x: `calc(10% + ${attackerIndex * 10}% - 20px)`, y: '55%' };
     const defenderPosition = isHero
@@ -762,16 +814,21 @@ function GameScene() {
         ? { x: `calc(10% + ${targetIndex * 10}% - 20px)`, y: '55%' }
         : { x: `calc(50% + ${targetIndex * 10}% - 20px)`, y: '25%' };
 
-    defender.health -= attacker.attack;
-    addVisualFeedback('damage', attacker.attack, defenderPosition);
-    
     if (!isHero) {
-      attacker.health -= defender.attack;
-      
-      // Přidáme zpoždění pro zobrazení poškození útočníka
-      setTimeout(() => {
-        addVisualFeedback('damage', defender.attack, attackerPosition);
-      }, 100);
+      if (defender.hasDivineShield) {
+        defender.hasDivineShield = false;
+      } else {
+        defender.health -= attacker.attack;
+        addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacks);
+      }
+
+      if (attacker.hasDivineShield) {
+        attacker.hasDivineShield = false;
+      } else {
+        attacker.health -= defender.attack;
+
+        addVisualFeedback('damage', defender.attack, attackerPosition, setVisualFeedbacks);
+      }
 
       // Odstranění zničených jednotek
       if (defender.health <= 0) {
@@ -788,6 +845,9 @@ function GameScene() {
           newState.players[0].field = newState.players[0].field.filter((_, index) => index !== attackerIndex);
         }
       }
+    } else {
+      defender.health -= attacker.attack;
+      addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacks);
     }
 
     attacker.hasAttacked = true;
@@ -841,7 +901,7 @@ function GameScene() {
     // Nejprve použijeme The Coin, pokud je k dispozici a je to výhodné
     const coinIndex = updatedState.players[1].hand.findIndex(card => card.name === 'The Coin');
     if (coinIndex !== -1 && updatedState.players[1].mana < 10 && updatedState.players[1].hand.some(card => card.manaCost === updatedState.players[1].mana + 1)) {
-      updatedState = playCoin(1, updatedState);
+      updatedState = playCoin(1, updatedState, setVisualFeedbacks);
       console.log('AI použilo The Coin.');
       console.log(`AI nyní má ${updatedState.players[1].mana} many.`);
     }
@@ -852,6 +912,8 @@ function GameScene() {
 
     // Seřadíme jednotky podle priority
     const sortedUnits = units.sort((a, b) => {
+      if (a.name === 'Radiant Protector' && updatedState.players[1].field.length < 7) return -1;
+      if (b.name === 'Radiant Protector' && updatedState.players[1].field.length < 7) return 1;
       if (a.hasTaunt && !b.hasTaunt) return -1;
       if (!a.hasTaunt && b.hasTaunt) return 1;
       return (b.attack / b.manaCost) - (a.attack / a.manaCost);
@@ -876,12 +938,27 @@ function GameScene() {
 
     // Nyní zvážíme použití kouzel
     spells.forEach((card) => {
-      // Použijeme kouzlo pouze pokud máme alespoň 2 jednotky na poli nebo je to kouzlo léčení a máme méně než 15 zdraví
-      if (card.manaCost <= updatedState.players[1].mana && 
-          (updatedState.players[1].field.length >= 2 || 
-           (card.effect.includes('Restore') && updatedState.players[1].hero.health < 15))) {
-        console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
-        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+      switch (card.name) {
+        case 'Glacial Burst':
+          if (updatedState.players[0].field.length >= 2 && card.manaCost <= updatedState.players[1].mana) {
+            console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
+            updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+          }
+          break;
+        case 'Inferno Wave':
+          if (updatedState.players[0].field.length >= 3 && card.manaCost <= updatedState.players[1].mana) {
+            console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
+            updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+          }
+          break;
+        default:
+          if (card.manaCost <= updatedState.players[1].mana &&
+            (updatedState.players[1].field.length >= 2 ||
+              (card.effect.includes('Restore') && updatedState.players[1].hero.health < 15))) {
+            console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
+            updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+          }
+          break;
       }
     });
 
@@ -898,11 +975,11 @@ function GameScene() {
 
   const playAICard = (state, cardIndex) => {
     const card = state.players[1].hand[cardIndex];
-    console.log(`AI hraje kartu: ${card.name}`);
+    console.log(`AI hraje kartu: ${card?.name}`);
     console.log(`AI má před zahráním ${state.players[1].mana} many.`);
-    
-    const newState = playCardCommon(state, 1, cardIndex);
-    
+
+    const newState = playCardCommon(state, 1, cardIndex, setVisualFeedbacks);
+
     console.log(`AI má po zahrání ${newState.players[1].mana} many.`);
     return checkGameOver(newState);
   };
@@ -937,7 +1014,7 @@ function GameScene() {
 
   const chooseTarget = (playerField, playerHero, attacker) => {
     const tauntUnits = playerField.filter(unit => unit.hasTaunt);
-    
+
     if (tauntUnits.length > 0) {
       // Útočíme na jednotku s Taunt, která může být zničena
       const vulnerableTaunt = tauntUnits.find(unit => unit.health <= attacker.attack);
@@ -985,7 +1062,7 @@ function GameScene() {
         // Logika pro hraní karty z ruky na pole
         const cardIndex = source.index;
         const card = currentPlayer.hand[cardIndex];
-        
+
         if (card.type === 'spell') {
           // Pokud je to kouzlo, zahrajeme ho přímo
           return playCard(cardIndex)(newState);
@@ -1019,7 +1096,7 @@ function GameScene() {
           // Útok na nepřátelskou jednotku
           const targetIndex = parseInt(destination.droppableId.split('-')[1]);
           const targetUnit = opponentPlayer.field[targetIndex];
-          
+
           if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
             return attack(attackerIndex, targetIndex)(newState);
           } else {
@@ -1198,3 +1275,4 @@ function GameScene() {
 }
 
 export default GameScene;
+

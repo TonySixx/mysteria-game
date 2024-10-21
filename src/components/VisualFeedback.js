@@ -41,6 +41,11 @@ const SpellText = styled(AnimatedText)`
   color: #ff33ff;
 `;
 
+const BurnFeedback = styled(AnimatedText)`
+  color: #ff4500;
+  font-weight: bold;
+`;
+
 export const VisualFeedback = ({ type, value, position }) => {
   const [isVisible, setIsVisible] = useState(true);
 
@@ -73,6 +78,10 @@ export const VisualFeedback = ({ type, value, position }) => {
     case 'spell':
       TextComponent = SpellText;
       displayText = value;
+      break;
+    case 'burn':
+      TextComponent = BurnFeedback;
+      displayText = `${value} 🔥`;
       break;
     default:
       TextComponent = AnimatedText;
