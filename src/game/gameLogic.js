@@ -54,6 +54,13 @@ export const checkGameOver = (state) => {
 export const playCardCommon = (state, playerIndex, cardIndex, setLogEntries) => {
   const currentPlayer = state.players[playerIndex];
   const playedCard = currentPlayer.hand[cardIndex];
+
+  // Kontrola existence karty
+  if (!playedCard) {
+    console.error('Attempted to play undefined card:', { playerIndex, cardIndex });
+    return state;
+  }
+
   const playerName = playerIndex === 0 ? 'Player' : 'Enemy';
 
   // Speciální případ pro "The Coin"

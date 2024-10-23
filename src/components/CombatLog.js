@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
 
 const DraggableContainer = styled.div`
@@ -139,7 +139,7 @@ const formatTime = (timestamp) => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
-export const CombatLog = ({ logEntries }) => {
+ const _CombatLog = ({ logEntries }) => {
   const logRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 20, y: 90 });
@@ -214,3 +214,4 @@ export const CombatLog = ({ logEntries }) => {
     </DraggableContainer>
   );
 };
+export const CombatLog = memo(_CombatLog);
