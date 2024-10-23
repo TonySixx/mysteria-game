@@ -1,6 +1,6 @@
 import { addVisualFeedback } from '../utils/visualFeedbackUtils';
 
-export const attack = (attackerIndex, targetIndex, isHero = false, isAI = false, setVisualFeedbacks) => (state) => {
+export const attack = (attackerIndex, targetIndex, isHero = false, isAI = false, setVisualFeedbacksFunction) => (state) => {
   const newState = { ...state };
   const attacker = isAI ? newState.players[1].field[attackerIndex] : newState.players[0].field[attackerIndex];
   let defender;
@@ -29,14 +29,12 @@ export const attack = (attackerIndex, targetIndex, isHero = false, isAI = false,
       defender.hasDivineShield = false;
     } else {
       defender.health -= attacker.attack;
-      addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacks);
+      addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacksFunction);
     }
 
-    if (attacker.hasDivineShield) {
-      attacker.hasDivineShield = false;
-    } else {
+    if (!attacker.hasDivineShield) {
       attacker.health -= defender.attack;
-      addVisualFeedback('damage', defender.attack, attackerPosition, setVisualFeedbacks);
+      addVisualFeedback('damage', defender.attack, attackerPosition, setVisualFeedbacksFunction);
     }
 
     if (defender.health <= 0) {
@@ -55,7 +53,7 @@ export const attack = (attackerIndex, targetIndex, isHero = false, isAI = false,
     }
   } else {
     defender.health -= attacker.attack;
-    addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacks);
+    addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacksFunction);
   }
 
   attacker.hasAttacked = true;
@@ -69,4 +67,55 @@ export const attack = (attackerIndex, targetIndex, isHero = false, isAI = false,
   }
 
   return newState;
+};
+
+export const performAIAttacks = (state, setVisualFeedbacksFunction) => {
+  let updatedState = { ...state };
+  const aiField = updatedState.players[1].field;
+  const playerField = updatedState.players[0].field;
+  const playerHero = updatedState.players[0].hero;
+
+  const sortedAIUnits = aiField.sort((a, b) => {
+    if (a.hasAttacked !== b.hasAttacked) return a.hasAttacked ? 1 : -1;
+    return b.attack - a.attack;
+  });
+
+  sortedAIUnits.forEach((attacker, index) => {
+    if (!attacker.hasAttacked && !attacker.frozen) {
+      const target = chooseTarget(playerField, playerHero, attacker);
+      if (target) {
+        updatedState = attack(index, target.index, target.isHero, true, setVisualFeedbacksFunction)(updatedState);
+      }
+    }
+  });
+
+  return updatedState;
+};
+
+export const chooseTarget = (playerField, playerHero, attacker) => {
+  const tauntUnits = playerField.filter(unit => unit.hasTaunt);
+
+  if (tauntUnits.length > 0) {
+    const vulnerableTaunt = tauntUnits.find(unit => unit.health <= attacker.attack);
+    if (vulnerableTaunt) {
+      return { index: playerField.indexOf(vulnerableTaunt), isHero: false };
+    }
+    return { index: playerField.indexOf(tauntUnits.reduce((min, unit) => unit.health < min.health ? unit : min, tauntUnits[0])), isHero: false };
+  }
+
+  const vulnerableUnit = playerField.find(unit => unit.health <= attacker.attack);
+  if (vulnerableUnit) {
+    return { index: playerField.indexOf(vulnerableUnit), isHero: false };
+  }
+
+  if (playerHero.health <= attacker.attack) {
+    return { index: null, isHero: true };
+  }
+
+  if (playerField.length > 0) {
+    const highestAttackUnit = playerField.reduce((max, unit) => unit.attack > max.attack ? unit : max, playerField[0]);
+    return { index: playerField.indexOf(highestAttackUnit), isHero: false };
+  }
+
+  return { index: null, isHero: true };
 };

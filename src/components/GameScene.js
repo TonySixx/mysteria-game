@@ -26,6 +26,8 @@ import cardBackImage from '../assets/images/card-back.png';
 import { Card, UnitCard, SpellCard, Hero } from '../game/CardClasses';
 import { startNextTurn, checkGameOver } from '../game/gameLogic';
 import { attack } from '../game/combatLogic';
+import { playCardCommon, playCoin } from '../game/gameLogic';
+import { performAIAttacks, chooseTarget } from '../game/combatLogic';
 
 const GameBoard = styled.div`
   position: relative;
@@ -459,134 +461,6 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
   );
 }
 
-const playCardCommon = (state, playerIndex, cardIndex, setVisualFeedbacksSetter) => {
-  const currentPlayerIndex = playerIndex;
-  const opponentPlayerIndex = (playerIndex + 1) % 2;
-
-  const currentPlayer = { ...state.players[currentPlayerIndex] };
-  const opponentPlayer = { ...state.players[opponentPlayerIndex] };
-
-  const playedCard = currentPlayer.hand[cardIndex];
-
-  if (!playedCard) {
-    return state;
-  }
-
-  // Speciální případ pro "The Coin"
-  if (playedCard.name === 'The Coin') {
-    return playCoin(currentPlayerIndex, state, setVisualFeedbacksSetter);
-  }
-
-  if (currentPlayer.mana < playedCard.manaCost) {
-    return state;
-  }
-
-  currentPlayer.mana -= playedCard.manaCost;
-  currentPlayer.hand = currentPlayer.hand.filter((_, index) => index !== cardIndex);
-
-  if (playedCard.type === 'unit') {
-    const newUnit = { ...playedCard, hasAttacked: false, frozen: false };
-    currentPlayer.field = [...currentPlayer.field, newUnit];
-
-    // Aplikujeme efekt karty při zahrání
-    if (playedCard.effect) {
-      if (playedCard.effect.includes('Deals 2 damage when played')) {
-        opponentPlayer.hero.health -= 2;
-      }
-      if (playedCard.effect.includes('Freeze enemy when played')) {
-        const opponentField = opponentPlayer.field;
-        if (opponentField.length > 0) {
-          const randomIndex = Math.floor(Math.random() * opponentField.length);
-          opponentField[randomIndex] = {
-            ...opponentField[randomIndex],
-            frozen: true,
-            frozenTurns: 2
-          };
-        }
-      }
-      if (playedCard.effect.includes('Draw a card when played')) {
-        if (currentPlayer.deck.length > 0) {
-          const drawnCard = currentPlayer.deck.pop();
-          if (currentPlayer.hand.length < 10) {
-            currentPlayer.hand.push(drawnCard);
-          } else {
-            // Karta se "spálí", pokud má hráč již 10 karet v ruce
-            const spellPosition = { x: '50%', y: '50%' };
-            addVisualFeedback('burn', drawnCard.name, spellPosition, setVisualFeedbacksSetter);
-          }
-        }
-      }
-    }
-  } else if (playedCard.type === 'spell') {
-    // Aplikujeme efekt kouzla
-    if (playedCard.effect === 'Deal 6 damage') {
-      opponentPlayer.hero.health -= 6;
-    } else if (playedCard.effect === 'Restore 8 health') {
-      currentPlayer.hero.health = Math.min(30, currentPlayer.hero.health + 8);
-    } else if (playedCard.effect === 'Deal 3 damage') {
-      opponentPlayer.hero.health -= 3;
-    } else if (playedCard.effect === 'Draw 2 cards') {
-      const cardsToDraw = Math.min(2, currentPlayer.deck.length);
-      for (let i = 0; i < cardsToDraw; i++) {
-        const drawnCard = currentPlayer.deck.pop();
-        if (currentPlayer.hand.length < 10) {
-          currentPlayer.hand.push(drawnCard);
-        } else {
-          // Karta se "spálí", pokud má hráč již 10 karet v ruce
-          const spellPosition = { x: '50%', y: '50%' };
-          addVisualFeedback('burn', drawnCard.name, spellPosition, setVisualFeedbacksSetter);
-        }
-      }
-    } else if (playedCard.effect === 'Freeze all enemy minions') {
-      opponentPlayer.field = opponentPlayer.field.map(unit => ({
-        ...unit,
-        frozen: true,
-        frozenTurns: 2
-      }));
-    } else if (playedCard.effect === 'Deal 4 damage to all enemy minions') {
-      opponentPlayer.field = opponentPlayer.field.map(unit => ({
-        ...unit,
-        health: unit.health - 4
-      })).filter(unit => unit.health > 0);
-    }
-  }
-
-  // Přidáme vizuální zpětnou vazbu pro zahranou kartu
-  addSpellVisualFeedback(playedCard, setVisualFeedbacksSetter);
-
-  // Aplikujeme efekt Arcane Familiar
-  currentPlayer.field = currentPlayer.field.map(unit => {
-    const spellPosition = { x: '50%', y: '50%' };
-    if (unit.effect && unit.effect.includes('Gain +1 attack for each spell cast') && playedCard.type === 'spell') {
-      addVisualFeedback('spell', 'Gain +1 attack', spellPosition, setVisualFeedbacksSetter);
-      return { ...unit, attack: unit.attack + 1 };
-    }
-    return unit;
-  });
-
-  const updatedPlayers = [...state.players];
-  updatedPlayers[currentPlayerIndex] = currentPlayer;
-  updatedPlayers[opponentPlayerIndex] = opponentPlayer;
-
-  return {
-    ...state,
-    players: updatedPlayers,
-  };
-};
-
-const playCoin = (playerIndex, state, setVisualFeedbacksSetter) => {
-  const updatedPlayers = [...state.players];
-  const currentPlayer = { ...updatedPlayers[playerIndex] };
-  currentPlayer.mana += 1;
-  currentPlayer.hand = currentPlayer.hand.filter(card => card.name !== 'The Coin');
-  updatedPlayers[playerIndex] = currentPlayer;
-
-  const spellPosition = { x: '50%', y: '50%' };
-  addVisualFeedback('spell', 'Gain 1 Mana Crystal', spellPosition, setVisualFeedbacksSetter);
-
-  return { ...state, players: updatedPlayers };
-};
-
 function GameScene() {
   const [gameState, setGameState] = useState(() => {
     const initialState = {
@@ -796,8 +670,8 @@ function GameScene() {
       }
     });
 
-    // AI útočí
-    updatedState = performAIAttacks(updatedState);
+    // Předáváme setVisualFeedbacks jako funkci pro aktualizaci
+    updatedState = performAIAttacks(updatedState, setVisualFeedbacks);
 
     // Předáme tah hráči
     const nextPlayer = 0;
@@ -816,67 +690,6 @@ function GameScene() {
 
     console.log(`AI má po zahrání ${newState.players[1].mana} many.`);
     return checkGameOver(newState);
-  };
-
-  const performAIAttacks = (state) => {
-    let updatedState = { ...state };
-    const aiField = updatedState.players[1].field;
-    const playerField = updatedState.players[0].field;
-    const playerHero = updatedState.players[0].hero;
-
-    console.log('AI začíná útočit.');
-
-    const sortedAIUnits = aiField.sort((a, b) => {
-      if (a.hasAttacked !== b.hasAttacked) return a.hasAttacked ? 1 : -1;
-      return b.attack - a.attack;
-    });
-
-    sortedAIUnits.forEach((attacker, index) => {
-      if (!attacker.hasAttacked && !attacker.frozen) {
-        const target = chooseTarget(playerField, playerHero, attacker);
-        if (target) {
-          console.log(`AI útočí jednotkou ${attacker.name} (útok: ${attacker.attack}) na ${target.isHero ? 'hrdinu' : `jednotku ${playerField[target.index].name}`}`);
-          updatedState = attack(index, target.index, target.isHero, true, setVisualFeedbacks)(updatedState);
-        }
-      }
-    });
-
-    console.log('AI dokončilo útok.');
-    return updatedState;
-  };
-
-  const chooseTarget = (playerField, playerHero, attacker) => {
-    const tauntUnits = playerField.filter(unit => unit.hasTaunt);
-
-    if (tauntUnits.length > 0) {
-      // Útočíme na jednotku s Taunt, která může být zničena
-      const vulnerableTaunt = tauntUnits.find(unit => unit.health <= attacker.attack);
-      if (vulnerableTaunt) {
-        return { index: playerField.indexOf(vulnerableTaunt), isHero: false };
-      }
-      // Jinak útočíme na jednotku s Taunt s nejnižším zdravím
-      return { index: playerField.indexOf(tauntUnits.reduce((min, unit) => unit.health < min.health ? unit : min, tauntUnits[0])), isHero: false };
-    }
-
-    // Hledáme jednotku, kterou můžeme zničit
-    const vulnerableUnit = playerField.find(unit => unit.health <= attacker.attack);
-    if (vulnerableUnit) {
-      return { index: playerField.indexOf(vulnerableUnit), isHero: false };
-    }
-
-    // Pokud můžeme zničit hrdinu, uděláme to
-    if (playerHero.health <= attacker.attack) {
-      return { index: null, isHero: true };
-    }
-
-    // Útočíme na jednotku s nejvyšším útokem
-    if (playerField.length > 0) {
-      const highestAttackUnit = playerField.reduce((max, unit) => unit.attack > max.attack ? unit : max, playerField[0]);
-      return { index: playerField.indexOf(highestAttackUnit), isHero: false };
-    }
-
-    // Pokud není jiná možnost, útočíme na hrdinu
-    return { index: null, isHero: true };
   };
 
   const onDragEnd = (result) => {
