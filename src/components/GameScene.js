@@ -28,6 +28,7 @@ import { startNextTurn, checkGameOver } from '../game/gameLogic';
 import { attack } from '../game/combatLogic';
 import { playCardCommon, playCoin } from '../game/gameLogic';
 import { performAIAttacks, chooseTarget } from '../game/combatLogic';
+import { CombatLog } from './CombatLog';
 
 const GameBoard = styled.div`
   position: relative;
@@ -482,6 +483,7 @@ function GameScene() {
   const [visualFeedbacks, setVisualFeedbacks] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const notificationIdRef = useRef(0);
+  const [logEntries, setLogEntries] = useState([]);
 
   useEffect(() => {
     const handleContextMenu = (e) => {
@@ -582,8 +584,7 @@ function GameScene() {
       return prevState;
     }
 
-    const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex, setVisualFeedbacks);
-
+    const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex, setLogEntries);
     return checkGameOver(newState);
   };
 
@@ -609,7 +610,7 @@ function GameScene() {
     // Nejprve použijeme The Coin, pokud je k dispozici a je to výhodné
     const coinIndex = updatedState.players[1].hand.findIndex(card => card.name === 'The Coin');
     if (coinIndex !== -1 && updatedState.players[1].mana < 10 && updatedState.players[1].hand.some(card => card.manaCost === updatedState.players[1].mana + 1)) {
-      updatedState = playCoin(1, updatedState, setVisualFeedbacks);
+      updatedState = playCoin(1, updatedState, setLogEntries);
       console.log('AI použilo The Coin.');
       console.log(`AI nyní má ${updatedState.players[1].mana} many.`);
     }
@@ -670,8 +671,8 @@ function GameScene() {
       }
     });
 
-    // Předáváme setVisualFeedbacks jako funkci pro aktualizaci
-    updatedState = performAIAttacks(updatedState, setVisualFeedbacks);
+    // Předáváme setLogEntries místo setVisualFeedbacks
+    updatedState = performAIAttacks(updatedState, setLogEntries);
 
     // Předáme tah hráči
     const nextPlayer = 0;
@@ -686,7 +687,7 @@ function GameScene() {
     console.log(`AI hraje kartu: ${card?.name}`);
     console.log(`AI má před zahráním ${state.players[1].mana} many.`);
 
-    const newState = playCardCommon(state, 1, cardIndex, setVisualFeedbacks);
+    const newState = playCardCommon(state, 1, cardIndex, setLogEntries);
 
     console.log(`AI má po zahrání ${newState.players[1].mana} many.`);
     return checkGameOver(newState);
@@ -732,7 +733,7 @@ function GameScene() {
 
         if (destination.droppableId === 'opponentHero') {
           if (opponentTauntUnits.length === 0) {
-            return attack(attackerIndex, null, true, false, setVisualFeedbacks)(newState);
+            return attack(attackerIndex, null, true, false, setLogEntries)(newState);
           } else {
             addNotification('Nelze útočit na hrdinu, když je na poli jednotka s Taunt', 'warning');
             return newState;
@@ -742,7 +743,7 @@ function GameScene() {
           const targetUnit = opponentPlayer.field[targetIndex];
 
           if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
-            return attack(attackerIndex, targetIndex, false, false, setVisualFeedbacks)(newState);
+            return attack(attackerIndex, targetIndex, false, false, setLogEntries)(newState);
           } else {
             addNotification('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt', 'warning');
             return newState;
@@ -928,6 +929,7 @@ function GameScene() {
         </Droppable>
         <VisualFeedbackContainer feedbacks={visualFeedbacks} />
         <Notification notifications={notifications} />
+        <CombatLog logEntries={logEntries} />
       </GameBoard>
     </DragDropContext>
   );
