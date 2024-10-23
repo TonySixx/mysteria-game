@@ -1,32 +1,32 @@
 export class Card {
-  constructor(id, name, manaCost, type, image = null) {
+  constructor(id, name, manaCost, effect, image, rarity = 'common') {
     this.id = id;
     this.name = name;
     this.manaCost = manaCost;
-    this.type = type;
+    this.effect = effect;
     this.image = image;
+    this.rarity = rarity;
   }
 }
 
 export class UnitCard extends Card {
-  constructor(id, name, manaCost, attack, health, effect = null, image = null) {
-    super(id, name, manaCost, 'unit');
+  constructor(id, name, manaCost, attack, health, effect, image, rarity) {
+    super(id, name, manaCost, effect, image, rarity); // Předáváme rarity do nadřazené třídy
+    this.type = 'unit';
     this.attack = attack;
     this.health = health;
-    this.effect = effect;
+    this.maxHealth = health;
     this.hasAttacked = false;
-    this.hasTaunt = effect && effect.includes('Taunt');
-    this.hasDivineShield = effect && effect.includes('Divine Shield');
-    this.image = image;
+    this.hasTaunt = effect.toLowerCase().includes('taunt');
+    this.hasDivineShield = effect.toLowerCase().includes('divine shield');
     this.frozen = false;
   }
 }
 
 export class SpellCard extends Card {
-  constructor(id, name, manaCost, effect, image = null) {
-    super(id, name, manaCost, 'spell');
-    this.effect = effect;
-    this.image = image;
+  constructor(id, name, manaCost, effect, image, rarity) {
+    super(id, name, manaCost, effect, image, rarity); // Předáváme rarity do nadřazené třídy
+    this.type = 'spell';
   }
 }
 

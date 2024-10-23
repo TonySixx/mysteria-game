@@ -162,7 +162,12 @@ const DraggableCardWrapper = styled.div`
 const CardComponent = styled.div`
   width: ${(props) => (props.$isInHand ? '120px' : '140px')};
   height: ${(props) => (props.$isInHand ? '180px' : '200px')};
-  border: 2px solid ${(props) => (props.$isSelected ? '#ffd700' : props.$isTargetable ? '#ff9900' : '#000')};
+  border: 2px solid ${(props) => {
+    if (props.$isSelected) return '#ffd700';
+    if (props.$isTargetable) return '#ff9900';
+    if (props.$type === 'spell') return '#48176e';
+    return '#000';
+  }};
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -172,7 +177,7 @@ const CardComponent = styled.div`
   position: relative;
   transition: all 0.3s;
   transform-style: preserve-3d;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: ${(props) => props.$type === 'spell' ? '0 0 10px rgba(156, 39, 176, 0.3)' : '0 4px 8px rgba(0, 0, 0, 0.3)'};
   overflow: visible;
   
   &::before {
@@ -184,6 +189,7 @@ const CardComponent = styled.div`
     bottom: 0;
     background-image: url(${cardTexture});
     background-size: 130%;
+    border-radius: 8px;
     background-position: center;
     filter: grayscale(50%);
     z-index: -1;
@@ -220,6 +226,33 @@ const CardComponent = styled.div`
       box-shadow: 0 0 15px 5px #ff0000;
     }
   `}
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    background: ${props => {
+      switch (props.$rarity) {
+        case 'common':
+          return 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)';
+        case 'uncommon':
+          return 'linear-gradient(45deg, rgba(0,255,0,0.1) 0%, rgba(0,255,0,0) 100%)';
+        case 'rare':
+          return 'linear-gradient(45deg, rgba(0,112,255,0.1) 0%, rgba(0,112,255,0) 100%)';
+        case 'epic':
+          return 'linear-gradient(45deg, rgba(163,53,238,0.1) 0%, rgba(163,53,238,0) 100%)';
+        case 'legendary':
+          return 'linear-gradient(45deg, rgba(255,128,0,0.1) 0%, rgba(255,128,0,0) 100%)';
+        default:
+          return 'none';
+      }
+    }};
+  }
 `;
 
 const CardContent = styled.div`
@@ -254,12 +287,14 @@ const CardName = styled.div`
   text-align: center;
   font-size: 14px;
   margin-bottom: 5px;
-  color: white; // Změníme barvu na bílou
+  color: white;
+  position: relative;
+  z-index: 2; // Zvýšíme z-index, aby byl nad gemem
   text-shadow: 
     -1px -1px 0 #000,  
      1px -1px 0 #000,
     -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
+     1px  1px 0 #000;
 `;
 
 
@@ -349,6 +384,89 @@ const DivineShieldOverlay = styled.div`
   display: ${props => props.$isInHand ? 'none' : 'block'};
 `;
 
+const RarityGem = styled.div`
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(50% - 12px); // Posuneme gem na spodní hranu obrázku (obrázek má height: 50%)
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 14px;
+  z-index: 1; // Snížíme z-index, aby byl pod textem
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    background: ${props => {
+      switch (props.$rarity) {
+        case 'common':
+          return 'linear-gradient(135deg, #9e9e9e, #f5f5f5)';
+        case 'uncommon':
+          return 'linear-gradient(135deg, #1b5e20, #4caf50)';
+        case 'rare':
+          return 'linear-gradient(135deg, #0d47a1, #2196f3)';
+        case 'epic':
+          return 'linear-gradient(135deg, #4a148c, #9c27b0)';
+        case 'legendary':
+          return 'linear-gradient(135deg, #e65100, #ff9800)';
+        default:
+          return '#9e9e9e';
+      }
+    }};
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: ${props => {
+      switch (props.$rarity) {
+        case 'common':
+          return 'radial-gradient(circle, #ffffff 30%, #9e9e9e 70%)';
+        case 'uncommon':
+          return 'radial-gradient(circle, #81c784 30%, #1b5e20 70%)';
+        case 'rare':
+          return 'radial-gradient(circle, #64b5f6 30%, #0d47a1 70%)';
+        case 'epic':
+          return 'radial-gradient(circle, #ce93d8 30%, #4a148c 70%)';
+        case 'legendary':
+          return 'radial-gradient(circle, #ffb74d 30%, #e65100 70%)';
+        default:
+          return 'radial-gradient(circle, #ffffff 30%, #9e9e9e 70%)';
+      }
+    }};
+    border: 2px solid ${props => {
+      switch (props.$rarity) {
+        case 'common':
+          return '#f5f5f5';
+        case 'uncommon':
+          return '#4caf50';
+        case 'rare':
+          return '#2196f3';
+        case 'epic':
+          return '#9c27b0';
+        case 'legendary':
+          return '#ff9800';
+        default:
+          return '#f5f5f5';
+      }
+    }};
+    box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.5);
+  }
+`;
+
 function HeroDisplay({ hero, onClick, isTargetable }) {
   return (
     <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
@@ -436,13 +554,16 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
       $isInHand={isInHand}
       $isDragging={isDragging}
       $isFrozen={card.frozen}
+      $rarity={card.rarity}
     >
       <ManaCost>{card.manaCost}</ManaCost>
+      <RarityGem $rarity={card.rarity} />
       <CardImage style={{ borderRadius: '4px', border: '1px solid #000000' }} src={card.image} alt={card.name} />
       {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
         <CardName>{card.name}</CardName>
+        <CardDescription>{card.effect}</CardDescription>
         <CardStats>
           {card.type === 'unit' && (
             <>
@@ -451,7 +572,6 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
             </>
           )}
         </CardStats>
-        <CardDescription>{card.effect}</CardDescription>
       </CardContent>
       {card.frozen && (
         <FrozenOverlay>
@@ -513,25 +633,23 @@ function GameScene() {
 
   useEffect(() => {
     const initializeDeck = () => {
-      // Vytvoříme balíček s unikátními ID pro každého hráče
       const baseDeck = [
-        { id: 1, name: 'Fire Elemental', manaCost: 4, attack: 5, health: 6, effect: 'Deals 2 damage when played', image: fireElemental },
-        { id: 2, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
-        { id: 3, name: 'Fireball', manaCost: 4, effect: 'Deal 6 damage', image: fireball },
-        { id: 4, name: 'Healing Touch', manaCost: 3, effect: 'Restore 8 health', image: healingTouch },
-        { id: 5, name: 'Water Elemental', manaCost: 3, attack: 3, health: 5, effect: 'Freeze enemy when played', image: waterElemental },
-        { id: 6, name: 'Earth Golem', manaCost: 5, attack: 4, health: 8, effect: 'Taunt', image: earthGolem },
-        { id: 7, name: 'Lightning Bolt', manaCost: 2, effect: 'Deal 3 damage', image: lightningBolt },
-        { id: 8, name: 'Arcane Intellect', manaCost: 3, effect: 'Draw 2 cards', image: arcaneIntellect },
-        { id: 9, name: 'Nimble Sprite', manaCost: 1, attack: 1, health: 2, effect: 'Draw a card when played', image: nimbleSprite },
-        { id: 10, name: 'Arcane Familiar', manaCost: 1, attack: 1, health: 3, effect: 'Gain +1 attack for each spell cast', image: arcaneFamiliar },
-        { id: 11, name: 'Glacial Burst', manaCost: 3, effect: 'Freeze all enemy minions', image: glacialBurst },
-        { id: 12, name: 'Radiant Protector', manaCost: 6, attack: 4, health: 5, effect: 'Taunt, Divine Shield', image: radiantProtector },
-        { id: 13, name: 'Inferno Wave', manaCost: 7, effect: 'Deal 4 damage to all enemy minions', image: infernoWave },
-        { id: 14, name: 'Arcane Familiar', manaCost: 1, attack: 1, health: 3, effect: 'Gain +1 attack for each spell cast', image: arcaneFamiliar },
-        { id: 15, name: 'Nimble Sprite', manaCost: 1, attack: 1, health: 2, effect: 'Draw a card when played', image: nimbleSprite },
-        { id: 16, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
-
+        { id: 1, name: 'Fire Elemental', manaCost: 4, attack: 5, health: 6, effect: 'Deals 2 damage when played', image: fireElemental, rarity: 'rare' },
+        { id: 2, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer, rarity: 'common' },
+        { id: 3, name: 'Fireball', manaCost: 4, effect: 'Deal 6 damage', image: fireball, rarity: 'uncommon' },
+        { id: 4, name: 'Healing Touch', manaCost: 3, effect: 'Restore 8 health', image: healingTouch, rarity: 'common' },
+        { id: 5, name: 'Water Elemental', manaCost: 3, attack: 3, health: 5, effect: 'Freeze enemy when played', image: waterElemental, rarity: 'rare' },
+        { id: 6, name: 'Earth Golem', manaCost: 5, attack: 4, health: 8, effect: 'Taunt', image: earthGolem, rarity: 'uncommon' },
+        { id: 7, name: 'Lightning Bolt', manaCost: 2, effect: 'Deal 3 damage', image: lightningBolt, rarity: 'common' },
+        { id: 8, name: 'Arcane Intellect', manaCost: 3, effect: 'Draw 2 cards', image: arcaneIntellect, rarity: 'rare' },
+        { id: 9, name: 'Nimble Sprite', manaCost: 1, attack: 1, health: 2, effect: 'Draw a card when played', image: nimbleSprite, rarity: 'common' },
+        { id: 10, name: 'Arcane Familiar', manaCost: 1, attack: 1, health: 3, effect: 'Gain +1 attack for each spell cast', image: arcaneFamiliar, rarity: 'epic' },
+        { id: 11, name: 'Glacial Burst', manaCost: 3, effect: 'Freeze all enemy minions', image: glacialBurst, rarity: 'epic' },
+        { id: 12, name: 'Radiant Protector', manaCost: 6, attack: 4, health: 5, effect: 'Taunt, Divine Shield', image: radiantProtector, rarity: 'legendary' },
+        { id: 13, name: 'Inferno Wave', manaCost: 7, effect: 'Deal 4 damage to all enemy minions', image: infernoWave, rarity: 'epic' },
+        { id: 14, name: 'Arcane Familiar', manaCost: 1, attack: 1, health: 3, effect: 'Gain +1 attack for each spell cast', image: arcaneFamiliar, rarity: 'epic' },
+        { id: 15, name: 'Nimble Sprite', manaCost: 1, attack: 1, health: 2, effect: 'Draw a card when played', image: nimbleSprite, rarity: 'common' },
+        { id: 16, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer, rarity: 'common' },
       ];
 
       // Duplikujeme balíček pro každého hráče a přiřadíme unikátní ID
@@ -540,13 +658,35 @@ function GameScene() {
           let newCard;
           const uniqueId = `${playerIndex}-${card.id}`;
           if (card.attack !== undefined) {
-            newCard = new UnitCard(uniqueId, card.name, card.manaCost, card.attack, card.health, card.effect, card.image);
+            newCard = new UnitCard(
+              uniqueId, 
+              card.name, 
+              card.manaCost, 
+              card.attack, 
+              card.health, 
+              card.effect, 
+              card.image,
+              card.rarity // Přidáme předání vzácnosti
+            );
           } else {
-            newCard = new SpellCard(uniqueId, card.name, card.manaCost, card.effect, card.image);
+            newCard = new SpellCard(
+              uniqueId, 
+              card.name, 
+              card.manaCost, 
+              card.effect, 
+              card.image,
+              card.rarity // Přidáme předání vzácnosti
+            );
           }
           return newCard;
         });
       });
+
+      // Přidejte tento kód do useEffect po vytvoření balíčků:
+      console.log('Vytvořené karty:', playerDecks[0].map(card => ({
+        name: card.name,
+        rarity: card.rarity
+      })));
 
       return playerDecks;
     };
