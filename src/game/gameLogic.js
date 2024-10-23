@@ -1,37 +1,51 @@
 import { addSpellVisualFeedback, addVisualFeedback } from '../utils/visualFeedbackUtils';
 
 export const startNextTurn = (state, nextPlayer) => {
-  const newState = { ...state };
-  
-  // Zvýšíme maximální manu hráče, který je na tahu (max 10)
-  // Pouze pokud není první tah hry (turn > 1)
-  if (state.turn > 1) {
-    newState.players[nextPlayer].maxMana = Math.min(10, (newState.players[nextPlayer].maxMana || 0) + 1);
-  }
-  
-  // Obnovíme manu na maximum
-  newState.players[nextPlayer].mana = newState.players[nextPlayer].maxMana;
-  
-  // Obnovíme možnost útoku pro všechny jednotky hráče
-  newState.players[nextPlayer].field.forEach(card => {
-    card.hasAttacked = false;
-  });
-  
-  // Odstraníme efekt zmražení z jednotek hráče na začátku jeho tahu
-  newState.players[nextPlayer].field.forEach(card => {
-    if (card.frozen) {
-      card.frozen = false;
-    }
+  console.log('Začátek nového kola:', {
+    nextPlayer,
+    frozenCardsBeforeReset: state.players[nextPlayer].field
+      .filter(card => card.frozen)
+      .map(card => card.name)
   });
 
-  // Lízneme kartu na začátku tahu
+  const newState = { ...state };
+  
+  // Zvýšíme manu pro nového hráče
+  if (newState.players[nextPlayer].maxMana < 10) {
+    newState.players[nextPlayer].maxMana += 1;
+  }
+  newState.players[nextPlayer].mana = newState.players[nextPlayer].maxMana;
+
+  // Lízneme kartu
   if (newState.players[nextPlayer].deck.length > 0) {
     const drawnCard = newState.players[nextPlayer].deck.pop();
     newState.players[nextPlayer].hand.push(drawnCard);
   }
 
+  // Resetujeme hasAttacked pro nového hráče, ale zachováme frozen stav
+  newState.players[nextPlayer].field.forEach(card => {
+    card.hasAttacked = false;
+    // NERESETUJEME frozen stav - karta zůstává zmražená
+  });
+
+  // Aktualizujeme frozen stav pro předchozího hráče
+  const previousPlayer = (nextPlayer + 1) % 2;
+  newState.players[previousPlayer].field.forEach(card => {
+    if (card.frozen) {
+      // Rozmrazíme karty předchozího hráče, které byly zmražené
+      card.frozen = false;
+    }
+  });
+
   newState.currentPlayer = nextPlayer;
-  newState.turn++;
+  newState.turn += 1;
+
+  console.log('Konec nového kola:', {
+    nextPlayer,
+    frozenCardsAfterReset: newState.players[nextPlayer].field
+      .filter(card => card.frozen)
+      .map(card => card.name)
+  });
 
   return newState;
 };
@@ -195,4 +209,12 @@ export const playCoin = (playerIndex, state, setLogEntries) => {
   );
 
   return { ...state, players: updatedPlayers };
+};
+
+export const freezeCard = (card) => {
+  card.frozen = true;
+};
+
+export const isCardFrozen = (card) => {
+  return card.frozen === true;
 };

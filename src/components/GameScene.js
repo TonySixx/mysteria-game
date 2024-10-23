@@ -29,6 +29,18 @@ import { attack } from '../game/combatLogic';
 import { playCardCommon, playCoin } from '../game/gameLogic';
 import { performAIAttacks, chooseTarget } from '../game/combatLogic';
 import { CombatLog } from './CombatLog';
+import {
+  calculateFieldStrength,
+  categorizeDeckCards,
+  decideCoinUsage,
+  executeDefensiveStrategy,
+  executeAggressiveStrategy,
+  executeBalancedStrategy,
+  performOptimizedAttacks,
+  canKillOpponent,
+  executeLethalSequence,
+  finalizeTurn // Přidán import finalizeTurn
+} from '../game/aiStrategy';
 
 const GameBoard = styled.div`
   position: relative;
@@ -593,16 +605,16 @@ function GameScene() {
           deck: [], 
           hand: [], 
           field: [], 
-          mana: startingPlayer === 0 ? 1 : 1,  // Oba hráči začínají s 1 manou
-          maxMana: startingPlayer === 0 ? 1 : 1 // Oba hráči začínají s max 1 manou
+          mana: 1,     // Vždy začínáme s 1 manou
+          maxMana: 1   // Vždy začínáme s max 1 manou
         },
         { 
           hero: new Hero('AI', 30, null, aiHeroImage), 
           deck: [], 
           hand: [], 
           field: [], 
-          mana: startingPlayer === 1 ? 1 : 1,  // Oba hráči začínají s 1 manou
-          maxMana: startingPlayer === 1 ? 1 : 1 // Oba hráči začínají s max 1 manou
+          mana: 0,     // Druhý hráč začíná s 0 manou
+          maxMana: 0   // Druhý hráč začíná s 0 max manou
         }
       ],
       currentPlayer: startingPlayer,
@@ -666,7 +678,7 @@ function GameScene() {
               card.health, 
               card.effect, 
               card.image,
-              card.rarity // Přidáme předání vzácnosti
+              card.rarity // Přidáme přední vzácnosti
             );
           } else {
             newCard = new SpellCard(
@@ -699,15 +711,19 @@ function GameScene() {
         ...prevState,
         players: prevState.players.map((player, index) => {
           const deck = [...(index === 0 ? player1Deck : player2Deck)].sort(() => Math.random() - 0.5);
-          const hand = deck.splice(0, 3); // Oba hráči začínají se 3 kartami
+          const hand = deck.splice(0, 3);
+          
+          // Druhý hráč dostane The Coin
           if (index !== startingPlayer) {
             hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal', coinImage));
           }
+
           return {
             ...player,
             deck,
             hand,
-            mana: index === startingPlayer ? 1 : 0,
+            mana: index === startingPlayer ? 1 : 0,     // První hráč má 1 manu, druhý 0
+            maxMana: index === startingPlayer ? 1 : 0    // První hráč má max 1 manu, druhý 0
           };
         }),
       };
@@ -763,79 +779,52 @@ function GameScene() {
     let updatedState = { ...state };
     console.log(`AI začíná tah s ${updatedState.players[1].mana} manou.`);
 
-    // Nejprve použijeme The Coin, pokud je k dispozici a je to výhodné
-    const coinIndex = updatedState.players[1].hand.findIndex(card => card.name === 'The Coin');
-    if (coinIndex !== -1 && updatedState.players[1].mana < 10 && updatedState.players[1].hand.some(card => card.manaCost === updatedState.players[1].mana + 1)) {
-      updatedState = playCoin(1, updatedState, setLogEntries);
-      console.log('AI použilo The Coin.');
-      console.log(`AI nyní má ${updatedState.players[1].mana} many.`);
-    }
+    // Analýza herní situace
+    const aiPlayer = updatedState.players[1];
+    const humanPlayer = updatedState.players[0];
+    const gameAnalysis = {
+      aiHealth: aiPlayer.hero.health,
+      humanHealth: humanPlayer.hero.health,
+      aiFieldStrength: calculateFieldStrength(aiPlayer.field),
+      humanFieldStrength: calculateFieldStrength(humanPlayer.field),
+      isAiInDanger: aiPlayer.hero.health <= 10,
+      canKillHuman: canKillOpponent(aiPlayer, humanPlayer),
+    };
 
-    // Rozdělíme karty na jednotky a kouzla
-    const units = updatedState.players[1].hand.filter(card => card.type === 'unit');
-    const spells = updatedState.players[1].hand.filter(card => card.type === 'spell');
-
-    // Seřadíme jednotky podle priority
-    const sortedUnits = units.sort((a, b) => {
-      if (a.name === 'Radiant Protector' && updatedState.players[1].field.length < 7) return -1;
-      if (b.name === 'Radiant Protector' && updatedState.players[1].field.length < 7) return 1;
-      if (a.hasTaunt && !b.hasTaunt) return -1;
-      if (!a.hasTaunt && b.hasTaunt) return 1;
-      return (b.attack / b.manaCost) - (a.attack / a.manaCost);
-    });
-
-    // Nejprve se pokusíme vyložit jednotky
-    sortedUnits.forEach((card) => {
-      if (card.manaCost <= updatedState.players[1].mana && updatedState.players[1].field.length < 7) {
-        console.log(`AI se pokouší vyložit jednotku: ${card.name}`);
-        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
-      }
-    });
-
-    // Pokud máme dostatek many a méně než 3 jednotky na poli, pokusíme se vyložit další jednotku
-    if (updatedState.players[1].mana >= 3 && updatedState.players[1].field.length < 3) {
-      const affordableUnit = sortedUnits.find(card => card.manaCost <= updatedState.players[1].mana);
-      if (affordableUnit) {
-        console.log(`AI se pokouší vyložit další jednotku: ${affordableUnit.name}`);
-        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(affordableUnit));
+    // Použití The Coin strategicky
+    const coinIndex = aiPlayer.hand.findIndex(card => card.name === 'The Coin');
+    if (coinIndex !== -1) {
+      const shouldUseCoin = decideCoinUsage(aiPlayer, gameAnalysis);
+      if (shouldUseCoin) {
+        updatedState = playCoin(1, updatedState, setLogEntries);
+        console.log('AI použilo The Coin strategicky.');
       }
     }
 
-    // Nyní zvážíme použití kouzel
-    spells.forEach((card) => {
-      switch (card.name) {
-        case 'Glacial Burst':
-          if (updatedState.players[0].field.length >= 2 && card.manaCost <= updatedState.players[1].mana) {
-            console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
-            updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
-          }
-          break;
-        case 'Inferno Wave':
-          if (updatedState.players[0].field.length >= 3 && card.manaCost <= updatedState.players[1].mana) {
-            console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
-            updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
-          }
-          break;
-        default:
-          if (card.manaCost <= updatedState.players[1].mana &&
-            (updatedState.players[1].field.length >= 2 ||
-              (card.effect.includes('Restore') && updatedState.players[1].hero.health < 15))) {
-            console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
-            updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
-          }
-          break;
-      }
-    });
+    // Rozdělení karet podle typu a prioritizace
+    const cards = categorizeDeckCards(aiPlayer.hand);
+    
+    // Pokud máme lethal, provedeme vítěznou sekvenci
+    if (gameAnalysis.canKillHuman) {
+      updatedState = executeLethalSequence(updatedState, cards, playAICard);
+      return finalizeTurn(updatedState);
+    }
 
-    // Předáváme setLogEntries místo setVisualFeedbacks
-    updatedState = performAIAttacks(updatedState, setLogEntries);
+    // Výběr a provedení strategie
+    if (gameAnalysis.isAiInDanger) {
+      updatedState = executeDefensiveStrategy(updatedState, cards, gameAnalysis, playAICard);
+    } 
+    else if (gameAnalysis.aiFieldStrength > gameAnalysis.humanFieldStrength * 1.5) {
+      updatedState = executeAggressiveStrategy(updatedState, cards, gameAnalysis, playAICard);
+    }
+    else {
+      updatedState = executeBalancedStrategy(updatedState, cards, gameAnalysis, playAICard);
+    }
 
-    // Předáme tah hráči
-    const nextPlayer = 0;
-    updatedState = startNextTurn(updatedState, nextPlayer);
+    // Optimalizace útoků
+    updatedState = performOptimizedAttacks(updatedState, setLogEntries);
 
-    console.log(`AI končí tah s ${updatedState.players[1].mana} manou.`);
-    return updatedState;
+    return finalizeTurn(updatedState);
   };
 
   const playAICard = (state, cardIndex) => {
