@@ -1,43 +1,39 @@
 import { addSpellVisualFeedback, addVisualFeedback } from '../utils/visualFeedbackUtils';
 
 export const startNextTurn = (state, nextPlayer) => {
-  const newTurn = state.turn + 1;
-
-  let updatedPlayers = state.players.map((player, index) => {
-    let updatedPlayer = { ...player };
-    if (index === nextPlayer) {
-      updatedPlayer.mana = Math.min(10, player.mana + 1);
+  const newState = { ...state };
+  
+  // Zvýšíme maximální manu hráče, který je na tahu (max 10)
+  // Pouze pokud není první tah hry (turn > 1)
+  if (state.turn > 1) {
+    newState.players[nextPlayer].maxMana = Math.min(10, (newState.players[nextPlayer].maxMana || 0) + 1);
+  }
+  
+  // Obnovíme manu na maximum
+  newState.players[nextPlayer].mana = newState.players[nextPlayer].maxMana;
+  
+  // Obnovíme možnost útoku pro všechny jednotky hráče
+  newState.players[nextPlayer].field.forEach(card => {
+    card.hasAttacked = false;
+  });
+  
+  // Odstraníme efekt zmražení z jednotek hráče na začátku jeho tahu
+  newState.players[nextPlayer].field.forEach(card => {
+    if (card.frozen) {
+      card.frozen = false;
     }
-    updatedPlayer.field = updatedPlayer.field.map((unit) => {
-      let updatedUnit = { ...unit };
-      updatedUnit.hasAttacked = false;
-
-      if (updatedUnit.frozen) {
-        updatedUnit.frozenTurns = (updatedUnit.frozenTurns || 1) - 1;
-        if (updatedUnit.frozenTurns <= 0) {
-          updatedUnit.frozen = false;
-          delete updatedUnit.frozenTurns;
-        }
-      }
-
-      return updatedUnit;
-    });
-    return updatedPlayer;
   });
 
-  if (updatedPlayers[nextPlayer].deck.length > 0) {
-    const drawnCard = updatedPlayers[nextPlayer].deck.pop();
-    if (updatedPlayers[nextPlayer].hand.length < 10) {
-      updatedPlayers[nextPlayer].hand.push(drawnCard);
-    }
+  // Lízneme kartu na začátku tahu
+  if (newState.players[nextPlayer].deck.length > 0) {
+    const drawnCard = newState.players[nextPlayer].deck.pop();
+    newState.players[nextPlayer].hand.push(drawnCard);
   }
 
-  return {
-    ...state,
-    currentPlayer: nextPlayer,
-    turn: newTurn,
-    players: updatedPlayers,
-  };
+  newState.currentPlayer = nextPlayer;
+  newState.turn++;
+
+  return newState;
 };
 
 export const checkGameOver = (state) => {

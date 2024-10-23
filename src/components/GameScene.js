@@ -464,12 +464,28 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
 
 function GameScene() {
   const [gameState, setGameState] = useState(() => {
+    const startingPlayer = Math.random() < 0.5 ? 0 : 1;
+    
     const initialState = {
       players: [
-        { hero: new Hero('Player', 30, null, playerHeroImage), deck: [], hand: [], field: [], mana: 0 },
-        { hero: new Hero('AI', 30, null, aiHeroImage), deck: [], hand: [], field: [], mana: 0 },
+        { 
+          hero: new Hero('Player', 30, null, playerHeroImage), 
+          deck: [], 
+          hand: [], 
+          field: [], 
+          mana: startingPlayer === 0 ? 1 : 1,  // Oba hráči začínají s 1 manou
+          maxMana: startingPlayer === 0 ? 1 : 1 // Oba hráči začínají s max 1 manou
+        },
+        { 
+          hero: new Hero('AI', 30, null, aiHeroImage), 
+          deck: [], 
+          hand: [], 
+          field: [], 
+          mana: startingPlayer === 1 ? 1 : 1,  // Oba hráči začínají s 1 manou
+          maxMana: startingPlayer === 1 ? 1 : 1 // Oba hráči začínají s max 1 manou
+        }
       ],
-      currentPlayer: Math.random() < 0.5 ? 0 : 1, // Náhodný začínající hráč
+      currentPlayer: startingPlayer,
       turn: 1,
       gameOver: false,
       winner: null,
@@ -796,7 +812,7 @@ function GameScene() {
         <PlayerInfo>
           <DeckAndManaContainer>
             <DeckContainer>{gameState.players[1].deck.length}</DeckContainer>
-            <ManaInfo>🔮 {gameState.players[1].mana}</ManaInfo>
+            <ManaInfo>🔮 {gameState.players[1].mana}/{gameState.players[1].maxMana}</ManaInfo>
           </DeckAndManaContainer>
         </PlayerInfo>
 
@@ -891,9 +907,10 @@ function GameScene() {
         <PlayerInfo>
           <DeckAndManaContainer>
             <DeckContainer>{gameState.players[0].deck.length}</DeckContainer>
-            <ManaInfo>🔮 {gameState.players[0].mana}</ManaInfo>
+            <ManaInfo>🔮 {gameState.players[0].mana}/{gameState.players[0].maxMana}</ManaInfo>
           </DeckAndManaContainer>
           <EndTurnButton onClick={endTurn}>Ukončit tah</EndTurnButton>
+
         </PlayerInfo>
 
         <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
