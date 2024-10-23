@@ -23,54 +23,9 @@ import radiantProtector from '../assets/images/radiant-protector.png';
 import infernoWave from '../assets/images/inferno-wave.png';
 import { addSpellVisualFeedback, addVisualFeedback } from '../utils/visualFeedbackUtils';
 import cardBackImage from '../assets/images/card-back.png';
-
-
-
-
-// Základní třída pro kartu
-class Card {
-  constructor(id, name, manaCost, type, image = null) {
-    this.id = id;
-    this.name = name;
-    this.manaCost = manaCost;
-    this.type = type;
-    this.image = image;
-  }
-}
-
-// Tída pro jednotku
-class UnitCard extends Card {
-  constructor(id, name, manaCost, attack, health, effect = null, image = null) {
-    super(id, name, manaCost, 'unit');
-    this.attack = attack;
-    this.health = health;
-    this.effect = effect;
-    this.hasAttacked = false;
-    this.hasTaunt = effect && effect.includes('Taunt');
-    this.hasDivineShield = effect && effect.includes('Divine Shield');
-    this.image = image;
-    this.frozen = false;
-  }
-}
-
-// Třída pro kouzlo
-class SpellCard extends Card {
-  constructor(id, name, manaCost, effect, image = null) {
-    super(id, name, manaCost, 'spell');
-    this.effect = effect;
-    this.image = image;
-  }
-}
-
-// Třída pro hrdinu
-class Hero {
-  constructor(name, health = 30, specialAbility = null, image) {
-    this.name = name;
-    this.health = health;
-    this.specialAbility = specialAbility;
-    this.image = image;
-  }
-}
+import { Card, UnitCard, SpellCard, Hero } from '../game/CardClasses';
+import { startNextTurn, checkGameOver } from '../game/gameLogic';
+import { attack } from '../game/combatLogic';
 
 const GameBoard = styled.div`
   position: relative;
@@ -734,52 +689,6 @@ function GameScene() {
     });
   }, []);
 
-  const startNextTurn = (state, nextPlayer) => {
-    const newTurn = state.turn + 1;
-
-    let updatedPlayers = state.players.map((player, index) => {
-      let updatedPlayer = { ...player };
-      if (index === nextPlayer) {
-        updatedPlayer.mana = Math.min(10, player.mana + 1);
-      }
-      updatedPlayer.field = updatedPlayer.field.map((unit) => {
-        let updatedUnit = { ...unit };
-        updatedUnit.hasAttacked = false;
-
-        // Pokud je jednotka zmrazená, snížíme počet kol zmrazení o 1
-        if (updatedUnit.frozen) {
-          updatedUnit.frozenTurns = (updatedUnit.frozenTurns || 1) - 1;
-          if (updatedUnit.frozenTurns <= 0) {
-            updatedUnit.frozen = false;
-            delete updatedUnit.frozenTurns;
-          }
-        }
-
-        return updatedUnit;
-      });
-      return updatedPlayer;
-    });
-
-    // Přidání karty do ruky nového hráče
-    if (updatedPlayers[nextPlayer].deck.length > 0) {
-      const drawnCard = updatedPlayers[nextPlayer].deck.pop();
-      if (updatedPlayers[nextPlayer].hand.length < 10) {
-        updatedPlayers[nextPlayer].hand.push(drawnCard);
-      } else {
-        // Karta se "spálí", pokud má hráč již 10 karet v ruce
-        addNotification(`Karta "${drawnCard.name}" byla spálena, protože máte plnou ruku`, 'warning');
-      }
-    }
-
-    return {
-      ...state,
-      currentPlayer: nextPlayer,
-      turn: newTurn,
-      players: updatedPlayers,
-    };
-  };
-
-
   const addNotification = useCallback((message, type = 'info') => {
     const id = notificationIdRef.current++;
     setNotifications(prev => [...prev, { id, message, type }]);
@@ -802,99 +711,6 @@ function GameScene() {
     const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex, setVisualFeedbacks);
 
     return checkGameOver(newState);
-  };
-
-
-
-  const attack = (attackerIndex, targetIndex, isHero = false, isAI = false) => (state) => {
-    const newState = { ...state };
-    const attacker = isAI ? newState.players[1].field[attackerIndex] : newState.players[0].field[attackerIndex];
-    let defender;
-
-    if (isHero) {
-      defender = isAI ? newState.players[0].hero : newState.players[1].hero;
-    } else {
-      defender = isAI ? newState.players[0].field[targetIndex] : newState.players[1].field[targetIndex];
-    }
-
-    // Kontrola, zda útočník a obránce existují
-    if (!attacker || !defender) {
-      console.error('Útočník nebo obránce neexistuje:', { attacker, defender, attackerIndex, targetIndex, isHero, isAI });
-      return newState;  // Vrátíme nezměněný stav
-    }
-
-    const attackerPosition = isAI
-      ? { x: `calc(50% + ${attackerIndex * 10}% - 20px)`, y: '25%' }
-      : { x: `calc(10% + ${attackerIndex * 10}% - 20px)`, y: '55%' };
-    const defenderPosition = isHero
-      ? { x: 'calc(50% - 20px)', y: isAI ? '75%' : '15%' }
-      : isAI
-        ? { x: `calc(10% + ${targetIndex * 10}% - 20px)`, y: '55%' }
-        : { x: `calc(50% + ${targetIndex * 10}% - 20px)`, y: '25%' };
-
-    if (!isHero) {
-      if (defender.hasDivineShield) {
-        defender.hasDivineShield = false;
-      } else {
-        defender.health -= attacker.attack;
-        addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacks);
-      }
-
-      if (attacker.hasDivineShield) {
-        attacker.hasDivineShield = false;
-      } else {
-        attacker.health -= defender.attack;
-
-        addVisualFeedback('damage', defender.attack, attackerPosition, setVisualFeedbacks);
-      }
-
-      // Odstranění zničených jednotek
-      if (defender.health <= 0) {
-        if (isAI) {
-          newState.players[0].field = newState.players[0].field.filter((_, index) => index !== targetIndex);
-        } else {
-          newState.players[1].field = newState.players[1].field.filter((_, index) => index !== targetIndex);
-        }
-      }
-      if (attacker.health <= 0) {
-        if (isAI) {
-          newState.players[1].field = newState.players[1].field.filter((_, index) => index !== attackerIndex);
-        } else {
-          newState.players[0].field = newState.players[0].field.filter((_, index) => index !== attackerIndex);
-        }
-      }
-    } else {
-      defender.health -= attacker.attack;
-      addVisualFeedback('damage', attacker.attack, defenderPosition, setVisualFeedbacks);
-    }
-
-    attacker.hasAttacked = true;
-
-    // Kontrola konce hry
-    if (newState.players[1].hero.health <= 0) {
-      newState.gameOver = true;
-      newState.winner = 'Player';
-    } else if (newState.players[0].hero.health <= 0) {
-      newState.gameOver = true;
-      newState.winner = 'AI';
-    }
-
-    return newState;
-  };
-
-  const checkGameOver = (state) => {
-    const player1Health = state.players[0].hero.health;
-    const player2Health = state.players[1].hero.health;
-
-    if (player1Health <= 0 || player2Health <= 0) {
-      return {
-        ...state,
-        gameOver: true,
-        winner: player1Health > 0 ? 'Player 1' : 'Player 2',
-      };
-    }
-
-    return state;
   };
 
   const endTurn = () => {
@@ -1010,7 +826,6 @@ function GameScene() {
 
     console.log('AI začíná útočit.');
 
-    // Seřadíme jednotky AI podle priority útoku
     const sortedAIUnits = aiField.sort((a, b) => {
       if (a.hasAttacked !== b.hasAttacked) return a.hasAttacked ? 1 : -1;
       return b.attack - a.attack;
@@ -1021,7 +836,7 @@ function GameScene() {
         const target = chooseTarget(playerField, playerHero, attacker);
         if (target) {
           console.log(`AI útočí jednotkou ${attacker.name} (útok: ${attacker.attack}) na ${target.isHero ? 'hrdinu' : `jednotku ${playerField[target.index].name}`}`);
-          updatedState = attack(index, target.index, target.isHero, true)(updatedState);
+          updatedState = attack(index, target.index, target.isHero, true, setVisualFeedbacks)(updatedState);
         }
       }
     });
@@ -1103,20 +918,18 @@ function GameScene() {
         const opponentTauntUnits = opponentPlayer.field.filter(unit => unit.hasTaunt);
 
         if (destination.droppableId === 'opponentHero') {
-          // Útok na hrdinu
           if (opponentTauntUnits.length === 0) {
-            return attack(attackerIndex, null, true)(newState);
+            return attack(attackerIndex, null, true, false, setVisualFeedbacks)(newState);
           } else {
             addNotification('Nelze útočit na hrdinu, když je na poli jednotka s Taunt', 'warning');
             return newState;
           }
         } else if (destination.droppableId.startsWith('opponentCard-')) {
-          // Útok na nepřátelskou jednotku
           const targetIndex = parseInt(destination.droppableId.split('-')[1]);
           const targetUnit = opponentPlayer.field[targetIndex];
 
           if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
-            return attack(attackerIndex, targetIndex)(newState);
+            return attack(attackerIndex, targetIndex, false, false, setVisualFeedbacks)(newState);
           } else {
             addNotification('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt', 'warning');
             return newState;
@@ -1308,4 +1121,3 @@ function GameScene() {
 }
 
 export default GameScene;
-

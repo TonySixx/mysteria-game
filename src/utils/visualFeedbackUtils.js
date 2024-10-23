@@ -1,56 +1,67 @@
-export const addVisualFeedback = (type, value, position, setVisualFeedbacksSetter) => {
-    const id = Date.now(); // Vytvoříme unikátní ID pro každou zpětnou vazbu
-    setVisualFeedbacksSetter(prev => [...prev, { id, type, value, position }]);
+let feedbackId = 0;
 
-   var timer = setTimeout(() => {
-        setVisualFeedbacksSetter(prev => prev.filter(feedback => feedback.id !== id));
-        clearTimeout(timer);    
-    }, 2500);
+export const addVisualFeedback = (type, value, position, setVisualFeedbacks) => {
+  const newFeedback = {
+    id: feedbackId++,
+    type,
+    value,
+    position,
+  };
+
+  setVisualFeedbacks(prev => [...prev, newFeedback]);
+
+  const timer = setTimeout(() => {
+    setVisualFeedbacks(prev => prev.filter(f => f.id !== newFeedback.id));
+    clearTimeout(timer); // Zničíme timer po dokončení akce
+  }, 3500);
 };
 
-export const addSpellVisualFeedback = (playedCard, setVisualFeedbacksSetter) => {
-    const spellPosition = { x: '50%', y: '50%' };
-    const heroPosition = { x: '50%', y: '10%' };
-    const playerPosition = { x: '50%', y: '80%' };
-
-    switch (playedCard.effect) {
-        case 'Restore 8 health':
-            addVisualFeedback('heal', 8, playerPosition, setVisualFeedbacksSetter);
-            break;
-        case 'Deal 6 damage':
-        case 'Deal 3 damage':
-            addVisualFeedback('damage', parseInt(playedCard.effect.match(/\d+/)[0]), heroPosition, setVisualFeedbacksSetter);
-            break;
-        case 'Draw 2 cards':
-            addVisualFeedback('draw', 2, spellPosition, setVisualFeedbacksSetter);
-            break;
-        case 'Freeze all enemy minions':
-            addVisualFeedback('spell', 'Freeze All', heroPosition, setVisualFeedbacksSetter);
-            break;
-        case 'Deal 4 damage to all enemy minions':
-            addVisualFeedback('damage', 4, heroPosition, setVisualFeedbacksSetter);
-            break;
-        case 'burn':
-            addVisualFeedback('burn', `Card burned`, spellPosition, setVisualFeedbacksSetter);
-            break;
-        default:
-            console.log('No effect found');
-    }
-
-    // Přidáme vizuální zpětnou vazbu pro nové karty
-    if (playedCard.name === 'Nimble Sprite') {
-        addVisualFeedback('draw', 1, spellPosition, setVisualFeedbacksSetter);
-    }
-    if (playedCard.name === 'Arcane Familiar') {
-        addVisualFeedback('spell', 'Arcane Familiar', spellPosition, setVisualFeedbacksSetter);
-    }
-    if (playedCard.name === 'Glacial Burst') {
-        addVisualFeedback('spell', 'Freeze All', heroPosition, setVisualFeedbacksSetter);
-    }
-    if (playedCard.name === 'Radiant Protector') {
-        addVisualFeedback('spell', 'Divine Shield', spellPosition, setVisualFeedbacksSetter);
-    }
-    if (playedCard.name === 'Inferno Wave') {
-        addVisualFeedback('damage', 4, heroPosition, setVisualFeedbacksSetter);
-    }
+export const addSpellVisualFeedback = (card, setVisualFeedbacks) => {
+  const spellPosition = { x: '50%', y: '50%' };
+  
+  switch (card.name) {
+    case 'Fireball':
+      addVisualFeedback('damage', 6, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Lightning Bolt':
+      addVisualFeedback('damage', 3, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Healing Touch':
+      addVisualFeedback('heal', 8, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Arcane Intellect':
+      addVisualFeedback('draw', 2, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Glacial Burst':
+      addVisualFeedback('freeze', 'all', spellPosition, setVisualFeedbacks);
+      break;
+    case 'Inferno Wave':
+      addVisualFeedback('damage', 4, spellPosition, setVisualFeedbacks);
+      break;
+    case 'The Coin':
+      addVisualFeedback('mana', 1, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Fire Elemental':
+      addVisualFeedback('damage', 2, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Water Elemental':
+      addVisualFeedback('freeze', 1, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Nimble Sprite':
+      addVisualFeedback('draw', 1, spellPosition, setVisualFeedbacks);
+      break;
+    case 'Arcane Familiar':
+      addVisualFeedback('buff', '+1 attack', spellPosition, setVisualFeedbacks);
+      break;
+    case 'Shield Bearer':
+    case 'Earth Golem':
+      addVisualFeedback('taunt', 'Taunt', spellPosition, setVisualFeedbacks);
+      break;
+    case 'Radiant Protector':
+      addVisualFeedback('shield', 'Divine Shield', spellPosition, setVisualFeedbacks);
+      addVisualFeedback('taunt', 'Taunt', spellPosition, setVisualFeedbacks);
+      break;
+    default:
+      addVisualFeedback('spell', card.name, spellPosition, setVisualFeedbacks);
+  }
 };

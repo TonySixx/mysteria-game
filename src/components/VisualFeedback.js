@@ -1,104 +1,84 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import styled, { keyframes } from 'styled-components';
 
-const floatUpAndFade = keyframes`
-  0% {
-    transform: translateY(0) scale(1);
+const fadeOut = keyframes`
+  from {
     opacity: 1;
+    transform: translateY(0);
   }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-30px) scale(0.7);
+  to {
     opacity: 0;
+    transform: translateY(-20px);
   }
 `;
 
-const AnimatedText = styled.div`
+const FeedbackText = styled.div`
   position: absolute;
-  font-size: 36px;
+  color: ${props => {
+    switch (props.$type) {
+      case 'damage':
+        return '#ff0000';
+      case 'heal':
+        return '#00ff00';
+      case 'mana':
+        return '#4fc3f7';
+      case 'freeze':
+        return '#00ffff';
+      case 'draw':
+        return '#ffd700';
+      case 'buff':
+        return '#ff00ff';
+      case 'taunt':
+        return '#8b4513';
+      case 'shield':
+        return '#ffd700';
+      default:
+        return '#ffffff';
+    }
+  }};
+  font-size: 24px;
   font-weight: bold;
+  text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.5);
+  animation: ${fadeOut} 3s forwards;
   pointer-events: none;
-  animation: ${floatUpAndFade} 2.5s ease-out forwards;
-  text-shadow: 2px 2px 4px #000;
   z-index: 1000;
+  left: ${props => props.$position.x};
+  top: ${props => props.$position.y};
 `;
 
-const DamageText = styled(AnimatedText)`
-  color: #ff3333;
-`;
-
-const HealText = styled(AnimatedText)`
-  color: #33ff33;
-`;
-
-const DrawText = styled(AnimatedText)`
-  color: #3333ff;
-`;
-
-const SpellText = styled(AnimatedText)`
-  color: #ff33ff;
-`;
-
-const BurnFeedback = styled(AnimatedText)`
-  color: #ff4500;
-  font-weight: bold;
-`;
-
-export const VisualFeedback = ({ type, value, position }) => {
-  const [isVisible, setIsVisible] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(false);
-    }, 2500);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!isVisible) return null;
-
-  let TextComponent;
-  let displayText;
-
-  switch (type) {
-    case 'damage':
-      TextComponent = DamageText;
-      displayText = `-${value}`;
-      break;
-    case 'heal':
-      TextComponent = HealText;
-      displayText = `+${value}`;
-      break;
-    case 'draw':
-      TextComponent = DrawText;
-      displayText = `+${value} karty`;
-      break;
-    case 'spell':
-      TextComponent = SpellText;
-      displayText = value;
-      break;
-    case 'burn':
-      TextComponent = BurnFeedback;
-      displayText = `${value} 🔥`;
-      break;
-    default:
-      TextComponent = AnimatedText;
-      displayText = value;
-  }
-
+export const VisualFeedbackContainer = ({ feedbacks }) => {
   return (
-    <TextComponent style={{ left: position.x, top: position.y }}>
-      {displayText}
-    </TextComponent>
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+      {feedbacks.map((feedback, index) => (
+        <FeedbackText
+          key={`${feedback.id}-${index}`}
+          $type={feedback.type}
+          $position={feedback.position}
+        >
+          {(() => {
+            switch (feedback.type) {
+              case 'damage':
+                return `-${feedback.value}`;
+              case 'heal':
+                return `+${feedback.value} ❤️`;
+              case 'mana':
+                return `+${feedback.value} 🔮`;
+              case 'freeze':
+                return feedback.value === 'all' ? '❄️❄️❄️' : '❄️';
+              case 'draw':
+                return `+${feedback.value} 🎴`;
+              case 'buff':
+                return `${feedback.value} ⚔️`;
+              case 'taunt':
+                return '🛡️';
+              case 'shield':
+                return '✨';
+              default:
+                return feedback.value;
+            }
+          })()}
+        </FeedbackText>
+      ))}
+    </div>
   );
 };
-
-export const VisualFeedbackContainer = ({ feedbacks }) => (
-  <>
-    {feedbacks.map(feedback => (
-      <VisualFeedback key={feedback.id} {...feedback} />
-    ))}
-  </>
-);
