@@ -730,7 +730,7 @@ function GameScene() {
 
       // Pokud AI začíná, provedeme jeho tah
       if (startingPlayer === 1) {
-        return performAITurn(updatedState);
+        return performAITurn(updatedState,setLogEntries);
       }
 
       return updatedState;
@@ -756,6 +756,7 @@ function GameScene() {
       return prevState;
     }
 
+    // Předáme setLogEntries do playCardCommon
     const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex, setLogEntries);
     return checkGameOver(newState);
   };
@@ -765,9 +766,8 @@ function GameScene() {
       const nextPlayer = (prevState.currentPlayer + 1) % 2;
       const updatedState = startNextTurn(prevState, nextPlayer);
 
-      // Pokud je na tahu AI, provedeme jeho tah
       if (nextPlayer === 1 && prevState.isAIOpponent) {
-        return performAITurn(updatedState);
+        return performAITurn(updatedState, setLogEntries);
       }
 
       return updatedState;
@@ -775,7 +775,7 @@ function GameScene() {
     setSelectedAttackerIndex(null);
   };
 
-  const performAITurn = (state) => {
+  const performAITurn = useCallback((state, setLogEntriesFunc) => {
     let updatedState = { ...state };
     console.log(`AI začíná tah s ${updatedState.players[1].mana} manou.`);
 
@@ -796,7 +796,7 @@ function GameScene() {
     if (coinIndex !== -1) {
       const shouldUseCoin = decideCoinUsage(aiPlayer, gameAnalysis);
       if (shouldUseCoin) {
-        updatedState = playCoin(1, updatedState, setLogEntries);
+        updatedState = playCoin(1, updatedState, setLogEntriesFunc);
         console.log('AI použilo The Coin strategicky.');
       }
     }
@@ -804,30 +804,33 @@ function GameScene() {
     // Rozdělení karet podle typu a prioritizace
     const cards = categorizeDeckCards(aiPlayer.hand);
     
+    // Vytvoříme wrapper pro playAICard, který automaticky předá setLogEntries
+    const playAICardWithLogs = (state, cardIndex) => playAICard(state, cardIndex, setLogEntriesFunc);
+    
     // Pokud máme lethal, provedeme vítěznou sekvenci
     if (gameAnalysis.canKillHuman) {
-      updatedState = executeLethalSequence(updatedState, cards, playAICard);
+      updatedState = executeLethalSequence(updatedState, cards, playAICardWithLogs, setLogEntriesFunc);
       return finalizeTurn(updatedState);
     }
 
     // Výběr a provedení strategie
     if (gameAnalysis.isAiInDanger) {
-      updatedState = executeDefensiveStrategy(updatedState, cards, gameAnalysis, playAICard);
+      updatedState = executeDefensiveStrategy(updatedState, cards, gameAnalysis, playAICardWithLogs, setLogEntriesFunc);
     } 
     else if (gameAnalysis.aiFieldStrength > gameAnalysis.humanFieldStrength * 1.5) {
-      updatedState = executeAggressiveStrategy(updatedState, cards, gameAnalysis, playAICard);
+      updatedState = executeAggressiveStrategy(updatedState, cards, gameAnalysis, playAICardWithLogs, setLogEntriesFunc);
     }
     else {
-      updatedState = executeBalancedStrategy(updatedState, cards, gameAnalysis, playAICard);
+      updatedState = executeBalancedStrategy(updatedState, cards, gameAnalysis, playAICardWithLogs, setLogEntriesFunc);
     }
 
-    // Optimalizace útoků
-    updatedState = performOptimizedAttacks(updatedState, setLogEntries);
+    // Předáme setLogEntries do performOptimizedAttacks
+    updatedState = performOptimizedAttacks(updatedState, setLogEntriesFunc);
 
     return finalizeTurn(updatedState);
-  };
+  }, []);
 
-  const playAICard = (state, cardIndex) => {
+  const playAICard = (state, cardIndex, setLogEntries) => { // Přidáme setLogEntries jako parametr
     const card = state.players[1].hand[cardIndex];
     console.log(`AI hraje kartu: ${card?.name}`);
     console.log(`AI má před zahráním ${state.players[1].mana} many.`);
@@ -878,6 +881,7 @@ function GameScene() {
 
         if (destination.droppableId === 'opponentHero') {
           if (opponentTauntUnits.length === 0) {
+            // Předáme setLogEntries do attack
             return attack(attackerIndex, null, true, false, setLogEntries)(newState);
           } else {
             addNotification('Nelze útočit na hrdinu, když je na poli jednotka s Taunt', 'warning');
@@ -888,6 +892,7 @@ function GameScene() {
           const targetUnit = opponentPlayer.field[targetIndex];
 
           if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
+            // Předáme setLogEntries do attack
             return attack(attackerIndex, targetIndex, false, false, setLogEntries)(newState);
           } else {
             addNotification('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt', 'warning');

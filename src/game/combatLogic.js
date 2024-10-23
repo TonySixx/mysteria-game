@@ -1,91 +1,94 @@
-import { addCombatLogEntry, addVisualFeedback } from '../utils/visualFeedbackUtils';
+import { addCombatLogEntry } from '../utils/visualFeedbackUtils';
+import { checkGameOver } from './gameLogic';
 
-export const attack = (attackerIndex, targetIndex, isHeroTarget, isAIAttacker, setLogEntries) => (state) => {
-  const attackerPlayerIndex = isAIAttacker ? 1 : 0;
-  const attackerPlayer = state.players[attackerPlayerIndex];
-  const defenderPlayer = state.players[isAIAttacker ? 0 : 1];
-  const attacker = attackerPlayer.field[attackerIndex];
-  const playerName = isAIAttacker ? 'Enemy' : 'Player';
-
-  // Kontrola existence útočníka
-  if (!attacker) {
-    console.error('Attacker not found:', { attackerIndex, attackerPlayerIndex });
-    return state;
+export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, setLogEntries) => (state) => {
+    debugger;
+  let newState = { ...state };
+  const attackerPlayerIndex = isAIAttacking ? 1 : 0;
+  const defenderPlayerIndex = isAIAttacking ? 0 : 1;
+  
+  const attacker = newState.players[attackerPlayerIndex].field[attackerIndex];
+  
+  if (!attacker || attacker.hasAttacked || attacker.frozen) {
+    return newState;
   }
 
-  if (isHeroTarget) {
+  // Provedení útoku
+  if (isTargetHero) {
     // Útok na hrdinu
+    newState.players[defenderPlayerIndex].hero.health -= attacker.attack;
     addCombatLogEntry(
       attacker,
-      { name: 'Hero', isHero: true },
+      newState.players[defenderPlayerIndex].hero,
       attacker.attack,
       setLogEntries,
-      playerName
+      isAIAttacking ? 'Enemy' : 'Player'
     );
-    
-    defenderPlayer.hero.health -= attacker.attack;
+
+    // Kontrola konce hry po útoku na hrdinu
+    if (newState.players[defenderPlayerIndex].hero.health <= 0) {
+      newState.gameOver = true;
+      newState.winner = isAIAttacking ? 'Enemy' : 'Player';
+      newState.players[defenderPlayerIndex].hero.health = 0; // Zajistíme, že zdraví neklesne pod 0
+    }
   } else {
     // Útok na jednotku
-    const target = defenderPlayer.field[targetIndex];
-    
-    // Kontrola existence cíle
-    if (!target) {
-      console.error('Target not found:', { targetIndex });
-      return state;
-    }
+    const target = newState.players[defenderPlayerIndex].field[targetIndex];
+    if (!target) return newState;
 
-    addCombatLogEntry(
-      attacker,
-      target,
-      attacker.attack,
-      setLogEntries,
-      playerName
-    );
-    
+    // Zpracování útoku s Divine Shield
     if (target.hasDivineShield) {
       target.hasDivineShield = false;
-      addVisualFeedback(target.name, { 
-        type: 'shield_broken',
-        target: target.name 
-      }, null, setLogEntries, playerName);
+      addCombatLogEntry(
+        attacker,
+        target,
+        0, // Žádné poškození při rozbití Divine Shield
+        setLogEntries,
+        isAIAttacking ? 'Enemy' : 'Player'
+      );
     } else {
       target.health -= attacker.attack;
-      
-      if (target.health <= 0) {
-        addVisualFeedback(target.name, {
-          type: 'death',
-          unit: target.name
-        }, null, setLogEntries, playerName);
-      }
+      addCombatLogEntry(
+        attacker,
+        target,
+        attacker.attack,
+        setLogEntries,
+        isAIAttacking ? 'Enemy' : 'Player'
+      );
     }
 
-    if (!target.hasDivineShield) {
-      if (attacker.hasDivineShield) {
-        attacker.hasDivineShield = false;
-        addVisualFeedback(attacker.name, {
-          type: 'shield_broken',
-          target: attacker.name
-        }, null, setLogEntries, playerName);
-      } else {
-        attacker.health -= target.attack;
-        
-        if (attacker.health <= 0) {
-          addVisualFeedback(attacker.name, {
-            type: 'death',
-            unit: attacker.name
-          }, null, setLogEntries, playerName);
-        }
-      }
+    if (!attacker.hasDivineShield) {
+      attacker.health -= target.attack;
+      addCombatLogEntry(
+        target,
+        attacker,
+        target.attack,
+        setLogEntries,
+        isAIAttacking ? 'Player' : 'Enemy' // Obrácené pořadí, protože útočí cíl
+      );
+    } else {
+      attacker.hasDivineShield = false;
+      addCombatLogEntry(
+        target,
+        attacker,
+        0, // Žádné poškození při rozbití Divine Shield
+        setLogEntries,
+        isAIAttacking ? 'Player' : 'Enemy'
+      );
     }
+
+    // Odstranění mrtvých jednotek
+    newState.players[attackerPlayerIndex].field = newState.players[attackerPlayerIndex].field.filter(unit => unit.health > 0);
+    newState.players[defenderPlayerIndex].field = newState.players[defenderPlayerIndex].field.filter(unit => unit.health > 0);
   }
 
-  attacker.hasAttacked = true;
+  // Označení útočníka jako použitého
+  if (attacker) {
+    attacker.hasAttacked = true;
+  }
 
-  // Odstraníme mrtvé jednotky
-  attackerPlayer.field = attackerPlayer.field.filter(unit => unit.health > 0);
-  defenderPlayer.field = defenderPlayer.field.filter(unit => unit.health > 0);
-
-  return state;
+  // Kontrola konce hry po každém útoku
+  return checkGameOver(newState);
 };
 
 export const performAIAttacks = (state, setLogEntries) => {

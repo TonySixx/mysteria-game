@@ -65,7 +65,7 @@ export const decideCoinUsage = (aiPlayer, analysis) => {
 };
 
 // Defenzivní strategie
-export const executeDefensiveStrategy = (state, cards, analysis, playAICard) => {
+export const executeDefensiveStrategy = (state, cards, analysis, playAICard, setLogEntries) => {
   let updatedState = { ...state };
   
   const playOrder = [
@@ -90,7 +90,7 @@ export const executeDefensiveStrategy = (state, cards, analysis, playAICard) => 
 };
 
 // Agresivní strategie
-export const executeAggressiveStrategy = (state, cards, analysis, playAICard) => {
+export const executeAggressiveStrategy = (state, cards, analysis, playAICard, setLogEntries) => {
   let updatedState = { ...state };
   
   const playOrder = [
@@ -115,7 +115,7 @@ export const executeAggressiveStrategy = (state, cards, analysis, playAICard) =>
 };
 
 // Vyvážená strategie
-export const executeBalancedStrategy = (state, cards, analysis, playAICard) => {
+export const executeBalancedStrategy = (state, cards, analysis, playAICard, setLogEntries) => {
   let updatedState = { ...state };
   
   const playOrder = [
@@ -132,7 +132,7 @@ export const executeBalancedStrategy = (state, cards, analysis, playAICard) => {
 
   playOrder.forEach(card => {
     if (canPlayCard(updatedState.players[1], card)) {
-      updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+      updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card),setLogEntries);
     }
   });
 
@@ -140,28 +140,52 @@ export const executeBalancedStrategy = (state, cards, analysis, playAICard) => {
 };
 
 // Optimalizované útoky
-export const performOptimizedAttacks = (state, setLogEntries) => {
+export const performOptimizedAttacks = (state, setLogEntries, forceAttackHero = false) => {
+  // Ověříme, že setLogEntries je funkce
+  if (typeof setLogEntries !== 'function') {
+    console.error('performOptimizedAttacks: setLogEntries není funkce!', setLogEntries);
+    setLogEntries = () => {}; // Fallback na prázdnou funkci
+  }
+
   let updatedState = { ...state };
-  const aiField = updatedState.players[1].field;
-  const humanField = updatedState.players[0].field;
-  const humanHero = updatedState.players[0].hero;
+  const aiPlayer = updatedState.players[1];
+  const humanPlayer = updatedState.players[0];
 
-  // Seřadíme jednotky podle priority útoku, ale vyfiltrujeme zmrazené
-  const attackOrder = aiField
-    .map((unit, index) => ({ unit, index }))
-    .filter(({ unit }) => !unit.frozen && !unit.hasAttacked) // Přidána kontrola na frozen
-    .sort((a, b) => {
-      if (a.unit.hasDivineShield && !b.unit.hasDivineShield) return -1;
-      if (!a.unit.hasDivineShield && b.unit.hasDivineShield) return 1;
-      return b.unit.attack - a.unit.attack;
+  // Pokud máme forceAttackHero, útočíme přímo na hrdinu
+  if (forceAttackHero) {
+    aiPlayer.field.forEach((unit, index) => {
+      if (!unit.hasAttacked && !unit.frozen) {
+        const attackFunc = attack(index, null, true, true, setLogEntries);
+        updatedState = attackFunc(updatedState);
+      }
     });
+    return updatedState;
+  }
 
-  attackOrder.forEach(({ unit, index }) => {
-    // Najdeme optimální cíl
-    const target = findOptimalTarget(unit, humanField, humanHero);
-    
-    if (target) {
-      updatedState = attack(index, target.index, target.isHero, true, setLogEntries)(updatedState);
+  // Standardní útočná logika
+  const humanTaunts = humanPlayer.field.filter(unit => unit.hasTaunt);
+
+  aiPlayer.field.forEach((attacker, attackerIndex) => {
+    if (attacker.hasAttacked || attacker.frozen) return;
+
+    if (humanTaunts.length > 0) {
+      // Musíme útočit na taunty
+      const bestTauntTarget = findBestTarget(humanTaunts, attacker);
+      if (bestTauntTarget !== -1) {
+        updatedState = attack(attackerIndex, bestTauntTarget, false, true, setLogEntries)(updatedState);
+      }
+    } else if (humanPlayer.field.length === 0) {
+      // Pokud nepřítel nemá žádné jednotky, útočíme na hrdinu
+      updatedState = attack(attackerIndex, null, true, true, setLogEntries)(updatedState);
+    } else {
+      // Hledáme nejvýhodnější cíl
+      const bestTarget = findBestTarget(humanPlayer.field, attacker);
+      if (bestTarget !== -1) {
+        updatedState = attack(attackerIndex, bestTarget, false, true, setLogEntries)(updatedState);
+      } else {
+        // Pokud nemáme výhodný cíl, útočíme na hrdinu
+        updatedState = attack(attackerIndex, null, true, true, setLogEntries)(updatedState);
+      }
     }
   });
 
@@ -226,8 +250,29 @@ const calculateTradeValue = (attacker, defender) => {
 };
 
 export const canKillOpponent = (aiPlayer, humanPlayer) => {
-  const totalDamage = calculateTotalDamage(aiPlayer, humanPlayer);
-  return totalDamage >= humanPlayer.hero.health;
+  // Spočítáme celkové možné poškození
+  const totalPossibleDamage = aiPlayer.field.reduce((total, unit) => {
+    // Započítáme pouze jednotky, které mohou útočit
+    if (!unit.hasAttacked && !unit.frozen) {
+      return total + unit.attack;
+    }
+    return total;
+  }, 0);
+
+  // Přidáme poškození z kouzel v ruce
+  const spellDamage = aiPlayer.hand.reduce((total, card) => {
+    if (card.type === 'spell' && card.effect.includes('damage')) {
+      // Extrahujeme číslo poškození z efektu (předpokládáme formát "Deal X damage")
+      const damageMatch = card.effect.match(/Deal (\d+) damage/);
+      if (damageMatch && aiPlayer.mana >= card.manaCost) {
+        return total + parseInt(damageMatch[1]);
+      }
+    }
+    return total;
+  }, 0);
+
+  // Kontrola, zda máme dostatek poškození k zabití hráče
+  return (totalPossibleDamage + spellDamage) >= humanPlayer.hero.health;
 };
 
 const calculateTotalDamage = (aiPlayer, humanPlayer) => {
@@ -250,24 +295,22 @@ const calculateTotalDamage = (aiPlayer, humanPlayer) => {
 };
 
 // Sekvence pro lethal
-export const executeLethalSequence = (state, cards, playAICard) => {
+export const executeLethalSequence = (state, cards, playAICard, setLogEntries) => {
   let updatedState = { ...state };
-  
-  // Nejdřív zahrajeme posilující kouzla a jednotky
-  const playOrder = [
-    ...cards.strongUnits,
-    ...cards.divineShieldUnits,
-    ...cards.damageSpells,
-    ...cards.otherUnits,
-    ...cards.otherSpells,
-    ...(cards.otherCards || []) // Přidáme fallback pro případ, že otherCards je undefined
-  ];
+  const aiPlayer = updatedState.players[1];
 
-  playOrder.forEach(card => {
-    if (canPlayCard(updatedState.players[1], card)) {
-      updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
+  // Nejprve zahrajeme poškozující kouzla
+  cards.damageSpells.forEach((spell) => {
+    if (aiPlayer.mana >= spell.manaCost) {
+      const spellIndex = aiPlayer.hand.findIndex(card => card.id === spell.id);
+      if (spellIndex !== -1) {
+        updatedState = playAICard(updatedState, spellIndex);
+      }
     }
   });
+
+  // Poté provedeme útoky všemi jednotkami na hrdinu
+  updatedState = performOptimizedAttacks(updatedState, setLogEntries, true);
 
   return updatedState;
 };
@@ -277,3 +320,42 @@ export const finalizeTurn = (state) => {
   const nextPlayer = 0; // Předání tahu hráči
   return startNextTurn(state, nextPlayer);
 };
+
+// Pomocná funkce pro nalezení nejlepšího cíle
+function findBestTarget(targets, attacker) {
+  let bestTargetIndex = -1;
+  let bestValue = -Infinity;
+
+  targets.forEach((target, index) => {
+    const value = evaluateTarget(attacker, target);
+    if (value > bestValue) {
+      bestValue = value;
+      bestTargetIndex = index;
+    }
+  });
+
+  return bestTargetIndex;
+}
+
+// Pomocná funkce pro vyhodnocení hodnoty cíle
+function evaluateTarget(attacker, target) {
+  // Základní hodnota je rozdíl mezi poškozením a zdravím
+  let value = attacker.attack - target.health;
+
+  // Přidáme bonus za zabití jednotky
+  if (attacker.attack >= target.health) {
+    value += 5;
+  }
+
+  // Přidáme bonus za odstranění taunty
+  if (target.hasTaunt) {
+    value += 3;
+  }
+
+  // Přidáme bonus za odstranění nebezpečné jednotky
+  if (target.attack >= 4) {
+    value += 2;
+  }
+
+  return value;
+}

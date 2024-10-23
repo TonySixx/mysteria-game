@@ -51,18 +51,20 @@ export const startNextTurn = (state, nextPlayer) => {
 };
 
 export const checkGameOver = (state) => {
-  const player1Health = state.players[0].hero.health;
-  const player2Health = state.players[1].hero.health;
-
-  if (player1Health <= 0 || player2Health <= 0) {
-    return {
-      ...state,
-      gameOver: true,
-      winner: player1Health > 0 ? 'Player 1' : 'Player 2',
-    };
+  const newState = { ...state };
+  
+  // Kontrola zdraví hrdinů
+  if (newState.players[0].hero.health <= 0) {
+    newState.players[0].hero.health = 0; // Zajistíme, že zdraví neklesne pod 0
+    newState.gameOver = true;
+    newState.winner = 'AI';
+  } else if (newState.players[1].hero.health <= 0) {
+    newState.players[1].hero.health = 0; // Zajistíme, že zdraví neklesne pod 0
+    newState.gameOver = true;
+    newState.winner = 'Player';
   }
-
-  return state;
+  
+  return newState;
 };
 
 export const playCardCommon = (state, playerIndex, cardIndex, setLogEntries) => {
