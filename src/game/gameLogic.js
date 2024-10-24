@@ -77,7 +77,7 @@ export const playCardCommon = (state, playerIndex, cardIndex, setLogEntries) => 
     return state;
   }
 
-  const playerName = playerIndex === 0 ? 'Player' : 'Enemy';
+  const playerName = playerIndex === 0 ? 'Player' : 'AI';
 
   // Speciální případ pro "The Coin"
   if (playedCard.name === 'The Coin') {
@@ -197,7 +197,7 @@ const applyArcaneFamiliarEffect = (player, playedCard, setLogEntries) => {
 export const playCoin = (playerIndex, state, setLogEntries) => {
   const updatedPlayers = [...state.players];
   const currentPlayer = { ...updatedPlayers[playerIndex] };
-  const playerName = playerIndex === 0 ? 'Player' : 'Enemy';
+  const playerName = playerIndex === 0 ? 'Player' : 'AI';
   
   currentPlayer.mana += 1;
   currentPlayer.hand = currentPlayer.hand.filter(card => card.name !== 'The Coin');
