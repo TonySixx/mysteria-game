@@ -14,41 +14,42 @@ export const calculateFieldStrength = (field) => {
 
 // Kategorizace karet v ruce
 export const categorizeDeckCards = (hand) => {
-  const categorizedCards = {
-    tauntUnits: hand.filter(card => card.type === 'unit' && card.hasTaunt),
-    divineShieldUnits: hand.filter(card => card.type === 'unit' && card.hasDivineShield),
-    strongUnits: hand.filter(card => card.type === 'unit' && card.attack >= 4),
-    aoeSpells: hand.filter(card => card.type === 'spell' && (card.name === 'Inferno Wave' || card.name === 'Glacial Burst')),
-    healingSpells: hand.filter(card => card.type === 'spell' && card.effect.includes('Restore')),
-    damageSpells: hand.filter(card => card.type === 'spell' && card.effect.includes('damage') && !card.effect.includes('all')),
-    otherSpells: hand.filter(card => 
-      card.type === 'spell' && 
-      !card.effect.includes('Restore') && 
-      !card.effect.includes('damage') &&
-      card.name !== 'Inferno Wave' && 
-      card.name !== 'Glacial Burst'
-    ),
-    otherUnits: hand.filter(card => 
-      card.type === 'unit' && 
-      !card.hasTaunt && 
-      !card.hasDivineShield && 
-      card.attack < 4
-    ),
-    otherCards: [] // Inicializujeme jako prázdné pole
+  const categories = {
+    healingSpells: [],
+    damageSpells: [],
+    aoeSpells: [],
+    tauntUnits: [],
+    divineShieldUnits: [],
+    strongUnits: [],
+    otherUnits: [],
+    otherSpells: [],
   };
 
-  // Kontrola, zda jsme nezapomněli na nějaké karty
-  const allCategorizedCards = Object.values(categorizedCards).flat();
-  const uncategorizedCards = hand.filter(card => 
-    !allCategorizedCards.some(categorizedCard => categorizedCard.id === card.id)
-  );
+  hand.forEach(card => {
+    if (card.type === 'spell') {
+      if (card.effect.includes('Restore') || card.effect.includes('heal')) {
+        categories.healingSpells.push(card);
+      } else if (card.effect.includes('damage to all')) {
+        categories.aoeSpells.push(card);
+      } else if (card.effect.includes('damage')) {
+        categories.damageSpells.push(card);
+      } else {
+        categories.otherSpells.push(card);
+      }
+    } else if (card.type === 'unit') {
+      if (card.effect.includes('Taunt')) {
+        categories.tauntUnits.push(card);
+      } else if (card.effect.includes('Divine Shield')) {
+        categories.divineShieldUnits.push(card);
+      } else if (card.attack >= 4 || card.health >= 5) {
+        categories.strongUnits.push(card);
+      } else {
+        categories.otherUnits.push(card);
+      }
+    }
+  });
 
-  if (uncategorizedCards.length > 0) {
-    console.warn('Nenakategorizované karty:', uncategorizedCards);
-    categorizedCards.otherCards = uncategorizedCards; // Přiřadíme nekategorizované karty
-  }
-
-  return categorizedCards;
+  return categories;
 };
 
 // Rozhodnutí o použití mince
@@ -68,7 +69,8 @@ export const decideCoinUsage = (aiPlayer, analysis) => {
 export const executeDefensiveStrategy = (state, cards, analysis, playAICard, setLogEntries) => {
   let updatedState = { ...state };
   
-  const playOrder = [
+  // Seřadíme karty podle jejich hodnoty v aktuální situaci
+  const allCards = [
     ...cards.healingSpells,
     ...cards.tauntUnits,
     ...cards.aoeSpells,
@@ -76,12 +78,16 @@ export const executeDefensiveStrategy = (state, cards, analysis, playAICard, set
     ...cards.damageSpells,
     ...cards.strongUnits,
     ...cards.otherSpells,
-    ...cards.otherUnits,
-    ...(cards.otherCards || [])
-  ];
+    ...cards.otherUnits
+  ].sort((a, b) => {
+    const valueA = evaluateSpellValue(a, updatedState);
+    const valueB = evaluateSpellValue(b, updatedState);
+    return valueB - valueA;
+  });
 
-  playOrder.forEach(card => {
-    if (canPlayCard(updatedState.players[1], card)) {
+  // Hrajeme karty s pozitivní hodnotou
+  allCards.forEach(card => {
+    if (evaluateSpellValue(card, updatedState) > 0 && canPlayCard(updatedState.players[1], card)) {
       updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
     }
   });
@@ -359,3 +365,128 @@ function evaluateTarget(attacker, target) {
 
   return value;
 }
+
+// Přidáme novou funkci pro vyhodnocení užitečnosti kouzla
+const evaluateSpellValue = (spell, gameState, isAIPlayer = true) => {
+  const aiPlayer = isAIPlayer ? gameState.players[1] : gameState.players[0];
+  const humanPlayer = isAIPlayer ? gameState.players[0] : gameState.players[1];
+  
+  switch (spell.name) {
+    case 'Healing Touch':
+      // Použít jen pokud máme méně než 75% zdraví
+      const maxHealth = 30; // Maximální zdraví hrdiny
+      const currentHealthPercentage = (aiPlayer.hero.health / maxHealth) * 100;
+      return currentHealthPercentage <= 75 ? 5 : 0;
+      
+    case 'Glacial Burst':
+      // Hodnota závisí na počtu nepřátelských jednotek
+      const enemyUnits = humanPlayer.field.length;
+      return enemyUnits >= 2 ? enemyUnits * 2 : 0;
+      
+    case 'Fireball':
+      // Hodnotnější proti silným jednotkám nebo při nízkém zdraví nepřítele
+      const bestTarget = findBestFireballTarget(humanPlayer);
+      return bestTarget ? bestTarget.value : 0;
+      
+    case 'Lightning Bolt':
+      // Podobně jako Fireball, ale pro menší poškození
+      const lightningTarget = findBestLightningBoltTarget(humanPlayer);
+      return lightningTarget ? lightningTarget.value : 0;
+      
+    case 'Inferno Wave':
+      // Hodnota závisí na celkovém počtu nepřátelských jednotek a jejich zdraví
+      return evaluateAoEValue(humanPlayer.field, 4);
+      
+    case 'Arcane Intellect':
+      // Hodnotnější když máme málo karet v ruce
+      return aiPlayer.hand.length <= 3 ? 6 : 3;
+      
+    default:
+      return 1;
+  }
+};
+
+// Pomocné funkce pro evaluateSpellValue
+const findBestFireballTarget = (opponent) => {
+  // Nejdřív zkontrolujeme, zda můžeme zabít hrdinu
+  if (opponent.hero.health <= 6) {
+    return { target: opponent.hero, value: 10 };
+  }
+
+  // Pak hledáme nejlepší jednotku k zabití
+  const targets = opponent.field.map(unit => ({
+    unit,
+    value: calculateFireballValue(unit)
+  }));
+
+  return targets.length > 0 ? 
+    targets.reduce((best, current) => current.value > best.value ? current : best) :
+    null;
+};
+
+const calculateFireballValue = (unit) => {
+  let value = 0;
+  
+  // Základní hodnota za zabití jednotky
+  if (unit.health <= 6) {
+    value += 5;
+    
+    // Bonus za efektivní využití poškození
+    value += (6 - unit.health); // Čím méně přebývajícího poškození, tím lépe
+    
+    // Bonus za odstranění silných jednotek
+    if (unit.attack >= 4) value += 2;
+    if (unit.hasTaunt) value += 2;
+    if (unit.hasDivineShield) value += 3;
+  }
+  
+  return value;
+};
+
+const findBestLightningBoltTarget = (opponent) => {
+  // Podobná logika jako u Fireballu, ale pro 3 poškození
+  if (opponent.hero.health <= 3) {
+    return { target: opponent.hero, value: 10 };
+  }
+
+  const targets = opponent.field.map(unit => ({
+    unit,
+    value: calculateLightningBoltValue(unit)
+  }));
+
+  return targets.length > 0 ? 
+    targets.reduce((best, current) => current.value > best.value ? current : best) :
+    null;
+};
+
+const calculateLightningBoltValue = (unit) => {
+  let value = 0;
+  
+  if (unit.health <= 3) {
+    value += 5;
+    value += (3 - unit.health);
+    if (unit.attack >= 3) value += 2;
+    if (unit.hasTaunt) value += 2;
+    if (unit.hasDivineShield) value += 3;
+  }
+  
+  return value;
+};
+
+const evaluateAoEValue = (enemyField, damage) => {
+  if (enemyField.length === 0) return 0;
+  
+  let value = 0;
+  enemyField.forEach(unit => {
+    if (unit.health <= damage) {
+      value += 3;
+      if (unit.attack >= 3) value += 1;
+      if (unit.hasTaunt) value += 1;
+    }
+  });
+  
+  // Bonus za počet jednotek
+  value += enemyField.length;
+  
+  return value;
+};
