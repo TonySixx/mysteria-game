@@ -546,16 +546,38 @@ const CardBack = styled.div`
   border-radius: 8px;
 `;
 
+// Vytvoříme mapu obrázků karet
+const cardImages = {
+  'Earth Golem': earthGolem,
+  'Fireball': fireball,
+  'Healing Touch': healingTouch,
+  'Lightning Bolt': lightningBolt,
+  'Arcane Intellect': arcaneIntellect,
+  'Fire Elemental': fireElemental,
+  'Shield Bearer': shieldBearer,
+  'Water Elemental': waterElemental,
+  'Nimble Sprite': nimbleSprite,
+  'Arcane Familiar': arcaneFamiliar,
+  'Glacial Burst': glacialBurst,
+  'Radiant Protector': radiantProtector,
+  'Inferno Wave': infernoWave,
+};
+
+// Upravíme CardDisplay komponentu
 const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
   if (!card) return null;
 
-  if (isOpponentCard) {
+  // Karty v ruce protivníka zobrazujeme jako rub
+  if (isOpponentCard && isInHand) {
     return (
       <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
         <CardBack />
       </CardComponent>
     );
   }
+
+  // Získáme obrázek karty
+  const cardImage = cardImages[card.name] || cardBackImage;
 
   return (
     <CardComponent
@@ -570,7 +592,7 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
     >
       <ManaCost>{card.manaCost}</ManaCost>
       <RarityGem $rarity={card.rarity} />
-      <CardImage style={{ borderRadius: '4px', border: '1px solid #000000' }} src={card.image} alt={card.name} />
+      <CardImage src={cardImage} alt={card.name} />
       {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
@@ -681,7 +703,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                     <CardDisplay
                       key={card.id}
                       card={card}
-                      isOpponentCard={true}
+                      isOpponentCard={false} // Změníme na false, protože chceme vidět karty na stole
                       isTargetable={selectedCard && selectedCard.canAttack}
                     />
                   ))}
