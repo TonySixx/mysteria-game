@@ -1,7 +1,7 @@
 import { addCombatLogEntry } from '../utils/visualFeedbackUtils';
 import { checkGameOver } from './gameLogic';
 
-export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, setLogEntries) => (state) => {
+export const attack = (attackerIndex, targetIndex, isHeroTarget, isAIAttacking, setLogEntries) => (state) => {
     debugger;
   let newState = { ...state };
   const attackerPlayerIndex = isAIAttacking ? 1 : 0;
@@ -14,7 +14,7 @@ export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, 
   }
 
   // Provedení útoku
-  if (isTargetHero) {
+  if (isHeroTarget) {
     // Útok na hrdinu
     newState.players[defenderPlayerIndex].hero.health -= attacker.attack;
     addCombatLogEntry(
@@ -22,13 +22,13 @@ export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, 
       newState.players[defenderPlayerIndex].hero,
       attacker.attack,
       setLogEntries,
-      isAIAttacking ? 'Enemy' : 'Player'
+      isAIAttacking ? 'AI' : 'Player'
     );
 
     // Kontrola konce hry po útoku na hrdinu
     if (newState.players[defenderPlayerIndex].hero.health <= 0) {
       newState.gameOver = true;
-      newState.winner = isAIAttacking ? 'Enemy' : 'Player';
+      newState.winner = isAIAttacking ? 'AI' : 'Player';
       newState.players[defenderPlayerIndex].hero.health = 0; // Zajistíme, že zdraví neklesne pod 0
     }
   } else {
@@ -44,7 +44,7 @@ export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, 
         target,
         0, // Žádné poškození při rozbití Divine Shield
         setLogEntries,
-        isAIAttacking ? 'Enemy' : 'Player'
+        isAIAttacking ? 'AI' : 'Player'
       );
     } else {
       target.health -= attacker.attack;
@@ -53,7 +53,7 @@ export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, 
         target,
         attacker.attack,
         setLogEntries,
-        isAIAttacking ? 'Enemy' : 'Player'
+        isAIAttacking ? 'AI' : 'Player'
       );
     }
 
@@ -64,7 +64,7 @@ export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, 
         attacker,
         target.attack,
         setLogEntries,
-        isAIAttacking ? 'Player' : 'Enemy' // Obrácené pořadí, protože útočí cíl
+        isAIAttacking ? 'Player' : 'AI' // Obrácené pořadí, protože útočí cíl
       );
     } else {
       attacker.hasDivineShield = false;
@@ -73,13 +73,21 @@ export const attack = (attackerIndex, targetIndex, isTargetHero, isAIAttacking, 
         attacker,
         0, // Žádné poškození při rozbití Divine Shield
         setLogEntries,
-        isAIAttacking ? 'Player' : 'Enemy'
+        isAIAttacking ? 'Player' : 'AI'
       );
     }
 
     // Odstranění mrtvých jednotek
     newState.players[attackerPlayerIndex].field = newState.players[attackerPlayerIndex].field.filter(unit => unit.health > 0);
     newState.players[defenderPlayerIndex].field = newState.players[defenderPlayerIndex].field.filter(unit => unit.health > 0);
+
+    // Přidáme logiku pro zaznamenání zničení jednotky
+    if (!isHeroTarget && target.health <= attacker.attack) {
+      setLogEntries(prev => [...prev, {
+        timestamp: Date.now(),
+        message: `<span class="${isAIAttacking ? 'enemy-name' : 'player-name'}">${attacker.name}</span> destroyed <span class="${isAIAttacking ? 'player-name' : 'enemy-name'}">${target.name}</span>`
+      }]);
+    }
   }
 
   // Označení útočníka jako použitého

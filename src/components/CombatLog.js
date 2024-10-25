@@ -116,6 +116,12 @@ const LogEntry = styled.div`
     color: #3498db;
     font-weight: bold;
   }
+
+  .destroyed {
+    color: #e74c3c;
+    font-weight: bold;
+    text-decoration: line-through;
+  }
 `;
 
 const ResetButton = styled.button`
