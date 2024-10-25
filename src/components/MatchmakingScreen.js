@@ -54,22 +54,32 @@ const MatchmakingScreen = ({ onGameStart }) => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        // Připojení k socket serveru
-        socketService.connect();
+        // Připojení k socket serveru pouze pokud není připojen
+        if (!socketService.isConnected()) {
+            socketService.connect();
+        }
 
         // Nastavení callback funkcí
         socketService.onMatchFound((response) => {
-            setIsSearching(false);
-            onGameStart(response.gameId);
+            console.log('Match found response:', response);
+            if (response.status === 'joined') {
+                setIsSearching(false);
+                onGameStart(response.gameId);
+            }
         });
 
         socketService.onError((error) => {
+            console.error('Matchmaking error:', error);
             setIsSearching(false);
             setError(error);
         });
 
+        // Cleanup - NEODPOJUJEME socket při unmount
         return () => {
-            socketService.disconnect();
+            if (isSearching) {
+                socketService.cancelSearch();
+                setIsSearching(false);
+            }
         };
     }, [onGameStart]);
 
@@ -80,9 +90,8 @@ const MatchmakingScreen = ({ onGameStart }) => {
     };
 
     const handleCancel = () => {
-        setIsSearching(false);
         socketService.cancelSearch();
-        // Již nemusíme odpojovat a znovu připojovat socket
+        setIsSearching(false);
     };
 
     return (

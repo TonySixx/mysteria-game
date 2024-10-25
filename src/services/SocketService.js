@@ -11,134 +11,99 @@ class SocketService {
         this.localGameState = null; // Pro optimistické aktualizace
     }
 
+    isConnected() {
+        return this.socket?.connected || false;
+    }
+
     connect() {
-        this.socket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000');
+        if (this.isConnected()) {
+            console.log('Socket je již připojen');
+            return;
+        }
+
+        console.log('Připojuji k serveru:', process.env.REACT_APP_SERVER_URL);
+        this.socket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000', {
+            transports: ['websocket'],
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            autoConnect: true
+        });
+
+        this.setupSocketListeners();
+    }
+
+    setupSocketListeners() {
+        if (!this.socket) return;
 
         this.socket.on('connect', () => {
-            console.log('Připojeno k serveru');
+            console.log('Připojeno k serveru, socket ID:', this.socket.id);
+        });
+
+        this.socket.on('connect_error', (error) => {
+            console.error('Chyba připojení:', error);
+            if (this.errorCallback) {
+                this.errorCallback('Nepodařilo se připojit k serveru');
+            }
         });
 
         this.socket.on('gameState', (serverState) => {
-            console.log('Received game state:', serverState); // Pro debugging
-            this.localGameState = this.mergeGameStates(this.localGameState, serverState);
-            
+            console.log('Přijat herní stav:', serverState);
             if (this.gameStateCallback) {
-                this.gameStateCallback(this.localGameState);
+                this.gameStateCallback(serverState);
             }
         });
 
         this.socket.on('joinGameResponse', (response) => {
-            if (response.status === 'joined') {
-                console.log('Hra nalezena, gameId:', response.gameId);
-                if (this.matchFoundCallback) {
-                    this.matchFoundCallback(response);
-                }
+            console.log('Přijata odpověď na připojení do hry:', response);
+            if (response.status === 'joined' && this.matchFoundCallback) {
+                this.matchFoundCallback(response);
             }
         });
 
         this.socket.on('opponentDisconnected', () => {
+            console.log('Protihráč se odpojil');
             if (this.errorCallback) {
                 this.errorCallback('Protihráč se odpojil');
             }
         });
 
         this.socket.on('error', (error) => {
+            console.error('Chyba ze serveru:', error);
             if (this.errorCallback) {
                 this.errorCallback(error);
             }
         });
-    }
 
-    // Sloučení stavů s preferencí serverového stavu pro kritické údaje
-    mergeGameStates(localState, serverState) {
-        if (!localState) {
-            console.log('Initial game state:', serverState); // Pro debugging
-            return serverState;
-        }
-
-        return {
-            ...localState,
-            currentPlayer: serverState.currentPlayer,
-            turn: serverState.turn,
-            gameOver: serverState.gameOver,
-            winner: serverState.winner,
-            players: serverState.players.map((player, index) => ({
-                ...localState.players[index],
-                ...player,
-                // Zachováme lokální stav pro animace a vizuální efekty
-                field: this.mergeFields(localState.players[index].field, player.field),
-                hand: player.hand, // Vždy použijeme serverový stav pro karty v ruce
-                mana: player.mana,
-                maxMana: player.maxMana
-            }))
-        };
-    }
-
-    mergeFields(localField, serverField) {
-        return serverField.map(serverCard => {
-            const localCard = localField.find(c => c.id === serverCard.id);
-            return {
-                ...serverCard,
-                // Zachováme lokální animační stavy
-                isAnimating: localCard?.isAnimating || false,
-                visualEffects: localCard?.visualEffects || []
-            };
+        this.socket.on('disconnect', (reason) => {
+            console.log('Odpojeno od serveru, důvod:', reason);
+            if (reason === 'io server disconnect') {
+                // Server nás odpojil, zkusíme se znovu připojit
+                this.socket.connect();
+            }
         });
     }
 
-    // Herní akce
-    playCard(cardData) {
-        // Optimistická aktualizace
-        if (this.localGameState) {
-            this.localGameState = playCardCommon(
-                this.localGameState, 
-                this.localGameState.currentPlayer, 
-                cardData.cardIndex
-            );
-            this.gameStateCallback?.(this.localGameState);
-        }
-
-        // Odeslání na server
-        this.socket.emit('playCard', cardData);
-    }
-
-    attack(attackData) {
-        // Optimistická aktualizace
-        if (this.localGameState) {
-            this.localGameState = attack(
-                attackData.attackerIndex,
-                attackData.targetIndex,
-                attackData.isHeroTarget,
-                false
-            )(this.localGameState);
-            this.gameStateCallback?.(this.localGameState);
-        }
-
-        // Odeslání na server
-        this.socket.emit('attack', attackData);
-    }
-
-    endTurn() {
-        // Optimistická aktualizace
-        if (this.localGameState) {
-            const nextPlayer = (this.localGameState.currentPlayer + 1) % 2;
-            this.localGameState = startNextTurn(this.localGameState, nextPlayer);
-            this.gameStateCallback?.(this.localGameState);
-        }
-
-        this.socket.emit('endTurn');
-    }
-
-    // Připojení do hry
     joinGame() {
+        if (!this.socket?.connected) {
+            console.error('Socket není připojen');
+            if (this.errorCallback) {
+                this.errorCallback('Není připojení k serveru');
+            }
+            return;
+        }
+
+        console.log('Odesílám požadavek na připojení do hry');
         this.socket.emit('joinGame');
     }
 
     cancelSearch() {
-        this.socket.emit('cancelSearch');
+        if (this.socket?.connected) {
+            console.log('Ruším hledání hry');
+            this.socket.emit('cancelSearch');
+        }
     }
 
-    // Callback registrace
     onGameState(callback) {
         this.gameStateCallback = callback;
     }
@@ -153,9 +118,30 @@ class SocketService {
 
     disconnect() {
         if (this.socket) {
+            console.log('Odpojuji socket');
             this.socket.disconnect();
+            this.socket = null;
             this.localGameState = null;
         }
+    }
+
+    // Herní akce
+    playCard(cardData) {
+        if (!this.socket?.connected) return;
+        console.log('Hraji kartu:', cardData);
+        this.socket.emit('playCard', cardData);
+    }
+
+    attack(attackData) {
+        if (!this.socket?.connected) return;
+        console.log('Útočím:', attackData);
+        this.socket.emit('attack', attackData);
+    }
+
+    endTurn() {
+        if (!this.socket?.connected) return;
+        console.log('Končím tah');
+        this.socket.emit('endTurn');
     }
 }
 
