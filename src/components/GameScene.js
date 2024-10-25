@@ -42,6 +42,7 @@ import {
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
 
+
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
@@ -54,9 +55,6 @@ const GameBoard = styled.div`
   display: flex;
   flex-direction: column;
   user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
 `;
 
 const PlayerArea = styled.div`
@@ -553,53 +551,76 @@ const CardBack = styled.div`
   border-radius: 8px;
 `;
 
+
+const imageMap = {
+    'earthGolem': earthGolem,
+    'fireball': fireball,
+    'healingTouch': healingTouch,
+    'lightningBolt': lightningBolt,
+    'arcaneIntellect': arcaneIntellect,
+    'fireElemental': fireElemental,
+    'shieldBearer': shieldBearer,
+    'waterElemental': waterElemental,
+    'coinImage': coinImage,
+    'nimbleSprite': nimbleSprite,
+    'arcaneFamiliar': arcaneFamiliar,
+    'glacialBurst': glacialBurst,
+    'radiantProtector': radiantProtector,
+    'infernoWave': infernoWave,
+};
+
 const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
-  if (!card) return null;
+    if (!card) return null;
 
-  if (isOpponentCard) {
+    // Pouze pro karty v ruce protihráče zobrazujeme zadní stranu
+    if (isOpponentCard && isInHand) {
+        return (
+            <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
+                <CardBack />
+            </CardComponent>
+        );
+    }
+
     return (
-      <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
-        <CardBack />
-      </CardComponent>
+        <CardComponent
+            $type={card.type}
+            $canAttack={canAttack}
+            $isTargetable={isTargetable}
+            $isSelected={isSelected}
+            $isInHand={isInHand}
+            $isDragging={isDragging}
+            $isFrozen={card.frozen}
+            $rarity={card.rarity}
+        >
+            <ManaCost>{card.manaCost}</ManaCost>
+            <RarityGem $rarity={card.rarity} />
+            <CardImage 
+                style={{ borderRadius: '4px', border: '1px solid #000000' }} 
+                src={imageMap[card.image]} 
+                alt={card.name} 
+            />
+            {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
+            {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
+            <CardContent>
+                <CardName>{card.name}</CardName>
+                <CardDescription>{card.effect}</CardDescription>
+                <CardStats>
+                    {card.type === 'unit' && (
+                        <>
+                            <span>⚔️ {card.attack}</span>
+                            <span>❤️ {card.health}</span>
+                        </>
+                    )}
+                </CardStats>
+            </CardContent>
+            {card.frozen && (
+                <FrozenOverlay>
+                    <span role="img" aria-label="snowflake">❄️</span>
+                </FrozenOverlay>
+            )}
+        </CardComponent>
     );
-  }
-
-  return (
-    <CardComponent
-      $type={card.type}
-      $canAttack={canAttack}
-      $isTargetable={isTargetable}
-      $isSelected={isSelected}
-      $isInHand={isInHand}
-      $isDragging={isDragging}
-      $isFrozen={card.frozen}
-      $rarity={card.rarity}
-    >
-      <ManaCost>{card.manaCost}</ManaCost>
-      <RarityGem $rarity={card.rarity} />
-      <CardImage style={{ borderRadius: '4px', border: '1px solid #000000' }} src={card.image} alt={card.name} />
-      {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
-      {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
-      <CardContent>
-        <CardName>{card.name}</CardName>
-        <CardDescription>{card.effect}</CardDescription>
-        <CardStats>
-          {card.type === 'unit' && (
-            <>
-              <span>⚔️ {card.attack}</span>
-              <span>❤️ {card.health}</span>
-            </>
-          )}
-        </CardStats>
-      </CardContent>
-      {card.frozen && (
-        <FrozenOverlay>
-          <span role="img" aria-label="snowflake">❄️</span>
-        </FrozenOverlay>
-      )}
-    </CardComponent>
-  );
-}
+};
 
 // Přidat definici OpponentHandArea
 const OpponentHandArea = styled(HandArea)`
@@ -616,7 +637,7 @@ const Field = ({ cards, isOpponent, onCardClick }) => {
                 <div key={card.id} onClick={() => onCardClick(index)}>
                     <CardDisplay
                         card={card}
-                        isOpponentCard={isOpponent}
+                        isOpponentCard={false} // Změnit na false, aby byly vidět i karty protihráče
                     />
                 </div>
             ))}
