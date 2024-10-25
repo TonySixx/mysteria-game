@@ -55,6 +55,8 @@ const GameBoard = styled.div`
   display: flex;
   flex-direction: column;
   user-select: none;
+  justify-content: space-between; // Přidáno pro lepší rozvržení
+  padding: 20px 0; // Přidáno pro lepší spacing
 `;
 
 const PlayerArea = styled.div`
@@ -88,14 +90,15 @@ const FieldArea = styled.div`
   gap: 10px;
   flex-wrap: wrap;
   width: 100%;
-  padding: 10px 0;
+  padding: 20px 0; // Zvětšeno z 10px na 20px
   box-sizing: border-box;
-  min-height: 220px; // Zvětšeno pro lepší prostor pro přetahování
+  min-height: 220px;
+  background-color: rgba(0, 0, 0, 0.3); // Přidáno pro lepší viditelnost herní plochy
 `;
 
 const HandArea = styled.div`
   position: fixed;
-  bottom: -40px;
+  bottom: 0; // Změna z -40px na 0
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -103,7 +106,9 @@ const HandArea = styled.div`
   gap: 5px;
   padding: 10px 0;
   perspective: 1000px;
-  min-height: 220px; // Přidáno pro zajištění prostoru pro karty
+  min-height: 220px;
+  width: 100%; // Přidáno pro zajištění plné šířky
+  z-index: 100; // Přidáno pro správné překrývání
 `;
 
 const PlayerInfo = styled.div`
@@ -202,9 +207,10 @@ const CardComponent = styled.div`
     border-radius: 8px;
     background-position: center;
     filter: grayscale(50%);
+    opacity: 0.9;
     z-index: -1;
   }
-  
+
   ${(props) => props.$isInHand && `
     transform: translateY(35%) rotate(${-10 + Math.random() * 20}deg);
     &:hover {
@@ -673,8 +679,6 @@ const Hand = ({ cards, playerMana, isPlayerTurn, onCardPlay }) => {
 };
 
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
-    console.log('GameScene rendered with state:', gameState);
-
     if (!gameState) {
         return <div>Načítání hry...</div>;
     }
@@ -682,71 +686,178 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     const { player, opponent, currentPlayer, playerIndex } = gameState;
     const isPlayerTurn = currentPlayer === playerIndex;
 
-    // Přidáme debugovací výpisy
-    console.log('Player hand:', player.hand);
-    console.log('Player field:', player.field);
-    console.log('Is player turn:', isPlayerTurn);
+    const onDragEnd = (result) => {
+        const { source, destination } = result;
+
+        if (!destination || !isPlayerTurn) {
+            return;
+        }
+
+        // Hraní karty z ruky
+        if (source.droppableId === 'hand') {
+            if (destination.droppableId === 'playerField') {
+                onPlayCard({ cardIndex: source.index });
+            } else if (destination.droppableId === 'opponentHero' || destination.droppableId.startsWith('opponentCard-')) {
+                // Pokus o útok kartou z ruky - není povoleno
+                return;
+            }
+        }
+        // Útok jednotkou z pole
+        else if (source.droppableId === 'playerField') {
+            const attackerIndex = source.index;
+            const attacker = player.field[attackerIndex];
+
+            if (attacker.hasAttacked || attacker.frozen) {
+                return;
+            }
+
+            if (destination.droppableId === 'opponentHero') {
+                onAttack({ 
+                    attackerIndex,
+                    targetIndex: null,
+                    isHeroTarget: true 
+                });
+            } else if (destination.droppableId.startsWith('opponentCard-')) {
+                const targetIndex = parseInt(destination.droppableId.split('-')[1]);
+                onAttack({ 
+                    attackerIndex,
+                    targetIndex,
+                    isHeroTarget: false 
+                });
+            }
+        }
+    };
 
     return (
-        <div className="game-scene">
-            {/* Opponent's side */}
-            <div className="opponent-side">
-                <HeroDisplay 
-                    hero={opponent.hero}
-                    mana={opponent.mana}
-                    maxMana={opponent.maxMana}
-                    isOpponent={true}
-                />
-                <div className="opponent-hand">
-                    {Array(opponent.handSize).fill(null).map((_, index) => (
-                        <CardBack key={`opponent-card-${index}`} />
-                    ))}
-                </div>
-                <Field 
-                    cards={opponent.field}
-                    isOpponent={true}
-                    onCardClick={() => {}} // Prázdná funkce pro karty protivníka
-                />
-            </div>
+        <DragDropContext onDragEnd={onDragEnd}>
+            <GameBoard>
+                <PlayerArea>
+                    {/* Opponent Area */}
+                    <PlayerInfo>
+                        <DeckAndManaContainer>
+                            <DeckContainer>{opponent.deckSize}</DeckContainer>
+                            <ManaInfo>🔮 {opponent.mana}/{opponent.maxMana}</ManaInfo>
+                        </DeckAndManaContainer>
+                    </PlayerInfo>
 
-            {/* Player's side */}
-            <div className="player-side">
-                <Field 
-                    cards={player.field}
-                    isOpponent={false}
-                    onCardClick={(cardIndex) => {
-                        if (isPlayerTurn) {
-                            // Implementace útoku
-                        }
-                    }}
-                />
-                <Hand 
-                    cards={player.hand}
-                    playerMana={player.mana}
-                    isPlayerTurn={isPlayerTurn}
-                    onCardPlay={(cardIndex) => {
-                        if (isPlayerTurn) {
-                            onPlayCard({ cardIndex });
-                        }
-                    }}
-                />
-                <HeroDisplay 
-                    hero={player.hero}
-                    mana={player.mana}
-                    maxMana={player.maxMana}
-                    isOpponent={false}
-                />
-            </div>
+                    <BattleArea>
+                        <Droppable droppableId="opponentHero" direction="horizontal">
+                            {(provided, snapshot) => (
+                                <HeroArea
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                >
+                                    <HeroDisplay 
+                                        hero={opponent.hero}
+                                        isOpponent={true}
+                                    />
+                                    {provided.placeholder}
+                                </HeroArea>
+                            )}
+                        </Droppable>
 
-            {isPlayerTurn && (
-                <button 
-                    className="end-turn-button"
-                    onClick={onEndTurn}
-                >
-                    Ukončit tah
-                </button>
-            )}
-        </div>
+                        <OpponentHandArea>
+                            {Array(opponent.handSize).fill(null).map((_, index) => (
+                                <CardComponent $isInHand={true} key={`opponent-card-${index}`}>
+                                    <CardBack />
+                                </CardComponent>
+                            ))}
+                        </OpponentHandArea>
+
+                        <FieldArea>
+                            {opponent.field.map((card, index) => (
+                                <Droppable droppableId={`opponentCard-${index}`} key={`opponent-drop-${index}`}>
+                                    {(provided, snapshot) => (
+                                        <div
+                                            ref={provided.innerRef}
+                                            {...provided.droppableProps}
+                                        >
+                                            <CardDisplay
+                                                card={card}
+                                                isOpponentCard={true}
+                                                isTargetable={isPlayerTurn && player.field.some(c => !c.hasAttacked && !c.frozen)}
+                                            />
+                                            {provided.placeholder}
+                                        </div>
+                                    )}
+                                </Droppable>
+                            ))}
+                        </FieldArea>
+
+                        <Droppable droppableId="playerField" direction="horizontal">
+                            {(provided, snapshot) => (
+                                <FieldArea
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                    style={{
+                                        background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
+                                    }}
+                                >
+                                    {player.field.map((card, index) => (
+                                        <Draggable key={card.id} draggableId={card.id} index={index}>
+                                            {(provided, snapshot) => (
+                                                <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    {...provided.dragHandleProps}
+                                                >
+                                                    <CardDisplay
+                                                        card={card}
+                                                        canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
+                                                        isDragging={snapshot.isDragging}
+                                                    />
+                                                </div>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </FieldArea>
+                            )}
+                        </Droppable>
+
+                        <Droppable droppableId="hand" direction="horizontal">
+                            {(provided, snapshot) => (
+                                <HandArea
+                                    ref={provided.innerRef}
+                                    {...provided.droppableProps}
+                                >
+                                    {player.hand.map((card, index) => (
+                                        <Draggable key={card.id} draggableId={card.id} index={index}>
+                                            {(provided, snapshot) => (
+                                                <DraggableCardWrapper
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    {...provided.dragHandleProps}
+                                                >
+                                                    <CardDisplay
+                                                        card={card}
+                                                        isInHand={true}
+                                                        isDragging={snapshot.isDragging}
+                                                    />
+                                                </DraggableCardWrapper>
+                                            )}
+                                        </Draggable>
+                                    ))}
+                                    {provided.placeholder}
+                                </HandArea>
+                            )}
+                        </Droppable>
+                    </BattleArea>
+
+                    <PlayerInfo>
+                        <DeckAndManaContainer>
+                            <DeckContainer>{player.deckSize}</DeckContainer>
+                            <ManaInfo>🔮 {player.mana}/{player.maxMana}</ManaInfo>
+                        </DeckAndManaContainer>
+                        {isPlayerTurn && (
+                            <EndTurnButton onClick={onEndTurn}>
+                                Ukončit tah
+                            </EndTurnButton>
+                        )}
+                    </PlayerInfo>
+                </PlayerArea>
+            </GameBoard>
+        </DragDropContext>
     );
 }
 
