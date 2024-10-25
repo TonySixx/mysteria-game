@@ -1,17 +1,33 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import GameScene from './components/GameScene';
-import config from './config';
+import MatchmakingScreen from './components/MatchmakingScreen';
+import socketService from './services/SocketService';
 
 function App() {
-  useEffect(() => {
-    console.log('Připojuji se k:', config.API_URL);
-  }, []);
+    const [gameId, setGameId] = useState(null);
+    const [gameState, setGameState] = useState(null);
 
-  return (
-    <div className="App">
-      <GameScene />
-    </div>
-  );
+    const handleGameStart = (newGameId) => {
+        setGameId(newGameId);
+        socketService.onGameState((state) => {
+            setGameState(state);
+        });
+    };
+
+    return (
+        <div>
+            {!gameId ? (
+                <MatchmakingScreen onGameStart={handleGameStart} />
+            ) : (
+                <GameScene 
+                    gameState={gameState}
+                    onPlayCard={(cardData) => socketService.playCard(cardData)}
+                    onAttack={(attackData) => socketService.attack(attackData)}
+                    onEndTurn={() => socketService.endTurn()}
+                />
+            )}
+        </div>
+    );
 }
 
 export default App;
