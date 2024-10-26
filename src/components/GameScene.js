@@ -479,19 +479,7 @@ const RarityGem = styled.div`
   }
 `;
 
-function HeroDisplay({ hero, onClick, isTargetable }) {
-  return (
-    <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
-      <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
-      <HeroHealth>
-        <HeartIcon>❤️</HeartIcon>
-        {hero.health}
-      </HeroHealth>
-    </HeroComponent>
-  );
-}
-
-const HeroComponent = styled.div.withConfig({
+const HeroContainer = styled.div.withConfig({
   shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
 })`
   width: 120px;
@@ -561,6 +549,7 @@ const cardImages = {
   'Glacial Burst': glacialBurst,
   'Radiant Protector': radiantProtector,
   'Inferno Wave': infernoWave,
+  "The Coin": coinImage,
 };
 
 // Upravíme CardDisplay komponentu
@@ -616,6 +605,59 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
   );
 }
 
+// Přidáme novou styled komponentu pro oblast karet protivníka
+const OpponentHandArea = styled.div`
+  position: absolute;
+  top: -166px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 0;
+  perspective: 1000px;
+  min-height: 120px;
+  z-index: 100;
+`;
+
+const HeroDisplay = ({ hero, isTargetable, isOpponent }) => {  // Přidáme prop isOpponent
+  return (
+    <HeroContainer isTargetable={isTargetable}>
+      <HeroImage 
+        src={isOpponent ? aiHeroImage : playerHeroImage}  // Použijeme správný obrázek podle toho, zda jde o protivníka
+        alt={isOpponent ? "Enemy Hero" : "Player Hero"}
+        isTargetable={isTargetable}
+      />
+      <HeroHealth>
+        <HeartIcon>❤️</HeartIcon>
+        {hero.health}
+      </HeroHealth>
+    </HeroContainer>
+  );
+};
+
+// Přidáme novou styled komponentu pro modal s koncem hry
+const GameOverModal = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 2rem;
+  border-radius: 10px;
+  border: 2px solid #ffd700;
+  color: white;
+  text-align: center;
+  z-index: 1000;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+`;
+
+const GameOverText = styled.h2`
+  color: #ffd700;
+  font-size: 2rem;
+  margin-bottom: 1rem;
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [notifications, setNotifications] = useState([]);
@@ -654,7 +696,8 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     else if (sourceArea === 'field' && targetArea === 'opponent-hero') {
       onAttack({
         attackerIndex: source.index,
-        targetIndex: null
+        targetIndex: null,
+        isHeroTarget: true  // Přidáme tento flag
       });
     }
   }, [gameState, onPlayCard, onAttack]);
@@ -665,6 +708,28 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
 
   const isPlayerTurn = gameState.currentPlayer === gameState.playerIndex;
 
+  // Přidáme zobrazení konce hry
+  if (gameState.gameOver) {
+    const isWinner = gameState.winner === gameState.playerIndex;
+    const isDraw = gameState.winner === 'draw';
+    return (
+      <GameBoard>
+        <GameOverModal>
+          <GameOverText>
+            {isDraw ? 'Remíza!' : isWinner ? 'Vítězství!' : 'Prohra!'}
+          </GameOverText>
+          <div>
+            {isDraw 
+              ? 'Oba hrdinové padli ve stejný okamžik!' 
+              : isWinner 
+                ? 'Gratulujeme k vítězství!' 
+                : 'Hodně štěstí příště!'}
+          </div>
+        </GameOverModal>
+      </GameBoard>
+    );
+  }
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <GameBoard>
@@ -672,6 +737,18 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
         {notifications.map(notification => (
           <Notification key={notification.id} message={notification.message} />
         ))}
+
+        {/* Karty v ruce protivníka */}
+        <OpponentHandArea>
+          {Array.isArray(gameState?.opponent?.hand) && gameState.opponent.hand.map((card, index) => (
+            <CardDisplay
+              key={card.id || index}
+              card={card}
+              isOpponentCard={true}
+              isInHand={true}
+            />
+          ))}
+        </OpponentHandArea>
 
         {/* Informace o protihráči */}
         <PlayerInfo>
@@ -690,6 +767,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                   <HeroDisplay 
                     hero={gameState.opponent.hero}
                     isTargetable={selectedCard && selectedCard.canAttack}
+                    isOpponent={true}  // Přidáme prop pro protivníka
                   />
                   {provided.placeholder}
                 </HeroArea>
@@ -746,7 +824,10 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </Droppable>
 
             <HeroArea>
-              <HeroDisplay hero={gameState.player.hero} />
+              <HeroDisplay 
+                hero={gameState.player.hero}
+                isOpponent={false}  // Přidáme prop pro hráče
+              />
             </HeroArea>
           </PlayerArea>
         </BattleArea>

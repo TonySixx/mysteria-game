@@ -8,8 +8,48 @@ const MatchmakingContainer = styled.div`
     align-items: center;
     justify-content: center;
     height: 100vh;
-    background: url('/background.png') no-repeat center center fixed;
-    background-size: cover;
+    background: linear-gradient(
+        135deg,
+        #1a1a2e 0%,
+        #16213e 50%,
+        #1a1a2e 100%
+    );
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(
+            circle at center,
+            rgba(255, 215, 0, 0.1) 0%,
+            transparent 70%
+        );
+        pointer-events: none;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(
+            45deg,
+            transparent 0%,
+            rgba(255, 215, 0, 0.05) 50%,
+            transparent 100%
+        );
+        animation: shimmer 3s infinite linear;
+        pointer-events: none;
+    }
+
+
 `;
 
 const SearchingText = styled.h2`
