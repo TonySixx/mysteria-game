@@ -701,8 +701,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           return;
         }
         onAttack({
-          attackerIndex,
-          targetHero: true
+          attackerIndex,         // Změněno zpět na attackerIndex
+          targetIndex: null,     // Přidáno pro konzistenci
+          isHeroTarget: true    // Změněno zpět na isHeroTarget
         });
       } 
       else if (destination.droppableId.startsWith('opponentCard-')) {
@@ -715,9 +716,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
         }
 
         onAttack({
-          attackerIndex,
-          targetIndex,
-          targetHero: false
+          attackerIndex,         // Změněno zpět na attackerIndex
+          targetIndex,          // Ponecháno stejné
+          isHeroTarget: false   // Změněno zpět na isHeroTarget
         });
       }
     }
