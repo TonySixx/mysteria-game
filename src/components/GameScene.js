@@ -15,7 +15,7 @@ import playerHeroImage from '../assets/images/player-hero.png';
 import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
 import { VisualFeedbackContainer } from './VisualFeedback';
-import Notification from './Notification';  // místo import { Notification }
+import { Notification } from './Notification';
 import nimbleSprite from '../assets/images/nimble-sprite.png';
 import arcaneFamiliar from '../assets/images/arcane-familiar.png';
 import glacialBurst from '../assets/images/glacial-burst.png';
@@ -41,47 +41,14 @@ import {
   executeLethalSequence,
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
-import backgroundImage from '../assets/images/background.png';
-import { createPortal } from 'react-dom';
-
-// Na začátek souboru přidejte nové konstanty pro škálování
-const BREAKPOINTS = {
-  small: 512,
-  medium: 768,
-  large: 1024
-};
-
-// Přidejte novou styled komponentu pro kontejner s CSS proměnnými
-const GameScaleContainer = styled.div`
-  --scale-factor: 1;
-  --card-width: calc(120px * var(--scale-factor));
-  --card-height: calc(180px * var(--scale-factor));
-  --field-card-width: calc(140px * var(--scale-factor));
-  --field-card-height: calc(200px * var(--scale-factor));
-  --hero-size: calc(120px * var(--scale-factor));
-  --spacing: calc(10px * var(--scale-factor));
-  
-  @media (max-height: ${BREAKPOINTS.small}px) {
-    --scale-factor: 0.5;
-  }
-  
-  @media (min-height: ${BREAKPOINTS.small}px) and (max-height: ${BREAKPOINTS.medium}px) {
-    --scale-factor: 0.6;
-  }
-  
-  @media (min-height: ${BREAKPOINTS.medium}px) and (max-height: ${BREAKPOINTS.large}px) {
-    --scale-factor: 0.75;
-  }
-  
-  width: 100%;
-  height: 100vh;
-`;
+import socketService from '../services/SocketService';
 
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
   height: 100vh;
-  background: url(${backgroundImage}) center center / cover no-repeat fixed;
+  background: url('/background.png') no-repeat center center fixed;
+  background-size: cover;
   color: #ffd700;
   font-family: 'Cinzel', serif;
   overflow: hidden;
@@ -121,25 +88,25 @@ const HeroArea = styled.div`
 const FieldArea = styled.div`
   display: flex;
   justify-content: center;
-  gap: var(--spacing);
+  gap: 10px;
   flex-wrap: wrap;
   width: 100%;
-  padding: var(--spacing) 0;
+  padding: 10px 0;
   box-sizing: border-box;
-  min-height: calc(220px * var(--scale-factor));
+  min-height: 220px; // Zvětšeno pro lepší prostor pro přetahování
 `;
 
 const HandArea = styled.div`
   position: fixed;
-  bottom: calc(-20px * var(--scale-factor));
+  bottom: -40px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: calc(5px * var(--scale-factor));
-  padding: calc(10px * var(--scale-factor)) 0;
+  gap: 5px;
+  padding: 10px 0;
   perspective: 1000px;
-  min-height: var(--card-height);
+  min-height: 220px; // Přidáno pro zajištění prostoru pro karty
 `;
 
 const PlayerInfo = styled.div`
@@ -189,10 +156,12 @@ const EndTurnButton = styled.button`
   cursor: pointer;
   transition: all 0.3s;
   margin-right: 36px;
-
+  opacity: ${props => props.disabled ? 0.5 : 1};
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  
   &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 10px #ffd700;
+    transform: ${props => props.disabled ? 'none' : 'scale(1.05)'};
+    box-shadow: ${props => props.disabled ? 'none' : '0 0 10px #ffd700'};
   }
 `;
 
@@ -206,8 +175,8 @@ const DraggableCardWrapper = styled.div`
 `;
 
 const CardComponent = styled.div`
-  width: ${(props) => (props.$isInHand ? 'var(--card-width)' : 'var(--field-card-width)')};
-  height: ${(props) => (props.$isInHand ? 'var(--card-height)' : 'var(--field-card-height)')};
+  width: ${(props) => (props.$isInHand ? '120px' : '140px')};
+  height: ${(props) => (props.$isInHand ? '180px' : '200px')};
   border: 2px solid ${(props) => {
     if (props.$isSelected) return '#ffd700';
     if (props.$isTargetable) return '#ff9900';
@@ -254,17 +223,14 @@ const CardComponent = styled.div`
     `
     transform: rotate(5deg) scale(1.05);
     box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-    opacity: 1.0;
-    z-index: 1001;
+    opacity: 1.0
   `}
 
   ${props => props.$isFrozen && frozenStyle}
 
   ${(props) => props.$canAttack && !props.$isInHand && css`
     box-shadow: 0 0 10px 3px #00ff00;
-    cursor: pointer;
     &:hover {
-      transform: scale(1.05);
       box-shadow: 0 0 15px 5px #00ff00;
     }
   `}
@@ -272,15 +238,6 @@ const CardComponent = styled.div`
   ${(props) => props.$isTargetable && css`
     box-shadow: 0 0 10px 3px #ff0000;
     &:hover {
-      box-shadow: 0 0 15px 5px #ff0000;
-    }
-  `}
-
-  ${(props) => props.$isValidTarget && css`
-    box-shadow: 0 0 10px 3px #ff0000;
-    cursor: pointer;
-    &:hover {
-      transform: scale(1.05);
       box-shadow: 0 0 15px 5px #ff0000;
     }
   `}
@@ -341,9 +298,9 @@ const TauntLabel = styled.div`
 `;
 
 const CardName = styled.div`
-  font-size: calc(14px * var(--scale-factor));
   font-weight: bold;
   text-align: center;
+  font-size: 14px;
   margin-bottom: 5px;
   color: white;
   position: relative;
@@ -372,8 +329,8 @@ const CardStats = styled.div`
 
 
 const CardDescription = styled.div`
-  font-size: calc(11px * var(--scale-factor));
   font-family: 'Arial', sans-serif;
+  font-size: 11px;
   text-align: center;
   margin-top: 2px;
   margin-bottom: 2px;
@@ -393,8 +350,8 @@ const ManaCost = styled.div`
   position: absolute;
   top: -10px;
   left: -10px;
-  width: calc(30px * var(--scale-factor));
-  height: calc(30px * var(--scale-factor));
+  width: 30px;
+  height: 30px;
   background-color: #4fc3f7;
   color: white;
   border-radius: 50%;
@@ -402,7 +359,7 @@ const ManaCost = styled.div`
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: calc(16px * var(--scale-factor));
+  font-size: 16px;
   border: 2px solid #2196f3;
   box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
   z-index: 10;
@@ -525,33 +482,25 @@ const RarityGem = styled.div`
   }
 `;
 
-const HeroContainer = styled.div.withConfig({
+function HeroDisplay({ hero, onClick, isTargetable }) {
+  return (
+    <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
+      <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
+      <HeroHealth>
+        <HeartIcon>❤️</HeartIcon>
+        {hero.health}
+      </HeroHealth>
+    </HeroComponent>
+  );
+}
+
+const HeroComponent = styled.div.withConfig({
   shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
 })`
-  width: var(--hero-size);
-  height: var(--hero-size);
+  width: 120px;
+  height: 120px;
   position: relative;
   cursor: ${(props) => (props.isTargetable ? 'pointer' : 'default')};
-
-  ${props => props.$isValidTarget && css`
-    &::after {
-      content: '';
-      position: absolute;
-      top: -5px;
-      left: -5px;
-      right: -5px;
-      bottom: -5px;
-      border-radius: 50%;
-      border: 2px dashed #ff0000;
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.7; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-  `}
 `;
 
 const HeroImage = styled.img.withConfig({
@@ -600,62 +549,40 @@ const CardBack = styled.div`
   border-radius: 8px;
 `;
 
-// Vytvoříme mapu obrázků karet
+// Nejdřív vytvoříme mapu obrázků
 const cardImages = {
-  'Earth Golem': earthGolem,
-  'Fireball': fireball,
-  'Healing Touch': healingTouch,
-  'Lightning Bolt': lightningBolt,
-  'Arcane Intellect': arcaneIntellect,
-  'Fire Elemental': fireElemental,
-  'Shield Bearer': shieldBearer,
-  'Water Elemental': waterElemental,
-  'Nimble Sprite': nimbleSprite,
-  'Arcane Familiar': arcaneFamiliar,
-  'Glacial Burst': glacialBurst,
-  'Radiant Protector': radiantProtector,
-  'Inferno Wave': infernoWave,
-  "The Coin": coinImage,
+  'fireElemental': fireElemental,
+  'earthGolem': earthGolem,
+  'fireball': fireball,
+  'healingTouch': healingTouch,
+  'lightningBolt': lightningBolt,
+  'arcaneIntellect': arcaneIntellect,
+  'shieldBearer': shieldBearer,
+  'waterElemental': waterElemental,
+  'nimbleSprite': nimbleSprite,
+  'arcaneFamiliar': arcaneFamiliar,
+  'glacialBurst': glacialBurst,
+  'radiantProtector': radiantProtector,
+  'infernoWave': infernoWave,
+  'coinImage': coinImage
 };
 
-// Přidejte novou styled komponentu pro drag layer
-const DragLayer = styled.div`
-  position: fixed;
-  pointer-events: none;
-  z-index: 2000;
-  transform: translate(-50%, -50%);
-  width: var(--card-width);
-  height: var(--card-height);
-`;
-
-// Vytvoříme nový kontejner pro portál
-const PortalContainer = styled(GameScaleContainer)`
-  position: fixed;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  width: 0;
-  height: 0;
-  overflow: visible;
-`;
-
-// Upravte CardDisplay komponentu pro použití portálu při přetahování
+// Upravíme CardDisplay komponentu
 const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
   if (!card) return null;
 
-  // Karty v ruce protivníka zobrazujeme jako rub
-  if (isOpponentCard && isInHand) {
+  if (isOpponentCard) {
     return (
-      <CardComponent 
-        $isInHand={isInHand} 
-        $isDragging={isDragging}
-      >
+      <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
         <CardBack />
       </CardComponent>
     );
   }
 
-  const cardContent = (
+  // Získáme správný obrázek z mapy
+  const cardImage = cardImages[card.image] || cardBackImage;
+
+  return (
     <CardComponent
       $type={card.type}
       $canAttack={canAttack}
@@ -668,7 +595,11 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
     >
       <ManaCost>{card.manaCost}</ManaCost>
       <RarityGem $rarity={card.rarity} />
-      <CardImage src={cardImages[card.name] || cardBackImage} alt={card.name} />
+      <CardImage 
+        style={{ borderRadius: '4px', border: '1px solid #000000' }} 
+        src={cardImage} 
+        alt={card.name} 
+      />
       {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
@@ -690,376 +621,284 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
       )}
     </CardComponent>
   );
-
-  // Pokud se karta přetahuje, vykreslíme ji přes portál s aktuální pozicí myši
-  if (isDragging) {
-    return createPortal(
-      <PortalContainer>
-        <DragLayer
-          style={{
-            left: window.dragPosition?.x || 0,
-            top: window.dragPosition?.y || 0,
-          }}
-        >
-          {cardContent}
-        </DragLayer>
-      </PortalContainer>,
-      document.body
-    );
-  }
-
-  return cardContent;
 };
-
-// Přidáme novou styled komponentu pro oblast karet protivníka
-const OpponentHandArea = styled.div`
-  position: absolute;
-  top: calc(-166px * var(--scale-factor));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  justify-content: center;
-  gap: calc(5px * var(--scale-factor));
-  padding: calc(10px * var(--scale-factor)) 0;
-  perspective: 1000px;
-  min-height: calc(120px * var(--scale-factor));
-  z-index: 100;
-`;
-
-const HeroDisplay = ({ hero, isTargetable, isOpponent }) => {  // Přidáme prop isOpponent
-  return (
-    <HeroContainer isTargetable={isTargetable}>
-      <HeroImage 
-        src={isOpponent ? aiHeroImage : playerHeroImage}  // Použijeme správný obrázek podle toho, zda jde o protivníka
-        alt={isOpponent ? "Enemy Hero" : "Player Hero"}
-        isTargetable={isTargetable}
-      />
-      <HeroHealth>
-        <HeartIcon>❤️</HeartIcon>
-        {hero.health}
-      </HeroHealth>
-    </HeroContainer>
-  );
-};
-
-// Přidáme novou styled komponentu pro modal s koncem hry
-const GameOverModal = styled.div`
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
-  padding: 2rem;
-  border-radius: 10px;
-  border: 2px solid #ffd700;
-  color: white;
-  text-align: center;
-  z-index: 1000;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
-`;
-
-const GameOverText = styled.h2`
-  color: #ffd700;
-  font-size: 2rem;
-  margin-bottom: 1rem;
-`;
-
-// Přidáme nové styled komponenty pro zvýraznění zón
-const DroppableZone = styled.div`
-  width: 100%;
-  height: 100%;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  background: ${props => props.$isDraggingOver 
-    ? 'rgba(255, 215, 0, 0.2)' 
-    : props.$isValidDropZone 
-      ? 'rgba(255, 215, 0, 0.1)'
-      : 'transparent'};
-  border: 2px dashed ${props => props.$isDraggingOver 
-    ? '#ffd700' 
-    : props.$isValidDropZone 
-      ? 'rgba(255, 215, 0, 0.5)'
-      : 'transparent'};
-`;
 
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [selectedAttackerIndex, setSelectedAttackerIndex] = useState(null);
+  const [visualFeedbacks, setVisualFeedbacks] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [draggedCard, setDraggedCard] = useState(null);
+  const notificationIdRef = useRef(0);
+  const [logEntries, setLogEntries] = useState([]);
 
-  // Přidáme funkci pro kontrolu validního cíle útoku
-  const isValidAttackTarget = useCallback((targetCard) => {
-    if (!draggedCard || draggedCard.type !== 'attack') return false;
-    
-    // Kontrola, zda má nepřítel kartu s provokací (Taunt)
-    const hasTauntMinion = gameState.opponent.field.some(card => card.hasTaunt);
-    
-    // Pokud má nepřítel kartu s provokací, můžeme útočit pouze na karty s provokací
-    if (hasTauntMinion && !targetCard.hasTaunt) {
-      return false;
-    }
-    
-    return true;
-  }, [draggedCard, gameState?.opponent?.field]);
-
-  // Přidáme onDragStart handler
-  const onDragStart = useCallback((start) => {
-    const { source } = start;
-    if (source.droppableId === 'hand') {
-      const card = gameState.player.hand[source.index];
-      setDraggedCard({ type: 'playCard', card });
-    } else if (source.droppableId === 'field') {
-      const card = gameState.player.field[source.index];
-      if (!card.hasAttacked && !card.frozen) {
-        setDraggedCard({ type: 'attack', card });
-      }
-    }
-  }, [gameState?.player]);
-
-  // Upravíme onDragEnd handler aby resetoval draggedCard
-  const onDragEnd = useCallback((result) => {
-    const { source, destination } = result;
-    
-    if (!destination || !gameState) {
-      setDraggedCard(null);
-      return;
-    }
-
-    const sourceArea = source.droppableId;
-    const targetArea = destination.droppableId;
-    const cardIndex = source.index;
-
-    // Hraní karty z ruky na pole
-    if (sourceArea === 'hand' && targetArea === 'field') {
-      onPlayCard({ cardIndex });
-    }
-    // Útok z pole na nepřítele
-    else if (sourceArea === 'field' && targetArea === 'opponent-field') {
-      onAttack({
-        attackerIndex: source.index,
-        targetIndex: destination.index
-      });
-    }
-    // Útok na hrdinu
-    else if (sourceArea === 'field' && targetArea === 'opponent-hero') {
-      onAttack({
-        attackerIndex: source.index,
-        targetIndex: null,
-        isHeroTarget: true
-      });
-    }
-    
-    setDraggedCard(null);
-  }, [gameState, onPlayCard, onAttack]);
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      window.dragPosition = { x: e.clientX, y: e.clientY };
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      delete window.dragPosition;
-    };
+  // Přidáme notifikační helper
+  const addNotification = useCallback((message, type = 'info') => {
+    const id = notificationIdRef.current++;
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
   }, []);
 
-  if (!gameState) {
-    return <div>Čekání na připojení protihráče...</div>;
-  }
-
-  const isPlayerTurn = gameState.currentPlayer === gameState.playerIndex;
-
-  // Přidáme zobrazení konce hry
-  if (gameState.gameOver) {
-    const isWinner = gameState.winner === gameState.playerIndex;
-    const isDraw = gameState.winner === 'draw';
+  // Přidáme early return pro případ, že gameState není definován
+  if (!gameState || !gameState.player) {
     return (
       <GameBoard>
-        <GameOverModal>
-          <GameOverText>
-            {isDraw ? 'Remíza!' : isWinner ? 'Vítězství!' : 'Prohra!'}
-          </GameOverText>
-          <div>
-            {isDraw 
-              ? 'Oba hrdinové padli ve stejný okamžik!' 
-              : isWinner 
-                ? 'Gratulujeme k vítězství!' 
-                : 'Hodně štěstí příště!'}
-          </div>
-        </GameOverModal>
+        <h1>Čekám na připojení protihráče...</h1>
       </GameBoard>
     );
   }
 
+  // Přidáme early return pro konec hry
+  if (gameState.gameOver) {
+    const isWinner = gameState.winner === gameState.playerIndex;
+    return (
+      <GameBoard>
+        <h1>Hra skončila!</h1>
+        <h2>{isWinner ? 'Vyhrál jsi!' : 'Prohrál jsi!'}</h2>
+      </GameBoard>
+    );
+  }
+
+  // Upravíme onDragEnd pro práci s novou strukturou
+  const onDragEnd = (result) => {
+    const { source, destination } = result;
+    if (!destination || !gameState) return;
+
+    // Kontrola, zda je aktuálně na tahu
+    if (gameState.currentPlayer !== gameState.playerIndex) {
+      addNotification('Nejsi na tahu!', 'warning');
+      return;
+    }
+
+    if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
+      const cardIndex = source.index;
+      const card = gameState.player.hand[cardIndex];
+      
+      if (!card) return;
+      
+      if (card.manaCost > gameState.player.mana) {
+        addNotification('Nedostatek many!', 'warning');
+        return;
+      }
+
+      onPlayCard({ cardIndex });
+    } 
+    else if (source.droppableId === 'playerField') {
+      const attackerIndex = source.index;
+      const attacker = gameState.player.field[attackerIndex];
+      
+      if (!attacker || attacker.hasAttacked || attacker.frozen) {
+        addNotification('Tato jednotka nemůže útočit!', 'warning');
+        return;
+      }
+
+      // Kontrola Taunt efektu
+      const hasTauntMinion = gameState.opponent.field.some(unit => unit?.hasTaunt);
+      
+      if (destination.droppableId === 'opponentHero') {
+        if (hasTauntMinion) {
+          addNotification('Musíte nejprve zaútočit na jednotku s Taunt!', 'warning');
+          return;
+        }
+        onAttack({
+          attackerIndex,
+          targetHero: true
+        });
+      } 
+      else if (destination.droppableId.startsWith('opponentCard-')) {
+        const targetIndex = parseInt(destination.droppableId.split('-')[1]);
+        const target = gameState.opponent.field[targetIndex];
+
+        if (hasTauntMinion && !target?.hasTaunt) {
+          addNotification('Musíte nejprve zaútočit na jednotku s Taunt!', 'warning');
+          return;
+        }
+
+        onAttack({
+          attackerIndex,
+          targetIndex,
+          targetHero: false
+        });
+      }
+    }
+  };
+
+  // Upravíme renderClone pro bezpečné použití gameState
+  const renderClone = (provided, snapshot, rubric) => {
+    const card = gameState?.player?.hand[rubric.source.index];
+    if (!card) return null;
+
+    return (
+      <div
+        ref={provided.innerRef}
+        {...provided.draggableProps}
+        {...provided.dragHandleProps}
+      >
+        <CardDisplay
+          card={card}
+          isInHand={true}
+          isDragging={true}
+        />
+      </div>
+    );
+  };
+
+  const OpponentHandArea = styled(HandArea)`
+    top: 10px;
+    bottom: auto;
+    transform: translateX(-50%) rotate(180deg);
+  `;
+
   return (
-    <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <GameScaleContainer>
-        <GameBoard>
-          {/* Zobrazení notifikací */}
-          {notifications.map(notification => (
-            <Notification 
-              key={notification.id} 
-              message={notification.message} 
+    <DragDropContext onDragEnd={onDragEnd}>
+      <GameBoard>
+        <PlayerInfo>
+          <DeckAndManaContainer>
+            <DeckContainer>{gameState.opponent.deckSize}</DeckContainer>
+            <ManaInfo>🔮 {gameState.opponent.mana}/{gameState.opponent.maxMana}</ManaInfo>
+          </DeckAndManaContainer>
+        </PlayerInfo>
+
+        <OpponentHandArea>
+          {gameState.opponent.hand.map((card, index) => (
+            <CardDisplay
+              key={card.id}
+              card={card}
+              isInHand={true}
+              isOpponentCard={true}
             />
           ))}
+        </OpponentHandArea>
 
-          {/* Karty v ruce protivníka */}
-          <OpponentHandArea>
-            {Array.isArray(gameState?.opponent?.hand) && gameState.opponent.hand.map((card, index) => (
-              <CardDisplay
-                key={card.id || index}
-                card={card}
-                isOpponentCard={true}
-                isInHand={true}
-              />
-            ))}
-          </OpponentHandArea>
+        <BattleArea>
+          <Droppable droppableId="opponentHero" direction="horizontal">
+            {(provided, snapshot) => (
+              <HeroArea
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                style={{
+                  background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
+                }}
+              >
+                <HeroDisplay
+                  hero={gameState.opponent.hero}
+                  isTargetable={
+                    gameState.currentPlayer === gameState.playerIndex &&
+                    gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
+                    gameState.opponent.field.every(card => !card.hasTaunt)
+                  }
+                />
+                {provided.placeholder}
+              </HeroArea>
+            )}
+          </Droppable>
 
-          {/* Informace o protihráči */}
-          <PlayerInfo>
-            <DeckAndManaContainer>
-              <DeckContainer>{gameState.opponent.deckSize}</DeckContainer>
-              <ManaInfo>{gameState.opponent.mana}/{gameState.opponent.maxMana} 💎</ManaInfo>
-            </DeckAndManaContainer>
-          </PlayerInfo>
-
-          <BattleArea>
-            {/* Protihráčova oblast */}
-            <PlayerArea>
-              <Droppable droppableId="opponent-hero" isDropDisabled={!draggedCard?.type === 'attack'}>
+          <FieldArea>
+            {gameState.opponent.field.map((card, index) => (
+              <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
                 {(provided, snapshot) => (
-                  <HeroArea ref={provided.innerRef} {...provided.droppableProps}>
-                    <HeroDisplay 
-                      hero={gameState.opponent.hero}
-                      isValidTarget={draggedCard?.type === 'attack'}
-                      isOpponent={true}
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{
+                      background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
+                    }}
+                  >
+                    <CardDisplay
+                      card={card}
+                      isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
                     />
                     {provided.placeholder}
-                  </HeroArea>
+                  </div>
                 )}
               </Droppable>
+            ))}
+          </FieldArea>
 
-              <Droppable droppableId="opponent-field" direction="horizontal" isDropDisabled={!draggedCard?.type === 'attack'}>
-                {(provided, snapshot) => (
-                  <DroppableZone
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    $isDraggingOver={snapshot.isDraggingOver}
-                    $isValidDropZone={draggedCard?.type === 'attack'}
-                  >
-                    <FieldArea>
-                      {gameState.opponent.field.map((card, index) => (
-                        <CardDisplay
-                          key={card.id}
-                          card={card}
-                          isValidTarget={draggedCard?.type === 'attack' && isValidAttackTarget(card)}
-                        />
-                      ))}
-                    </FieldArea>
-                    {provided.placeholder}
-                  </DroppableZone>
-                )}
-              </Droppable>
-            </PlayerArea>
-
-            {/* Hráčova oblast */}
-            <PlayerArea>
-              <Droppable droppableId="field" direction="horizontal">
-                {(provided, snapshot) => (
-                  <DroppableZone
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    $isDraggingOver={snapshot.isDraggingOver}
-                    $isValidDropZone={draggedCard?.type === 'playCard'}
-                  >
-                    <FieldArea>
-                      {gameState.player.field.map((card, index) => (
-                        <Draggable
-                          key={card.id}
-                          draggableId={card.id}
-                          index={index}
-                          isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
-                        >
-                          {(provided, snapshot) => (
-                            <DraggableCardWrapper
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                            >
-                              <CardDisplay
-                                card={card}
-                                canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
-                                isDragging={snapshot.isDragging}
-                              />
-                            </DraggableCardWrapper>
-                          )}
-                        </Draggable>
-                      ))}
-                    </FieldArea>
-                    {provided.placeholder}
-                  </DroppableZone>
-                )}
-              </Droppable>
-
-              <HeroArea>
-                <HeroDisplay 
-                  hero={gameState.player.hero}
-                  isOpponent={false}  // Přidáme prop pro hráče
-                />
-              </HeroArea>
-            </PlayerArea>
-          </BattleArea>
-
-          {/* Informace o hráči a ruka */}
-          <PlayerInfo>
-            <DeckAndManaContainer>
-              <DeckContainer>{gameState.player.deck}</DeckContainer>
-              <ManaInfo>{gameState.player.mana}/{gameState.player.maxMana} 💎</ManaInfo>
-            </DeckAndManaContainer>
-            
-            {isPlayerTurn && (
-              <EndTurnButton onClick={onEndTurn}>
-                Ukončit tah
-              </EndTurnButton>
-            )}
-          </PlayerInfo>
-
-          <Droppable droppableId="hand" direction="horizontal">
-            {(provided) => (
-              <HandArea ref={provided.innerRef} {...provided.droppableProps}>
-                {gameState.player.hand.map((card, index) => (
-                  <Draggable
-                    key={card.id}
-                    draggableId={card.id}
-                    index={index}
-                    isDragDisabled={!isPlayerTurn || card.manaCost > gameState.player.mana}
-                  >
+          <Droppable droppableId="playerField" direction="horizontal">
+            {(provided, snapshot) => (
+              <FieldArea
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                style={{
+                  background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
+                }}
+              >
+                {gameState.player.field.map((card, index) => (
+                  <Draggable key={card.id} draggableId={card.id} index={index} isDragDisabled={card.hasAttacked || card.frozen}>
                     {(provided, snapshot) => (
-                      <DraggableCardWrapper
+                      <div
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
-                        style={{
-                          ...provided.draggableProps.style,
-                          zIndex: snapshot.isDragging ? 2000 : 'auto'
-                        }}
                       >
                         <CardDisplay
                           card={card}
-                          isInHand={true}
+                          canAttack={gameState.currentPlayer === gameState.playerIndex && !card.hasAttacked && !card.frozen}
                           isDragging={snapshot.isDragging}
                         />
-                      </DraggableCardWrapper>
+                      </div>
                     )}
                   </Draggable>
                 ))}
                 {provided.placeholder}
-              </HandArea>
+              </FieldArea>
             )}
           </Droppable>
-        </GameBoard>
-      </GameScaleContainer>
+
+          <HeroArea>
+            <HeroDisplay hero={gameState.player.hero} />
+          </HeroArea>
+        </BattleArea>
+
+        <PlayerInfo>
+          <DeckAndManaContainer>
+            <DeckContainer>{gameState.player.deck}</DeckContainer>
+            <ManaInfo>🔮 {gameState.player.mana}/{gameState.player.maxMana}</ManaInfo>
+          </DeckAndManaContainer>
+          <EndTurnButton 
+            onClick={onEndTurn}
+            disabled={gameState.currentPlayer !== gameState.playerIndex}
+          >
+            Ukončit tah
+          </EndTurnButton>
+        </PlayerInfo>
+
+        <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
+          {(provided) => (
+            <HandArea
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              {gameState.player.hand.map((card, index) => (
+                <Draggable key={card.id} draggableId={card.id} index={index}>
+                  {(provided, snapshot) => (
+                    <DraggableCardWrapper
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      style={{
+                        ...provided.draggableProps.style,
+                        opacity: snapshot.isDragging ? 0 : 1,
+                      }}
+                    >
+                      <CardDisplay
+                        card={card}
+                        isInHand={true}
+                        isDragging={snapshot.isDragging}
+                      />
+                    </DraggableCardWrapper>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </HandArea>
+          )}
+        </Droppable>
+        <VisualFeedbackContainer feedbacks={visualFeedbacks} />
+        <Notification notifications={notifications} />
+        <CombatLog logEntries={logEntries} />
+      </GameBoard>
     </DragDropContext>
   );
 }
