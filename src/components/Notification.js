@@ -10,37 +10,38 @@ const fadeInOut = keyframes`
 
 const NotificationContainer = styled.div`
   position: fixed;
-  top: 50%;
+  top: 20%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 10px;
 `;
 
-const NotificationItem = styled.div`
-  background-color: rgba(0, 0, 0, 0.7);
-  color: ${props => props.type === 'warning' ? '#ffcc00' : '#4CAF50'};
-  padding: 15px 25px;
-  margin-bottom: 10px;
+const NotificationMessage = styled.div`
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 20px;
   border-radius: 5px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  font-family: 'Arial', sans-serif;
+  font-family: Arial, sans-serif;
   font-size: 16px;
-  text-align: center;
   animation: ${fadeInOut} 3s ease-in-out forwards;
-  max-width: 80%;
+  border: 2px solid #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 `;
 
-export const Notification = ({ notifications }) => {
+export const Notification = ({ message }) => {
+  if (!message) return null;
+
   return (
     <NotificationContainer>
-      {notifications.map(notification => (
-        <NotificationItem key={notification.id} type={notification.type}>
-          {notification.message}
-        </NotificationItem>
-      ))}
+      <NotificationMessage>
+        {message}
+      </NotificationMessage>
     </NotificationContainer>
   );
 };
+
+export default Notification;

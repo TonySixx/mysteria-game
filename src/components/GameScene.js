@@ -15,7 +15,7 @@ import playerHeroImage from '../assets/images/player-hero.png';
 import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
 import { VisualFeedbackContainer } from './VisualFeedback';
-import { Notification } from './Notification';
+import Notification from './Notification';  // místo import { Notification }
 import nimbleSprite from '../assets/images/nimble-sprite.png';
 import arcaneFamiliar from '../assets/images/arcane-familiar.png';
 import glacialBurst from '../assets/images/glacial-burst.png';
@@ -662,14 +662,23 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [notifications, setNotifications] = useState([]);
 
-  // Přidáme notifikaci
-  const addNotification = useCallback((message) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setNotifications(prev => [...prev, { id, message }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 3000);
-  }, []);
+  // Přidáme useEffect pro zpracování notifikací z gameState
+  useEffect(() => {
+    if (gameState?.notification) {  // Nyní přichází přímo jako string, ne jako objekt
+      const id = Math.random().toString(36).substr(2, 9);
+      const newNotification = {
+        id,
+        message: gameState.notification  // Použijeme přímo notification string
+      };
+      
+      setNotifications(prev => [...prev, newNotification]);
+      
+      // Odstranění notifikace po 3 sekundách
+      setTimeout(() => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+      }, 3000);
+    }
+  }, [gameState?.notification]);
 
   // Handler pro drag and drop
   const onDragEnd = useCallback((result) => {
@@ -733,9 +742,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <GameBoard>
-        {/* Notifikace */}
+        {/* Zobrazení notifikací */}
         {notifications.map(notification => (
-          <Notification key={notification.id} message={notification.message} />
+          <Notification 
+            key={notification.id} 
+            message={notification.message} 
+          />
         ))}
 
         {/* Karty v ruce protivníka */}
