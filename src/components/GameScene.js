@@ -629,15 +629,42 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notifications, setNotifications] = useState([]);
   const notificationIdRef = useRef(0);
   const [logEntries, setLogEntries] = useState([]);
+  const [notification, setNotification] = useState(null);
 
-  // Přidáme notifikační helper
+  // Vylepšený addNotification helper s logováním
   const addNotification = useCallback((message, type = 'info') => {
+    console.log('Přidávám notifikaci:', { message, type });
     const id = notificationIdRef.current++;
-    setNotifications(prev => [...prev, { id, message, type }]);
+    setNotifications(prev => {
+      console.log('Aktuální notifikace:', prev);
+      return [...prev, { id, message, type }];
+    });
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 5000);
   }, []);
+
+  // Zjednodušený useEffect pro notifikace
+  useEffect(() => {
+    if (gameState?.notification) {
+      const notificationMessage = typeof gameState.notification === 'object' 
+        ? gameState.notification.message 
+        : gameState.notification;
+
+      const isForThisPlayer = typeof gameState.notification === 'object' 
+        ? !gameState.notification.forPlayer || gameState.notification.forPlayer === gameState.playerIndex
+        : true;
+
+      if (isForThisPlayer) {
+        setNotification(notificationMessage);
+        // Automaticky odstraníme notifikaci po 3 sekundách
+        const timer = setTimeout(() => {
+          setNotification(null);
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [gameState?.notification, gameState?.playerIndex]);
 
   // Přidáme early return pro případ, že gameState není definován
   if (!gameState || !gameState.player) {
@@ -659,12 +686,18 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     );
   }
 
-  // Upravíme onDragEnd pro práci s novou strukturou
+  // Vylepšený onDragEnd s logováním
   const onDragEnd = (result) => {
     const { source, destination } = result;
     if (!destination || !gameState) return;
 
-    // Kontrola, zda je aktuálně na tahu
+    console.log('Drag end:', {
+      source,
+      destination,
+      currentPlayer: gameState.currentPlayer,
+      playerIndex: gameState.playerIndex
+    });
+
     if (gameState.currentPlayer !== gameState.playerIndex) {
       addNotification('Nejsi na tahu!', 'warning');
       return;
@@ -687,38 +720,32 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       const attackerIndex = source.index;
       const attacker = gameState.player.field[attackerIndex];
       
+      console.log('Útok jednotkou:', {
+        attackerIndex,
+        attacker,
+        destination: destination.droppableId
+      });
+
       if (!attacker || attacker.hasAttacked || attacker.frozen) {
         addNotification('Tato jednotka nemůže útočit!', 'warning');
         return;
       }
 
-      // Kontrola Taunt efektu
-      const hasTauntMinion = gameState.opponent.field.some(unit => unit?.hasTaunt);
-      
       if (destination.droppableId === 'opponentHero') {
-        if (hasTauntMinion) {
-          addNotification('Musíte nejprve zaútočit na jednotku s Taunt!', 'warning');
-          return;
-        }
+        console.log('Útok na hrdinu');
         onAttack({
-          attackerIndex,         // Změněno zpět na attackerIndex
-          targetIndex: null,     // Přidáno pro konzistenci
-          isHeroTarget: true    // Změněno zpět na isHeroTarget
+          attackerIndex,
+          targetIndex: null,
+          isHeroTarget: true
         });
       } 
       else if (destination.droppableId.startsWith('opponentCard-')) {
         const targetIndex = parseInt(destination.droppableId.split('-')[1]);
-        const target = gameState.opponent.field[targetIndex];
-
-        if (hasTauntMinion && !target?.hasTaunt) {
-          addNotification('Musíte nejprve zaútočit na jednotku s Taunt!', 'warning');
-          return;
-        }
-
+        console.log('Útok na jednotku:', { targetIndex });
         onAttack({
-          attackerIndex,         // Změněno zpět na attackerIndex
-          targetIndex,          // Ponecháno stejné
-          isHeroTarget: false   // Změněno zpět na isHeroTarget
+          attackerIndex,
+          targetIndex,
+          isHeroTarget: false
         });
       }
     }
@@ -897,7 +924,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           )}
         </Droppable>
         <VisualFeedbackContainer feedbacks={visualFeedbacks} />
-        <Notification notifications={notifications} />
+        <Notification message={notification} />
         <CombatLog logEntries={logEntries} />
       </GameBoard>
     </DragDropContext>
