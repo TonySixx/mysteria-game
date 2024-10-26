@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import socketService from '../services/SocketService';
+import socketService from '../services/socketService';
 
 const MatchmakingContainer = styled.div`
     display: flex;

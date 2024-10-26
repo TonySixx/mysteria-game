@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import GameScene from './components/GameScene';
 import MatchmakingScreen from './components/MatchmakingScreen';
-import socketService from './services/SocketService';
+import socketService from './services/socketService';
 
 function App() {
     const [gameId, setGameId] = useState(null);
@@ -29,10 +29,10 @@ function App() {
         };
     }, []);
 
-    const handleGameStart = (newGameId) => {
+    const handleGameStart = useCallback((newGameId) => {
         console.log('Game started with ID:', newGameId);
         setGameId(newGameId);
-    };
+    }, []);
 
     return (
         <div>

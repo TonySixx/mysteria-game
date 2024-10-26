@@ -41,7 +41,6 @@ import {
   executeLethalSequence,
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
-import socketService from '../services/SocketService';
 
 const GameBoard = styled.div`
   position: relative;
@@ -60,14 +59,6 @@ const GameBoard = styled.div`
   -ms-user-select: none;
 `;
 
-const PlayerArea = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  flex: 1;
-  padding: 10px 0;
-`;
 
 const BattleArea = styled.div`
   display: flex;
@@ -624,25 +615,8 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
 };
 
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
-  const [selectedAttackerIndex, setSelectedAttackerIndex] = useState(null);
-  const [visualFeedbacks, setVisualFeedbacks] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const notificationIdRef = useRef(0);
-  const [logEntries, setLogEntries] = useState([]);
   const [notification, setNotification] = useState(null);
-
-  // Vylepšený addNotification helper s logováním
-  const addNotification = useCallback((message, type = 'info') => {
-    console.log('Přidávám notifikaci:', { message, type });
-    const id = notificationIdRef.current++;
-    setNotifications(prev => {
-      console.log('Aktuální notifikace:', prev);
-      return [...prev, { id, message, type }];
-    });
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 5000);
-  }, []);
+  const [logEntries, setLogEntries] = useState([]);
 
   // Zjednodušený useEffect pro notifikace
   useEffect(() => {
@@ -699,7 +673,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     });
 
     if (gameState.currentPlayer !== gameState.playerIndex) {
-      addNotification('Nejsi na tahu!', 'warning');
+      setNotification('Nejsi na tahu!');
       return;
     }
 
@@ -710,7 +684,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       if (!card) return;
       
       if (card.manaCost > gameState.player.mana) {
-        addNotification('Nedostatek many!', 'warning');
+        setNotification('Nedostatek many!');
         return;
       }
 
@@ -727,7 +701,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       });
 
       if (!attacker || attacker.hasAttacked || attacker.frozen) {
-        addNotification('Tato jednotka nemůže útočit!', 'warning');
+        setNotification('Tato jednotka nemůže útočit!');
         return;
       }
 
@@ -829,6 +803,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     style={{
+                      position: 'relative',
                       background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
                     }}
                   >
@@ -836,7 +811,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                       card={card}
                       isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
                     />
-                    {provided.placeholder}
+                    {snapshot.isDraggingOver ? <div style={{ position: 'absolute', height: '100px', width: '100%', background: 'rgba(255, 0, 0, 0.5)', borderEndStartRadius: '8px', borderEndEndRadius: '8px' }} /> : null}
                   </div>
                 )}
               </Droppable>
@@ -923,7 +898,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </HandArea>
           )}
         </Droppable>
-        <VisualFeedbackContainer feedbacks={visualFeedbacks} />
         <Notification message={notification} />
         <CombatLog logEntries={logEntries} />
       </GameBoard>
