@@ -41,13 +41,13 @@ import {
   executeLethalSequence,
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
+import backgroundImage from '../assets/images/background.png';
 
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
   height: 100vh;
-  background: url('/background.png') no-repeat center center fixed;
-  background-size: cover;
+  background: url(${backgroundImage}) center center / cover no-repeat fixed;
   color: #ffd700;
   font-family: 'Cinzel', serif;
   overflow: hidden;

@@ -4,13 +4,20 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": { "distDir": "build" }
+      "config": { 
+        "distDir": "build",
+        "buildCommand": "CI=false npm run build"
+      }
     }
   ],
   "routes": [
     {
       "src": "/static/(.*)",
       "dest": "/static/$1"
+    },
+    {
+      "src": "/background.png",
+      "dest": "/background.png"
     },
     {
       "src": "/favicon.ico",
@@ -26,6 +33,7 @@
     }
   ],
   "env": {
-    "REACT_APP_SERVER_URL": "https://card-game-server.onrender.com"
+    "REACT_APP_SERVER_URL": "https://mysteria-backend.onrender.com",
+    "CI": "false"
   }
 }
