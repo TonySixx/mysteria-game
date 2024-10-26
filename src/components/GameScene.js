@@ -43,6 +43,39 @@ import {
 } from '../game/aiStrategy';
 import backgroundImage from '../assets/images/background.png';
 
+// Na začátek souboru přidejte nové konstanty pro škálování
+const BREAKPOINTS = {
+  small: 512,
+  medium: 768,
+  large: 1024
+};
+
+// Přidejte novou styled komponentu pro kontejner s CSS proměnnými
+const GameScaleContainer = styled.div`
+  --scale-factor: 1;
+  --card-width: calc(120px * var(--scale-factor));
+  --card-height: calc(180px * var(--scale-factor));
+  --field-card-width: calc(140px * var(--scale-factor));
+  --field-card-height: calc(200px * var(--scale-factor));
+  --hero-size: calc(120px * var(--scale-factor));
+  --spacing: calc(10px * var(--scale-factor));
+  
+  @media (max-height: ${BREAKPOINTS.small}px) {
+    --scale-factor: 0.5;
+  }
+  
+  @media (min-height: ${BREAKPOINTS.small}px) and (max-height: ${BREAKPOINTS.medium}px) {
+    --scale-factor: 0.6;
+  }
+  
+  @media (min-height: ${BREAKPOINTS.medium}px) and (max-height: ${BREAKPOINTS.large}px) {
+    --scale-factor: 0.75;
+  }
+  
+  width: 100%;
+  height: 100vh;
+`;
+
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
@@ -87,25 +120,25 @@ const HeroArea = styled.div`
 const FieldArea = styled.div`
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: var(--spacing);
   flex-wrap: wrap;
   width: 100%;
-  padding: 10px 0;
+  padding: var(--spacing) 0;
   box-sizing: border-box;
-  min-height: 220px; // Zvětšeno pro lepší prostor pro přetahování
+  min-height: calc(220px * var(--scale-factor));
 `;
 
 const HandArea = styled.div`
   position: fixed;
-  bottom: -40px;
+  bottom: calc(-20px * var(--scale-factor));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 5px;
-  padding: 10px 0;
+  gap: calc(5px * var(--scale-factor));
+  padding: calc(10px * var(--scale-factor)) 0;
   perspective: 1000px;
-  min-height: 220px; // Přidáno pro zajištění prostoru pro karty
+  min-height: var(--card-height);
 `;
 
 const PlayerInfo = styled.div`
@@ -172,8 +205,8 @@ const DraggableCardWrapper = styled.div`
 `;
 
 const CardComponent = styled.div`
-  width: ${(props) => (props.$isInHand ? '120px' : '140px')};
-  height: ${(props) => (props.$isInHand ? '180px' : '200px')};
+  width: ${(props) => (props.$isInHand ? 'var(--card-width)' : 'var(--field-card-width)')};
+  height: ${(props) => (props.$isInHand ? 'var(--card-height)' : 'var(--field-card-height)')};
   border: 2px solid ${(props) => {
     if (props.$isSelected) return '#ffd700';
     if (props.$isTargetable) return '#ff9900';
@@ -295,9 +328,9 @@ const TauntLabel = styled.div`
 `;
 
 const CardName = styled.div`
+  font-size: calc(14px * var(--scale-factor));
   font-weight: bold;
   text-align: center;
-  font-size: 14px;
   margin-bottom: 5px;
   color: white;
   position: relative;
@@ -326,8 +359,8 @@ const CardStats = styled.div`
 
 
 const CardDescription = styled.div`
+  font-size: calc(11px * var(--scale-factor));
   font-family: 'Arial', sans-serif;
-  font-size: 11px;
   text-align: center;
   margin-top: 2px;
   margin-bottom: 2px;
@@ -347,8 +380,8 @@ const ManaCost = styled.div`
   position: absolute;
   top: -10px;
   left: -10px;
-  width: 30px;
-  height: 30px;
+  width: calc(30px * var(--scale-factor));
+  height: calc(30px * var(--scale-factor));
   background-color: #4fc3f7;
   color: white;
   border-radius: 50%;
@@ -356,7 +389,7 @@ const ManaCost = styled.div`
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: 16px;
+  font-size: calc(16px * var(--scale-factor));
   border: 2px solid #2196f3;
   box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
   z-index: 10;
@@ -482,8 +515,8 @@ const RarityGem = styled.div`
 const HeroContainer = styled.div.withConfig({
   shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
 })`
-  width: 120px;
-  height: 120px;
+  width: var(--hero-size);
+  height: var(--hero-size);
   position: relative;
   cursor: ${(props) => (props.isTargetable ? 'pointer' : 'default')};
 `;
@@ -608,15 +641,15 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
 // Přidáme novou styled komponentu pro oblast karet protivníka
 const OpponentHandArea = styled.div`
   position: absolute;
-  top: -166px;
+  top: calc(-166px * var(--scale-factor));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 5px;
-  padding: 10px 0;
+  gap: calc(5px * var(--scale-factor));
+  padding: calc(10px * var(--scale-factor)) 0;
   perspective: 1000px;
-  min-height: 120px;
+  min-height: calc(120px * var(--scale-factor));
   z-index: 100;
 `;
 
@@ -741,153 +774,155 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <GameBoard>
-        {/* Zobrazení notifikací */}
-        {notifications.map(notification => (
-          <Notification 
-            key={notification.id} 
-            message={notification.message} 
-          />
-        ))}
-
-        {/* Karty v ruce protivníka */}
-        <OpponentHandArea>
-          {Array.isArray(gameState?.opponent?.hand) && gameState.opponent.hand.map((card, index) => (
-            <CardDisplay
-              key={card.id || index}
-              card={card}
-              isOpponentCard={true}
-              isInHand={true}
+      <GameScaleContainer>
+        <GameBoard>
+          {/* Zobrazení notifikací */}
+          {notifications.map(notification => (
+            <Notification 
+              key={notification.id} 
+              message={notification.message} 
             />
           ))}
-        </OpponentHandArea>
 
-        {/* Informace o protihráči */}
-        <PlayerInfo>
-          <DeckAndManaContainer>
-            <DeckContainer>{gameState.opponent.deckSize}</DeckContainer>
-            <ManaInfo>{gameState.opponent.mana}/{gameState.opponent.maxMana} 💎</ManaInfo>
-          </DeckAndManaContainer>
-        </PlayerInfo>
-
-        <BattleArea>
-          {/* Protihráčova oblast */}
-          <PlayerArea>
-            <Droppable droppableId="opponent-hero">
-              {(provided) => (
-                <HeroArea ref={provided.innerRef} {...provided.droppableProps}>
-                  <HeroDisplay 
-                    hero={gameState.opponent.hero}
-                    isTargetable={selectedCard && selectedCard.canAttack}
-                    isOpponent={true}  // Přidáme prop pro protivníka
-                  />
-                  {provided.placeholder}
-                </HeroArea>
-              )}
-            </Droppable>
-
-            <Droppable droppableId="opponent-field" direction="horizontal">
-              {(provided) => (
-                <FieldArea ref={provided.innerRef} {...provided.droppableProps}>
-                  {gameState.opponent.field.map((card, index) => (
-                    <CardDisplay
-                      key={card.id}
-                      card={card}
-                      isOpponentCard={false} // Změníme na false, protože chceme vidět karty na stole
-                      isTargetable={selectedCard && selectedCard.canAttack}
-                    />
-                  ))}
-                  {provided.placeholder}
-                </FieldArea>
-              )}
-            </Droppable>
-          </PlayerArea>
-
-          {/* Hráčova oblast */}
-          <PlayerArea>
-            <Droppable droppableId="field" direction="horizontal">
-              {(provided) => (
-                <FieldArea ref={provided.innerRef} {...provided.droppableProps}>
-                  {gameState.player.field.map((card, index) => (
-                    <Draggable
-                      key={card.id}
-                      draggableId={card.id}
-                      index={index}
-                      isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
-                    >
-                      {(provided, snapshot) => (
-                        <DraggableCardWrapper
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <CardDisplay
-                            card={card}
-                            canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
-                            isDragging={snapshot.isDragging}
-                          />
-                        </DraggableCardWrapper>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                </FieldArea>
-              )}
-            </Droppable>
-
-            <HeroArea>
-              <HeroDisplay 
-                hero={gameState.player.hero}
-                isOpponent={false}  // Přidáme prop pro hráče
+          {/* Karty v ruce protivníka */}
+          <OpponentHandArea>
+            {Array.isArray(gameState?.opponent?.hand) && gameState.opponent.hand.map((card, index) => (
+              <CardDisplay
+                key={card.id || index}
+                card={card}
+                isOpponentCard={true}
+                isInHand={true}
               />
-            </HeroArea>
-          </PlayerArea>
-        </BattleArea>
+            ))}
+          </OpponentHandArea>
 
-        {/* Informace o hráči a ruka */}
-        <PlayerInfo>
-          <DeckAndManaContainer>
-            <DeckContainer>{gameState.player.deck}</DeckContainer>
-            <ManaInfo>{gameState.player.mana}/{gameState.player.maxMana} 💎</ManaInfo>
-          </DeckAndManaContainer>
-          
-          {isPlayerTurn && (
-            <EndTurnButton onClick={onEndTurn}>
-              Ukončit tah
-            </EndTurnButton>
-          )}
-        </PlayerInfo>
+          {/* Informace o protihráči */}
+          <PlayerInfo>
+            <DeckAndManaContainer>
+              <DeckContainer>{gameState.opponent.deckSize}</DeckContainer>
+              <ManaInfo>{gameState.opponent.mana}/{gameState.opponent.maxMana} 💎</ManaInfo>
+            </DeckAndManaContainer>
+          </PlayerInfo>
 
-        <Droppable droppableId="hand" direction="horizontal">
-          {(provided) => (
-            <HandArea ref={provided.innerRef} {...provided.droppableProps}>
-              {gameState.player.hand.map((card, index) => (
-                <Draggable
-                  key={card.id}
-                  draggableId={card.id}
-                  index={index}
-                  isDragDisabled={!isPlayerTurn || card.manaCost > gameState.player.mana}
-                >
-                  {(provided, snapshot) => (
-                    <DraggableCardWrapper
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                    >
+          <BattleArea>
+            {/* Protihráčova oblast */}
+            <PlayerArea>
+              <Droppable droppableId="opponent-hero">
+                {(provided) => (
+                  <HeroArea ref={provided.innerRef} {...provided.droppableProps}>
+                    <HeroDisplay 
+                      hero={gameState.opponent.hero}
+                      isTargetable={selectedCard && selectedCard.canAttack}
+                      isOpponent={true}  // Přidáme prop pro protivníka
+                    />
+                    {provided.placeholder}
+                  </HeroArea>
+                )}
+              </Droppable>
+
+              <Droppable droppableId="opponent-field" direction="horizontal">
+                {(provided) => (
+                  <FieldArea ref={provided.innerRef} {...provided.droppableProps}>
+                    {gameState.opponent.field.map((card, index) => (
                       <CardDisplay
+                        key={card.id}
                         card={card}
-                        isInHand={true}
-                        isDragging={snapshot.isDragging}
+                        isOpponentCard={false} // Změníme na false, protože chceme vidět karty na stole
+                        isTargetable={selectedCard && selectedCard.canAttack}
                       />
-                    </DraggableCardWrapper>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </HandArea>
-          )}
-        </Droppable>
-      </GameBoard>
+                    ))}
+                    {provided.placeholder}
+                  </FieldArea>
+                )}
+              </Droppable>
+            </PlayerArea>
+
+            {/* Hráčova oblast */}
+            <PlayerArea>
+              <Droppable droppableId="field" direction="horizontal">
+                {(provided) => (
+                  <FieldArea ref={provided.innerRef} {...provided.droppableProps}>
+                    {gameState.player.field.map((card, index) => (
+                      <Draggable
+                        key={card.id}
+                        draggableId={card.id}
+                        index={index}
+                        isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
+                      >
+                        {(provided, snapshot) => (
+                          <DraggableCardWrapper
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <CardDisplay
+                              card={card}
+                              canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
+                              isDragging={snapshot.isDragging}
+                            />
+                          </DraggableCardWrapper>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </FieldArea>
+                )}
+              </Droppable>
+
+              <HeroArea>
+                <HeroDisplay 
+                  hero={gameState.player.hero}
+                  isOpponent={false}  // Přidáme prop pro hráče
+                />
+              </HeroArea>
+            </PlayerArea>
+          </BattleArea>
+
+          {/* Informace o hráči a ruka */}
+          <PlayerInfo>
+            <DeckAndManaContainer>
+              <DeckContainer>{gameState.player.deck}</DeckContainer>
+              <ManaInfo>{gameState.player.mana}/{gameState.player.maxMana} 💎</ManaInfo>
+            </DeckAndManaContainer>
+            
+            {isPlayerTurn && (
+              <EndTurnButton onClick={onEndTurn}>
+                Ukončit tah
+              </EndTurnButton>
+            )}
+          </PlayerInfo>
+
+          <Droppable droppableId="hand" direction="horizontal">
+            {(provided) => (
+              <HandArea ref={provided.innerRef} {...provided.droppableProps}>
+                {gameState.player.hand.map((card, index) => (
+                  <Draggable
+                    key={card.id}
+                    draggableId={card.id}
+                    index={index}
+                    isDragDisabled={!isPlayerTurn || card.manaCost > gameState.player.mana}
+                  >
+                    {(provided, snapshot) => (
+                      <DraggableCardWrapper
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <CardDisplay
+                          card={card}
+                          isInHand={true}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </DraggableCardWrapper>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </HandArea>
+            )}
+          </Droppable>
+        </GameBoard>
+      </GameScaleContainer>
     </DragDropContext>
   );
 }
