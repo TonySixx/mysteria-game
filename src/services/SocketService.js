@@ -1,6 +1,8 @@
 import io from 'socket.io-client';
 
 
+const SERVER_URL = process.env.REACT_APP_SERVER_URL || 'http://localhost:3001';
+
 class SocketService {
     constructor() {
         this.socket = null;
@@ -8,6 +10,7 @@ class SocketService {
         this.matchFoundCallback = null;
         this.errorCallback = null;
         this.localGameState = null; // Pro optimistické aktualizace
+        this.serverUrl = SERVER_URL;
     }
 
     isConnected() {
@@ -21,7 +24,7 @@ class SocketService {
         }
 
         console.log('Připojuji k serveru:', process.env.REACT_APP_SERVER_URL);
-        this.socket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000', {
+        this.socket = io(this.serverUrl, {
             transports: ['websocket'],
             reconnection: true,
             reconnectionAttempts: 5,

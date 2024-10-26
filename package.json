@@ -21,7 +21,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "setup": "../scripts/dev-setup.sh",
-    "deploy": "../scripts/deploy.sh"
+    "deploy": "vercel --prod"
   },
   "eslintConfig": {
     "extends": [
