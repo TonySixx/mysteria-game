@@ -42,6 +42,47 @@ import {
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
 
+// Přesuneme Tooltip komponentu na začátek, hned po importech
+const Tooltip = styled.div`
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 1000;
+  
+  ${props => props.$position === 'top' && `
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 5px;
+    
+    @media (max-width: 768px) {
+      left: auto;
+      right: 0;
+      transform: none;
+    }
+  `}
+  
+  ${props => props.$position === 'bottom' && `
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 5px;
+    
+    @media (max-width: 768px) {
+      left: auto;
+      right: 0;
+      transform: none;
+    }
+  `}
+`;
+
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
@@ -116,6 +157,7 @@ const DeckAndManaContainer = styled.div`
 `;
 
 const DeckContainer = styled.div`
+  position: relative;
   width: 40px;
   height: 60px;
   background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
@@ -128,12 +170,23 @@ const DeckContainer = styled.div`
   font-size: 14px;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  cursor: help;
+
+  &:hover ${Tooltip} {
+    opacity: 1;
+  }
 `;
 
 const ManaInfo = styled.div`
+  position: relative;
   font-size: 18px;
   color: #4fc3f7;
   text-shadow: 0 0 5px #4fc3f7;
+  cursor: help;
+
+  &:hover ${Tooltip} {
+    opacity: 1;
+  }
 `;
 
 const EndTurnButton = styled.button`
@@ -644,7 +697,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   if (!gameState || !gameState.player) {
     return (
       <GameBoard>
-        <h1>Čekám na připojení protihráče...</h1>
+        <h1>Waiting for opponent...</h1>
       </GameBoard>
     );
   }
@@ -654,8 +707,8 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     const isWinner = gameState.winner === gameState.playerIndex;
     return (
       <GameBoard>
-        <h1>Hra skončila!</h1>
-        <h2>{isWinner ? 'Vyhrál jsi!' : 'Prohrál jsi!'}</h2>
+        <h1>Game Over!</h1>
+        <h2>{isWinner ? 'You won!' : 'You lost!'}</h2>
       </GameBoard>
     );
   }
@@ -673,7 +726,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     });
 
     if (gameState.currentPlayer !== gameState.playerIndex) {
-      setNotification('Nejsi na tahu!');
+      setNotification('Not your turn!');
       return;
     }
 
@@ -684,7 +737,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       if (!card) return;
       
       if (card.manaCost > gameState.player.mana) {
-        setNotification('Nedostatek many!');
+        setNotification('Not enough mana!');
         return;
       }
 
@@ -701,7 +754,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       });
 
       if (!attacker || attacker.hasAttacked || attacker.frozen) {
-        setNotification('Tato jednotka nemůže útočit!');
+        setNotification('This unit cannot attack!');
         return;
       }
 
@@ -756,8 +809,18 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       <GameBoard>
         <PlayerInfo>
           <DeckAndManaContainer>
-            <DeckContainer>{gameState.opponent.deckSize}</DeckContainer>
-            <ManaInfo>🔮 {gameState.opponent.mana}/{gameState.opponent.maxMana}</ManaInfo>
+            <DeckContainer>
+              {gameState.opponent.deckSize}
+              <Tooltip $position="bottom">
+                Cards in deck
+              </Tooltip>
+            </DeckContainer>
+            <ManaInfo>
+              💎 {gameState.opponent.mana}/{gameState.opponent.maxMana}
+              <Tooltip $position="bottom">
+                Mana crystals
+              </Tooltip>
+            </ManaInfo>
           </DeckAndManaContainer>
         </PlayerInfo>
 
@@ -856,14 +919,24 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
 
         <PlayerInfo>
           <DeckAndManaContainer>
-            <DeckContainer>{gameState.player.deck}</DeckContainer>
-            <ManaInfo>🔮 {gameState.player.mana}/{gameState.player.maxMana}</ManaInfo>
+            <DeckContainer>
+              {gameState.player.deck}
+              <Tooltip $position="top">
+                Cards in deck
+              </Tooltip>
+            </DeckContainer>
+            <ManaInfo>
+              💎 {gameState.player.mana}/{gameState.player.maxMana}
+              <Tooltip $position="top">
+                Mana crystals
+              </Tooltip>
+            </ManaInfo>
           </DeckAndManaContainer>
           <EndTurnButton 
             onClick={onEndTurn}
             disabled={gameState.currentPlayer !== gameState.playerIndex}
           >
-            Ukončit tah
+            End turn
           </EndTurnButton>
         </PlayerInfo>
 

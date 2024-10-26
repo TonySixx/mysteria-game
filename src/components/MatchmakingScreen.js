@@ -140,12 +140,12 @@ const MatchmakingScreen = ({ onGameStart }) => {
             
             {isSearching ? (
                 <>
-                    <SearchingText>Hledání protihráče...</SearchingText>
+                    <SearchingText>Searching for opponent...</SearchingText>
                     <LoadingSpinner />
-                    <Button onClick={handleCancel}>Zrušit hledání</Button>
+                    <Button onClick={handleCancel}>Cancel search</Button>
                 </>
             ) : (
-                <Button onClick={handleFindGame}>Najít hru</Button>
+                <Button onClick={handleFindGame}>Find game</Button>
             )}
         </MatchmakingContainer>
     );
