@@ -42,6 +42,7 @@ import {
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
 import backgroundImage from '../assets/images/background.png';
+import { createPortal } from 'react-dom';
 
 // Na začátek souboru přidejte nové konstanty pro škálování
 const BREAKPOINTS = {
@@ -253,14 +254,17 @@ const CardComponent = styled.div`
     `
     transform: rotate(5deg) scale(1.05);
     box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-    opacity: 1.0
+    opacity: 1.0;
+    z-index: 1001;
   `}
 
   ${props => props.$isFrozen && frozenStyle}
 
   ${(props) => props.$canAttack && !props.$isInHand && css`
     box-shadow: 0 0 10px 3px #00ff00;
+    cursor: pointer;
     &:hover {
+      transform: scale(1.05);
       box-shadow: 0 0 15px 5px #00ff00;
     }
   `}
@@ -268,6 +272,15 @@ const CardComponent = styled.div`
   ${(props) => props.$isTargetable && css`
     box-shadow: 0 0 10px 3px #ff0000;
     &:hover {
+      box-shadow: 0 0 15px 5px #ff0000;
+    }
+  `}
+
+  ${(props) => props.$isValidTarget && css`
+    box-shadow: 0 0 10px 3px #ff0000;
+    cursor: pointer;
+    &:hover {
+      transform: scale(1.05);
       box-shadow: 0 0 15px 5px #ff0000;
     }
   `}
@@ -519,6 +532,26 @@ const HeroContainer = styled.div.withConfig({
   height: var(--hero-size);
   position: relative;
   cursor: ${(props) => (props.isTargetable ? 'pointer' : 'default')};
+
+  ${props => props.$isValidTarget && css`
+    &::after {
+      content: '';
+      position: absolute;
+      top: -5px;
+      left: -5px;
+      right: -5px;
+      bottom: -5px;
+      border-radius: 50%;
+      border: 2px dashed #ff0000;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.7; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  `}
 `;
 
 const HeroImage = styled.img.withConfig({
@@ -585,23 +618,44 @@ const cardImages = {
   "The Coin": coinImage,
 };
 
-// Upravíme CardDisplay komponentu
+// Přidejte novou styled komponentu pro drag layer
+const DragLayer = styled.div`
+  position: fixed;
+  pointer-events: none;
+  z-index: 2000;
+  transform: translate(-50%, -50%);
+  width: var(--card-width);
+  height: var(--card-height);
+`;
+
+// Vytvoříme nový kontejner pro portál
+const PortalContainer = styled(GameScaleContainer)`
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  overflow: visible;
+`;
+
+// Upravte CardDisplay komponentu pro použití portálu při přetahování
 const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
   if (!card) return null;
 
   // Karty v ruce protivníka zobrazujeme jako rub
   if (isOpponentCard && isInHand) {
     return (
-      <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
+      <CardComponent 
+        $isInHand={isInHand} 
+        $isDragging={isDragging}
+      >
         <CardBack />
       </CardComponent>
     );
   }
 
-  // Získáme obrázek karty
-  const cardImage = cardImages[card.name] || cardBackImage;
-
-  return (
+  const cardContent = (
     <CardComponent
       $type={card.type}
       $canAttack={canAttack}
@@ -614,7 +668,7 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
     >
       <ManaCost>{card.manaCost}</ManaCost>
       <RarityGem $rarity={card.rarity} />
-      <CardImage src={cardImage} alt={card.name} />
+      <CardImage src={cardImages[card.name] || cardBackImage} alt={card.name} />
       {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
@@ -636,7 +690,26 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
       )}
     </CardComponent>
   );
-}
+
+  // Pokud se karta přetahuje, vykreslíme ji přes portál s aktuální pozicí myši
+  if (isDragging) {
+    return createPortal(
+      <PortalContainer>
+        <DragLayer
+          style={{
+            left: window.dragPosition?.x || 0,
+            top: window.dragPosition?.y || 0,
+          }}
+        >
+          {cardContent}
+        </DragLayer>
+      </PortalContainer>,
+      document.body
+    );
+  }
+
+  return cardContent;
+};
 
 // Přidáme novou styled komponentu pro oblast karet protivníka
 const OpponentHandArea = styled.div`
@@ -691,33 +764,66 @@ const GameOverText = styled.h2`
   margin-bottom: 1rem;
 `;
 
+// Přidáme nové styled komponenty pro zvýraznění zón
+const DroppableZone = styled.div`
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: ${props => props.$isDraggingOver 
+    ? 'rgba(255, 215, 0, 0.2)' 
+    : props.$isValidDropZone 
+      ? 'rgba(255, 215, 0, 0.1)'
+      : 'transparent'};
+  border: 2px dashed ${props => props.$isDraggingOver 
+    ? '#ffd700' 
+    : props.$isValidDropZone 
+      ? 'rgba(255, 215, 0, 0.5)'
+      : 'transparent'};
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [selectedCard, setSelectedCard] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [draggedCard, setDraggedCard] = useState(null);
 
-  // Přidáme useEffect pro zpracování notifikací z gameState
-  useEffect(() => {
-    if (gameState?.notification) {  // Nyní přichází přímo jako string, ne jako objekt
-      const id = Math.random().toString(36).substr(2, 9);
-      const newNotification = {
-        id,
-        message: gameState.notification  // Použijeme přímo notification string
-      };
-      
-      setNotifications(prev => [...prev, newNotification]);
-      
-      // Odstranění notifikace po 3 sekundách
-      setTimeout(() => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-      }, 3000);
+  // Přidáme funkci pro kontrolu validního cíle útoku
+  const isValidAttackTarget = useCallback((targetCard) => {
+    if (!draggedCard || draggedCard.type !== 'attack') return false;
+    
+    // Kontrola, zda má nepřítel kartu s provokací (Taunt)
+    const hasTauntMinion = gameState.opponent.field.some(card => card.hasTaunt);
+    
+    // Pokud má nepřítel kartu s provokací, můžeme útočit pouze na karty s provokací
+    if (hasTauntMinion && !targetCard.hasTaunt) {
+      return false;
     }
-  }, [gameState?.notification]);
+    
+    return true;
+  }, [draggedCard, gameState?.opponent?.field]);
 
-  // Handler pro drag and drop
+  // Přidáme onDragStart handler
+  const onDragStart = useCallback((start) => {
+    const { source } = start;
+    if (source.droppableId === 'hand') {
+      const card = gameState.player.hand[source.index];
+      setDraggedCard({ type: 'playCard', card });
+    } else if (source.droppableId === 'field') {
+      const card = gameState.player.field[source.index];
+      if (!card.hasAttacked && !card.frozen) {
+        setDraggedCard({ type: 'attack', card });
+      }
+    }
+  }, [gameState?.player]);
+
+  // Upravíme onDragEnd handler aby resetoval draggedCard
   const onDragEnd = useCallback((result) => {
     const { source, destination } = result;
     
-    if (!destination || !gameState) return;
+    if (!destination || !gameState) {
+      setDraggedCard(null);
+      return;
+    }
 
     const sourceArea = source.droppableId;
     const targetArea = destination.droppableId;
@@ -739,10 +845,24 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       onAttack({
         attackerIndex: source.index,
         targetIndex: null,
-        isHeroTarget: true  // Přidáme tento flag
+        isHeroTarget: true
       });
     }
+    
+    setDraggedCard(null);
   }, [gameState, onPlayCard, onAttack]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      window.dragPosition = { x: e.clientX, y: e.clientY };
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      delete window.dragPosition;
+    };
+  }, []);
 
   if (!gameState) {
     return <div>Čekání na připojení protihráče...</div>;
@@ -773,7 +893,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
+    <DragDropContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <GameScaleContainer>
         <GameBoard>
           {/* Zobrazení notifikací */}
@@ -807,32 +927,38 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           <BattleArea>
             {/* Protihráčova oblast */}
             <PlayerArea>
-              <Droppable droppableId="opponent-hero">
-                {(provided) => (
+              <Droppable droppableId="opponent-hero" isDropDisabled={!draggedCard?.type === 'attack'}>
+                {(provided, snapshot) => (
                   <HeroArea ref={provided.innerRef} {...provided.droppableProps}>
                     <HeroDisplay 
                       hero={gameState.opponent.hero}
-                      isTargetable={selectedCard && selectedCard.canAttack}
-                      isOpponent={true}  // Přidáme prop pro protivníka
+                      isValidTarget={draggedCard?.type === 'attack'}
+                      isOpponent={true}
                     />
                     {provided.placeholder}
                   </HeroArea>
                 )}
               </Droppable>
 
-              <Droppable droppableId="opponent-field" direction="horizontal">
-                {(provided) => (
-                  <FieldArea ref={provided.innerRef} {...provided.droppableProps}>
-                    {gameState.opponent.field.map((card, index) => (
-                      <CardDisplay
-                        key={card.id}
-                        card={card}
-                        isOpponentCard={false} // Změníme na false, protože chceme vidět karty na stole
-                        isTargetable={selectedCard && selectedCard.canAttack}
-                      />
-                    ))}
+              <Droppable droppableId="opponent-field" direction="horizontal" isDropDisabled={!draggedCard?.type === 'attack'}>
+                {(provided, snapshot) => (
+                  <DroppableZone
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    $isDraggingOver={snapshot.isDraggingOver}
+                    $isValidDropZone={draggedCard?.type === 'attack'}
+                  >
+                    <FieldArea>
+                      {gameState.opponent.field.map((card, index) => (
+                        <CardDisplay
+                          key={card.id}
+                          card={card}
+                          isValidTarget={draggedCard?.type === 'attack' && isValidAttackTarget(card)}
+                        />
+                      ))}
+                    </FieldArea>
                     {provided.placeholder}
-                  </FieldArea>
+                  </DroppableZone>
                 )}
               </Droppable>
             </PlayerArea>
@@ -840,32 +966,39 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             {/* Hráčova oblast */}
             <PlayerArea>
               <Droppable droppableId="field" direction="horizontal">
-                {(provided) => (
-                  <FieldArea ref={provided.innerRef} {...provided.droppableProps}>
-                    {gameState.player.field.map((card, index) => (
-                      <Draggable
-                        key={card.id}
-                        draggableId={card.id}
-                        index={index}
-                        isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
-                      >
-                        {(provided, snapshot) => (
-                          <DraggableCardWrapper
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                          >
-                            <CardDisplay
-                              card={card}
-                              canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
-                              isDragging={snapshot.isDragging}
-                            />
-                          </DraggableCardWrapper>
-                        )}
-                      </Draggable>
-                    ))}
+                {(provided, snapshot) => (
+                  <DroppableZone
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    $isDraggingOver={snapshot.isDraggingOver}
+                    $isValidDropZone={draggedCard?.type === 'playCard'}
+                  >
+                    <FieldArea>
+                      {gameState.player.field.map((card, index) => (
+                        <Draggable
+                          key={card.id}
+                          draggableId={card.id}
+                          index={index}
+                          isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
+                        >
+                          {(provided, snapshot) => (
+                            <DraggableCardWrapper
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <CardDisplay
+                                card={card}
+                                canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
+                                isDragging={snapshot.isDragging}
+                              />
+                            </DraggableCardWrapper>
+                          )}
+                        </Draggable>
+                      ))}
+                    </FieldArea>
                     {provided.placeholder}
-                  </FieldArea>
+                  </DroppableZone>
                 )}
               </Droppable>
 
@@ -907,6 +1040,10 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                         ref={provided.innerRef}
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
+                        style={{
+                          ...provided.draggableProps.style,
+                          zIndex: snapshot.isDragging ? 2000 : 'auto'
+                        }}
                       >
                         <CardDisplay
                           card={card}
