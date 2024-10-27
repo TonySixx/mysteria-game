@@ -41,6 +41,7 @@ import {
   executeLethalSequence,
   finalizeTurn // Přidán import finalizeTurn
 } from '../game/aiStrategy';
+import { theme } from '../styles/theme';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`
@@ -590,7 +591,7 @@ const RarityGem = styled.div`
   }
 `;
 
-function HeroDisplay({ hero, onClick, isTargetable }) {
+function HeroDisplay({ hero, onClick, isTargetable,heroName }) {
   return (
     <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
       <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
@@ -598,9 +599,24 @@ function HeroDisplay({ hero, onClick, isTargetable }) {
         <HeartIcon>❤️</HeartIcon>
         {hero.health}
       </HeroHealth>
+      <HeroName>{heroName}</HeroName>
     </HeroComponent>
   );
 }
+
+const HeroName = styled.div`
+  position: absolute;
+  top: 0;
+  left: 72px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: ${theme.colors.text.primary};
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: flex-end;
+  text-shadow: ${theme.shadows.golden};
+`;
 
 const HeroComponent = styled.div.withConfig({
   shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
@@ -1050,6 +1066,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                 >
                   <HeroDisplay
                     hero={gameState.opponent.hero}
+                    heroName={gameState.opponent.username}
                     isTargetable={
                       gameState.currentPlayer === gameState.playerIndex &&
                       gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
@@ -1119,7 +1136,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </Droppable>
 
             <HeroArea $isMobile={isMobile}>
-              <HeroDisplay hero={gameState.player.hero} />
+              <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} />
             </HeroArea>
           </BattleArea>
 
