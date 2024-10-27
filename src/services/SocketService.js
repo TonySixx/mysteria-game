@@ -64,9 +64,9 @@ class SocketService {
         });
 
         this.socket.on('opponentDisconnected', () => {
-            console.log('Protihráč se odpojil');
+            console.log('Opponent disconnected');
             if (this.errorCallback) {
-                this.errorCallback('Protihráč se odpojil');
+                this.errorCallback('Opponent disconnected');
             }
         });
 

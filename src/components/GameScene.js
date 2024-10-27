@@ -83,11 +83,28 @@ const Tooltip = styled.div`
   `}
 `;
 
+const BASE_WIDTH = 1920; // Základní šířka pro full HD
+const BASE_HEIGHT = 1080; // Základní výška pro full HD
+const MIN_SCALE = 0.5; // Minimální scale faktor
+const MAX_SCALE = 1.2; // Maximální scale faktor
+
+// Přidejte tento styled component pro wrapper celé hry
+const ScalableGameWrapper = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(${props => props.$scale});
+  transform-origin: center center;
+  width: ${BASE_WIDTH}px;
+  height: ${BASE_HEIGHT}px;
+`;
+
+// Upravíme GameBoard styled component
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
-  height: 100vh;
-  background: url('/background.png') no-repeat center center fixed;
+  height: 100%;
+  background: url('/background.png') no-repeat center center;
   background-size: cover;
   color: #ffd700;
   font-family: 'Cinzel', serif;
@@ -129,7 +146,7 @@ const FieldArea = styled.div`
 `;
 
 const HandArea = styled.div`
-  position: fixed;
+  position: absolute; // Změněno z fixed na absolute
   bottom: -40px;
   left: 50%;
   transform: translateX(-50%);
@@ -219,8 +236,8 @@ const DraggableCardWrapper = styled.div`
 `;
 
 const CardComponent = styled.div`
-  width: ${(props) => (props.$isInHand ? '120px' : '140px')};
-  height: ${(props) => (props.$isInHand ? '180px' : '200px')};
+  width: ${props => props.$isInHand ? '120px' : '140px'};
+  height: ${props => props.$isInHand ? '180px' : '200px'};
   border: 2px solid ${(props) => {
     if (props.$isSelected) return '#ffd700';
     if (props.$isTargetable) return '#ff9900';
@@ -344,7 +361,7 @@ const TauntLabel = styled.div`
 const CardName = styled.div`
   font-weight: bold;
   text-align: center;
-  font-size: 14px;
+  font-size: ${14 * 1}px; // Můžete upravit podle potřeby
   margin-bottom: 5px;
   color: white;
   position: relative;
@@ -374,7 +391,7 @@ const CardStats = styled.div`
 
 const CardDescription = styled.div`
   font-family: 'Arial', sans-serif;
-  font-size: 11px;
+  font-size: ${11 * 1}px; // Můžete upravit podle potřeby
   text-align: center;
   margin-top: 2px;
   margin-bottom: 2px;
@@ -403,7 +420,7 @@ const ManaCost = styled.div`
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: 16px;
+  font-size: ${16 * 1}px; // Můžete upravit podle potřeby
   border: 2px solid #2196f3;
   box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
   z-index: 10;
@@ -739,6 +756,7 @@ const PlayAgainButton = styled.button`
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
+  const [scale, setScale] = useState(1);
 
   // Přidáme useEffect pro sledování nových zpráv z combat logu
   useEffect(() => {
@@ -772,7 +790,33 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     }
   }, [gameState?.notification, gameState?.playerIndex]);
 
+  // Přidejte useEffect pro výpočet scale faktoru
+  useEffect(() => {
+    const calculateScale = () => {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
+      
+      const scaleX = windowWidth / BASE_WIDTH;
+      const scaleY = windowHeight / BASE_HEIGHT;
+      
+      // Použijeme menší z obou hodnot, aby se vše vešlo na obrazovku
+      let newScale = Math.min(scaleX, scaleY);
+      
+      // Omezíme scale na minimální a maximální hodnoty
+      newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+      
+      setScale(newScale);
+    };
 
+    // Inicializační výpočet
+    calculateScale();
+
+    // Přidáme event listener pro změnu velikosti okna
+    window.addEventListener('resize', calculateScale);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', calculateScale);
+  }, []);
 
   // Vylepšený onDragEnd s logováním
   const onDragEnd = useCallback((result) => {
@@ -900,174 +944,176 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <GameBoard>
-        <PlayerInfo>
-          <DeckAndManaContainer>
-            <DeckContainer>
-              {gameState.opponent.deckSize}
-              <Tooltip $position="bottom">
-                Cards in deck
-              </Tooltip>
-            </DeckContainer>
-            <ManaInfo>
-              💎 {gameState.opponent.mana}/{gameState.opponent.maxMana}
-              <Tooltip $position="bottom">
-                Mana crystals
-              </Tooltip>
-            </ManaInfo>
-          </DeckAndManaContainer>
-        </PlayerInfo>
+      <ScalableGameWrapper $scale={scale}>
+        <GameBoard>
+          <PlayerInfo>
+            <DeckAndManaContainer>
+              <DeckContainer>
+                {gameState.opponent.deckSize}
+                <Tooltip $position="bottom">
+                  Cards in deck
+                </Tooltip>
+              </DeckContainer>
+              <ManaInfo>
+                💎 {gameState.opponent.mana}/{gameState.opponent.maxMana}
+                <Tooltip $position="bottom">
+                  Mana crystals
+                </Tooltip>
+              </ManaInfo>
+            </DeckAndManaContainer>
+          </PlayerInfo>
 
-        <OpponentHandArea>
-          {gameState.opponent.hand.map((card, index) => (
-            <CardDisplay
-              key={card.id}
-              card={card}
-              isInHand={true}
-              isOpponentCard={true}
-            />
-          ))}
-        </OpponentHandArea>
-
-        <BattleArea>
-          <Droppable droppableId="opponentHero" direction="horizontal">
-            {(provided, snapshot) => (
-              <HeroArea
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                style={{
-                  background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
-                }}
-              >
-                <HeroDisplay
-                  hero={gameState.opponent.hero}
-                  isTargetable={
-                    gameState.currentPlayer === gameState.playerIndex &&
-                    gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
-                    gameState.opponent.field.every(card => !card.hasTaunt)
-                  }
-                />
-                {provided.placeholder}
-              </HeroArea>
-            )}
-          </Droppable>
-
-          <FieldArea>
-            {gameState.opponent.field.map((card, index) => (
-              <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    style={{
-                      position: 'relative',
-                      background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
-                    }}
-                  >
-                    <CardDisplay
-                      card={card}
-                      isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
-                    />
-                    {snapshot.isDraggingOver ? <div style={{ position: 'absolute', height: '100px', width: '100%', background: 'rgba(255, 0, 0, 0.5)', borderEndStartRadius: '8px', borderEndEndRadius: '8px' }} /> : null}
-                  </div>
-                )}
-              </Droppable>
+          <OpponentHandArea>
+            {gameState.opponent.hand.map((card, index) => (
+              <CardDisplay
+                key={card.id}
+                card={card}
+                isInHand={true}
+                isOpponentCard={true}
+              />
             ))}
-          </FieldArea>
+          </OpponentHandArea>
 
-          <Droppable droppableId="playerField" direction="horizontal">
-            {(provided, snapshot) => (
-              <FieldArea
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                style={{
-                  background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
-                }}
-              >
-                {gameState.player.field.map((card, index) => (
-                  <Draggable key={card.id} draggableId={card.id} index={index} isDragDisabled={card.hasAttacked || card.frozen}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <CardDisplay
-                          card={card}
-                          canAttack={gameState.currentPlayer === gameState.playerIndex && !card.hasAttacked && !card.frozen}
-                          isDragging={snapshot.isDragging}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </FieldArea>
-            )}
-          </Droppable>
+          <BattleArea>
+            <Droppable droppableId="opponentHero" direction="horizontal">
+              {(provided, snapshot) => (
+                <HeroArea
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  style={{
+                    background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
+                  }}
+                >
+                  <HeroDisplay
+                    hero={gameState.opponent.hero}
+                    isTargetable={
+                      gameState.currentPlayer === gameState.playerIndex &&
+                      gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
+                      gameState.opponent.field.every(card => !card.hasTaunt)
+                    }
+                  />
+                  {provided.placeholder}
+                </HeroArea>
+              )}
+            </Droppable>
 
-          <HeroArea>
-            <HeroDisplay hero={gameState.player.hero} />
-          </HeroArea>
-        </BattleArea>
-
-        <PlayerInfo>
-          <DeckAndManaContainer>
-            <DeckContainer>
-              {gameState.player.deck}
-              <Tooltip $position="top">
-                Cards in deck
-              </Tooltip>
-            </DeckContainer>
-            <ManaInfo>
-              💎 {gameState.player.mana}/{gameState.player.maxMana}
-              <Tooltip $position="top">
-                Mana crystals
-              </Tooltip>
-            </ManaInfo>
-          </DeckAndManaContainer>
-          <EndTurnButton 
-            onClick={onEndTurn}
-            disabled={gameState.currentPlayer !== gameState.playerIndex}
-          >
-            End turn
-          </EndTurnButton>
-        </PlayerInfo>
-
-        <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
-          {(provided) => (
-            <HandArea
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
-              {gameState.player.hand.map((card, index) => (
-                <Draggable key={card.id} draggableId={card.id} index={index}>
+            <FieldArea>
+              {gameState.opponent.field.map((card, index) => (
+                <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
                   {(provided, snapshot) => (
-                    <DraggableCardWrapper
+                    <div
                       ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
+                      {...provided.droppableProps}
                       style={{
-                        ...provided.draggableProps.style,
-                        opacity: snapshot.isDragging ? 0 : 1,
+                        position: 'relative',
+                        background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
                       }}
                     >
                       <CardDisplay
                         card={card}
-                        isInHand={true}
-                        isDragging={snapshot.isDragging}
+                        isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
                       />
-                    </DraggableCardWrapper>
+                      {snapshot.isDraggingOver ? <div style={{ position: 'absolute', height: '100px', width: '100%', background: 'rgba(255, 0, 0, 0.5)', borderEndStartRadius: '8px', borderEndEndRadius: '8px' }} /> : null}
+                    </div>
                   )}
-                </Draggable>
+                </Droppable>
               ))}
-              {provided.placeholder}
-            </HandArea>
-          )}
-        </Droppable>
-        <Notification message={notification} />
-        <CombatLog logEntries={logEntries} />
-      </GameBoard>
+            </FieldArea>
+
+            <Droppable droppableId="playerField" direction="horizontal">
+              {(provided, snapshot) => (
+                <FieldArea
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  style={{
+                    background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
+                  }}
+                >
+                  {gameState.player.field.map((card, index) => (
+                    <Draggable key={card.id} draggableId={card.id} index={index} isDragDisabled={card.hasAttacked || card.frozen}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                        >
+                          <CardDisplay
+                            card={card}
+                            canAttack={gameState.currentPlayer === gameState.playerIndex && !card.hasAttacked && !card.frozen}
+                            isDragging={snapshot.isDragging}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </FieldArea>
+              )}
+            </Droppable>
+
+            <HeroArea>
+              <HeroDisplay hero={gameState.player.hero} />
+            </HeroArea>
+          </BattleArea>
+
+          <PlayerInfo>
+            <DeckAndManaContainer>
+              <DeckContainer>
+                {gameState.player.deck}
+                <Tooltip $position="top">
+                  Cards in deck
+                </Tooltip>
+              </DeckContainer>
+              <ManaInfo>
+                💎 {gameState.player.mana}/{gameState.player.maxMana}
+                <Tooltip $position="top">
+                  Mana crystals
+                </Tooltip>
+              </ManaInfo>
+            </DeckAndManaContainer>
+            <EndTurnButton 
+              onClick={onEndTurn}
+              disabled={gameState.currentPlayer !== gameState.playerIndex}
+            >
+              End turn
+            </EndTurnButton>
+          </PlayerInfo>
+
+          <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
+            {(provided) => (
+              <HandArea
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+              >
+                {gameState.player.hand.map((card, index) => (
+                  <Draggable key={card.id} draggableId={card.id} index={index}>
+                    {(provided, snapshot) => (
+                      <DraggableCardWrapper
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        style={{
+                          ...provided.draggableProps.style,
+                          opacity: snapshot.isDragging ? 0 : 1,
+                        }}
+                      >
+                        <CardDisplay
+                          card={card}
+                          isInHand={true}
+                          isDragging={snapshot.isDragging}
+                        />
+                      </DraggableCardWrapper>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </HandArea>
+            )}
+          </Droppable>
+          <Notification message={notification} />
+          <CombatLog logEntries={logEntries} />
+        </GameBoard>
+      </ScalableGameWrapper>
     </DragDropContext>
   );
 }

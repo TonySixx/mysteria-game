@@ -18,7 +18,7 @@ function App() {
         socketService.onError((errorMessage) => {
             console.error('Game error:', errorMessage);
             setError(errorMessage);
-            if (errorMessage === 'Protihráč se odpojil') {
+            if (errorMessage === 'Opponent disconnected') {
                 setGameId(null);
                 setGameState(null);
             }
