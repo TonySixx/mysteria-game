@@ -192,7 +192,7 @@ const PlayerInfo = styled.div`
   background-color: rgba(0, 0, 0, 0.7);
   position: ${props => props.$isBottom && props.$isMobile ? 'relative' : 'relative'};
   bottom: ${props => props.$isBottom && props.$isMobile ? 'auto' : 'auto'};
-  margin-top: ${props => props.$isPlayer && props.$isMobile ? '-55px' : '0px'};
+  margin-top: ${props => props.$isPlayer && props.$isMobile ? '-60px' : '0px'};
 `;
 
 const DeckAndManaContainer = styled.div`
@@ -263,19 +263,23 @@ const DraggableCardWrapper = styled.div`
   }
 `;
 
+// Upravte CardComponent pro lepší mobilní zobrazení
 const CardComponent = styled.div`
   width: ${props => {
     if (props.$isMobile) {
-      return props.$isInHand ? '90px' : '105px';
+      if (props.$isOpponentCard) return '60px'; // Menší karty pro oponenta na mobilu
+      return props.$isInHand ? '85px' : '100px';
     }
     return props.$isInHand ? '120px' : '140px';
   }};
   height: ${props => {
     if (props.$isMobile) {
-      return props.$isInHand ? '135px' : '150px';
+      if (props.$isOpponentCard) return '90px'; // Menší karty pro oponenta na mobilu
+      return props.$isInHand ? '127px' : '150px';
     }
     return props.$isInHand ? '180px' : '200px';
   }};
+  padding: ${props => props.$isMobile ? '3px' : '5px'};
   border: 2px solid ${(props) => {
     if (props.$isSelected) return '#ffd700';
     if (props.$isTargetable) return '#ff9900';
@@ -384,26 +388,28 @@ const CardImage = styled.img`
   margin-bottom: 2px;
 `;
 
+// Upravte TauntLabel pro mobilní zobrazení
 const TauntLabel = styled.div`
   position: absolute;
-  top: 5px;
-  left: 5px;
+  top: ${props => props.$isMobile ? '2px' : '5px'};
+  left: ${props => props.$isMobile ? '2px' : '5px'};
   background-color: #ffd700;
   color: #000;
   font-weight: bold;
-  padding: 2px 5px;
+  padding: ${props => props.$isMobile ? '1px 3px' : '2px 5px'};
   border-radius: 5px;
-  font-size: 12px;
+  font-size: ${props => props.$isMobile ? '8px' : '12px'};
 `;
 
+// Upravte CardName pro mobilní zobrazení
 const CardName = styled.div`
   font-weight: bold;
   text-align: center;
-  font-size: ${14 * 1}px; // Můžete upravit podle potřeby
-  margin-bottom: 5px;
+  font-size: ${props => props.$isMobile ? '10px' : '14px'};
+  margin-bottom: ${props => props.$isMobile ? '2px' : '5px'};
   color: white;
   position: relative;
-  z-index: 2; // Zvýšíme z-index, aby byl nad gemem
+  z-index: 2;
   text-shadow: 
     -1px -1px 0 #000,  
      1px -1px 0 #000,
@@ -411,46 +417,50 @@ const CardName = styled.div`
      1px  1px 0 #000;
 `;
 
-
+// Upravte CardStats pro mobilní zobrazení
 const CardStats = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 16px;
+  font-size: ${props => props.$isMobile ? '12px' : '16px'};
   font-weight: bold;
   color: white;
-    text-shadow: 
-    -1px -1px 0 #000,  
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme čern obrys pomocí text-shadow
-`;
-
-
-const CardDescription = styled.div`
-  font-family: 'Arial', sans-serif;
-  font-size: ${11 * 1}px; // Můžete upravit podle potřeby
-  text-align: center;
-  margin-top: 2px;
-  margin-bottom: 2px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  color: white; // Bílý text
   text-shadow: 
     -1px -1px 0 #000,  
      1px -1px 0 #000,
     -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme erný obrys pomocí text-shadow
+     1px  1px 0 #000;
+  padding: ${props => props.$isMobile ? '0 2px' : '0'};
 `;
 
+// Upravte CardDescription pro mobilní zobrazení
+const CardDescription = styled.div`
+  font-family: 'Arial', sans-serif;
+  font-size: ${props => props.$isMobile ? '8px' : '11px'};
+  line-height: ${props => props.$isMobile ? '9px' : '12px'};
+  text-align: center;
+  margin-top: ${props => props.$isMobile ? '1px' : '2px'};
+  margin-bottom: ${props => props.$isMobile ? '1px' : '2px'};
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  color: white;
+  text-shadow: 
+    -1px -1px 0 #000,  
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000;
+`;
+
+// Upravte ManaCost pro mobilní zobrazení
 const ManaCost = styled.div`
   position: absolute;
-  top: -10px;
-  left: -10px;
-  width: 30px;
-  height: 30px;
+  top: ${props => props.$isMobile ? '-8px' : '-10px'};
+  left: ${props => props.$isMobile ? '-8px' : '-10px'};
+  width: ${props => props.$isMobile ? '25px' : '30px'};
+  height: ${props => props.$isMobile ? '25px' : '30px'};
+  font-size: ${props => props.$isMobile ? '14px' : '16px'};
   background-color: #4fc3f7;
   color: white;
   border-radius: 50%;
@@ -458,7 +468,6 @@ const ManaCost = styled.div`
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  font-size: ${16 * 1}px; // Můžete upravit podle potřeby
   border: 2px solid #2196f3;
   box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
   z-index: 10;
@@ -666,7 +675,7 @@ const cardImages = {
   'coinImage': coinImage
 };
 
-// Upravíme CardDisplay komponentu
+// Upravte CardDisplay komponentu
 const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
   const isMobile = useIsMobile();
 
@@ -674,7 +683,12 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
 
   if (isOpponentCard) {
     return (
-      <CardComponent $isInHand={isInHand} $isDragging={isDragging}>
+      <CardComponent 
+        $isInHand={isInHand} 
+        $isDragging={isDragging}
+        $isMobile={isMobile}
+        $isOpponentCard={isOpponentCard} // Přidáme prop pro karty oponenta
+      >
         <CardBack />
       </CardComponent>
     );
@@ -695,19 +709,23 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
       $rarity={card.rarity}
       $isMobile={isMobile}
     >
-      <ManaCost>{card.manaCost}</ManaCost>
-      <RarityGem $rarity={card.rarity} />
+      <ManaCost $isMobile={isMobile}>{card.manaCost}</ManaCost>
+      <RarityGem $rarity={card.rarity} $isMobile={isMobile} />
       <CardImage 
-        style={{ borderRadius: '4px', border: '1px solid #000000' }} 
+        style={{ 
+          borderRadius: '4px', 
+          border: '1px solid #000000',
+          height: isMobile ? '45%' : '50%' // Zmenšíme obrázek na mobilních zařízeních
+        }} 
         src={cardImage} 
         alt={card.name} 
       />
-      {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
+      {card.hasTaunt && <TauntLabel $isMobile={isMobile}>Taunt</TauntLabel>}
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
-        <CardName>{card.name}</CardName>
-        <CardDescription>{card.effect}</CardDescription>
-        <CardStats>
+        <CardName $isMobile={isMobile}>{card.name}</CardName>
+        <CardDescription $isMobile={isMobile}>{card.effect}</CardDescription>
+        <CardStats $isMobile={isMobile}>
           {card.type === 'unit' && (
             <>
               <span>⚔️ {card.attack}</span>
@@ -718,7 +736,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
       </CardContent>
       {card.frozen && (
         <FrozenOverlay>
-          <span role="img" aria-label="snowflake">❄️</span>
+          <span role="img" aria-label="snowflake" style={{ fontSize: isMobile ? '30px' : '50px' }}>❄️</span>
         </FrozenOverlay>
       )}
     </CardComponent>
