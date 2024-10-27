@@ -126,7 +126,7 @@ function PlayerProfile({ userId }) {
                             <td>{new Date(game.created_at).toLocaleDateString()}</td>
                             <td>{game.opponent.username}</td>
                             <td>{game.winner_id === userId ? 'Výhra' : 'Prohra'}</td>
-                            <td>{Math.floor(game.game_duration / 1000 / 60)} min</td>
+                            <td>{game.game_duration}</td>
                         </tr>
                     ))}
                 </tbody>

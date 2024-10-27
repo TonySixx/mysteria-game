@@ -188,7 +188,7 @@ class SupabaseService {
         try {
             const { data, error } = await this.supabase
                 .from('profiles')
-                .select('username, rank, wins, losses')
+                .select('username, rank, wins, losses,total_games')
                 .order('rank', { ascending: false })
                 .limit(100);
 

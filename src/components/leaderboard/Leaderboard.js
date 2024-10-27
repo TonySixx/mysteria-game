@@ -101,6 +101,7 @@ function Leaderboard() {
                 </thead>
                 <tbody>
                     {leaderboard.map((player, index) => {
+                        console.log('Player:', player);
                         const winRate = player.total_games > 0
                             ? ((player.wins / (player.wins + player.losses)) * 100).toFixed(1)
                             : '0.0';
