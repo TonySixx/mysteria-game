@@ -1,44 +1,101 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
+import { theme } from '../../styles/theme';
 
 const FormContainer = styled.div`
-    max-width: 400px;
-    margin: 0 auto;
-    padding: 20px;
-    background: rgba(0, 0, 0, 0.8);
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 30px;
+    background: linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.backgroundLight} 100%);
+    border: 3px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
     border-radius: 8px;
-    color: white;
+    color: ${theme.colors.text.primary};
+    box-shadow: ${theme.shadows.golden};
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: ${theme.colors.border.golden};
+    }
+
+    h2 {
+        text-align: center;
+        font-size: 2em;
+        margin-bottom: 30px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: ${theme.colors.text.primary};
+        text-shadow: ${theme.shadows.golden};
+    }
 `;
 
 const Input = styled.input`
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: 1px solid #444;
+    width: 465px;
+    padding: 15px;
+    margin: 15px 0;
+    border: 2px solid ${theme.colors.backgroundLight};
     border-radius: 4px;
-    background: #222;
-    color: white;
+    background: rgba(0, 0, 0, 0.3);
+    color: ${theme.colors.text.light};
+    font-size: 1.1em;
+    transition: all 0.3s;
+
+    &:focus {
+        border-color: ${theme.colors.primary};
+        box-shadow: ${theme.shadows.golden};
+        outline: none;
+    }
+
+    &::placeholder {
+        color: rgba(255, 215, 0, 0.3);
+    }
 `;
 
 const Button = styled.button`
     width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    background: #4a90e2;
-    border: none;
-    border-radius: 4px;
-    color: white;
+    padding: 15px;
+    margin: 20px 0;
+    background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    color: ${theme.colors.text.primary};
+    font-size: 1.2em;
     cursor: pointer;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
 
     &:hover {
-        background: #357abd;
+        transform: translateY(-2px);
+        box-shadow: ${theme.shadows.golden};
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
     }
 `;
 
 const ErrorMessage = styled.div`
-    color: #ff4444;
-    margin: 10px 0;
+    color: ${theme.colors.accent};
+    margin: 15px 0;
+    padding: 10px;
+    border: 1px solid ${theme.colors.accent};
+    border-radius: 4px;
+    background: rgba(139, 0, 0, 0.1);
+    text-align: center;
 `;
 
 function LoginForm({ onSuccess }) {
@@ -64,7 +121,7 @@ function LoginForm({ onSuccess }) {
 
     return (
         <FormContainer>
-            <h2>Přihlášení</h2>
+            <h2>Login</h2>
             <form onSubmit={handleSubmit}>
                 <Input
                     type="email"
@@ -75,14 +132,14 @@ function LoginForm({ onSuccess }) {
                 />
                 <Input
                     type="password"
-                    placeholder="Heslo"
+                    placeholder="Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                 />
                 {error && <ErrorMessage>{error}</ErrorMessage>}
                 <Button type="submit" disabled={loading}>
-                    {loading ? 'Přihlašování...' : 'Přihlásit se'}
+                    {loading ? 'Logging in...' : 'Login'}
                 </Button>
             </form>
         </FormContainer>

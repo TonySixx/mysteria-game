@@ -5,78 +5,140 @@ import RegisterForm from './auth/RegisterForm';
 import PlayerProfile from './profile/PlayerProfile';
 import Leaderboard from './leaderboard/Leaderboard';
 import socketService from '../services/socketService';
+import { theme } from '../styles/theme';
 
 const MenuContainer = styled.div`
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
-    color: white;
+    padding: 40px 20px;
+    color: ${theme.colors.text.primary};
+    background: ${theme.colors.background};
+    position: relative;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: ${theme.colors.border.golden};
+    }
 `;
 
 const TabContainer = styled.div`
     display: flex;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    justify-content: center;
+    gap: 10px;
 `;
 
 const Tab = styled.button`
-    padding: 10px 20px;
-    margin: 0 5px;
-    background: ${props => props.$active ? 'rgba(74, 144, 226, 0.2)' : 'transparent'};
-    border: none;
-    border-bottom: 2px solid ${props => props.$active ? '#4a90e2' : 'transparent'};
-    color: white;
+    padding: 15px 30px;
+    background: ${props => props.$active ? theme.colors.backgroundLight : 'transparent'};
+    border: 2px solid transparent;
+    border-image: ${props => props.$active ? theme.colors.border.golden : 'none'};
+    border-image-slice: ${props => props.$active ? 1 : 'none'};
+    color: ${props => props.$active ? theme.colors.text.primary : theme.colors.text.secondary};
     cursor: pointer;
     transition: all 0.3s;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
 
     &:hover {
-        background: rgba(74, 144, 226, 0.1);
+        color: ${theme.colors.text.primary};
+        box-shadow: ${theme.shadows.golden};
+        transform: translateY(-2px);
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: ${props => props.$active ? theme.colors.primary : 'transparent'};
+        transition: all 0.3s;
     }
 `;
 
 const PlayButton = styled.button`
-    width: 200px;
-    padding: 15px;
-    background: #4CAF50;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    font-size: 1.2em;
+    width: 300px;
+    padding: 20px;
+    background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
+    border: 3px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    color: ${theme.colors.text.primary};
+    font-size: 1.5em;
+    font-weight: bold;
     cursor: pointer;
-    margin: 20px 0;
-    transition: background 0.3s;
+    margin: 30px auto;
+    display: block;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    position: relative;
+    overflow: hidden;
 
     &:hover {
-        background: #45a049;
+        transform: translateY(-3px);
+        box-shadow: ${theme.shadows.intense};
+        
+        &::after {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            45deg,
+            transparent 0%,
+            rgba(255, 215, 0, 0.1) 50%,
+            transparent 100%
+        );
+        transform: translateY(-100%);
+        opacity: 0;
+        transition: all 0.3s;
     }
 
     &:disabled {
-        background: #666;
+        background: ${theme.colors.secondary};
         cursor: not-allowed;
+        opacity: 0.7;
     }
 `;
 
 const LoadingText = styled.div`
-    font-size: 1.2em;
-    color: white;
+    font-size: 1.3em;
+    color: ${theme.colors.text.primary};
     text-align: center;
-    margin: 20px 0;
+    margin: 30px 0;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    animation: pulse 1.5s infinite;
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
 `;
 
-const CancelButton = styled.button`
-    width: 200px;
-    padding: 15px;
-    background: #e74c3c;
-    border: none;
-    border-radius: 4px;
-    color: white;
-    font-size: 1.2em;
-    cursor: pointer;
-    margin: 20px 0;
-    transition: background 0.3s;
-
-    &:hover {
-        background: #c0392b;
-    }
+const CancelButton = styled(PlayButton)`
+    background: linear-gradient(45deg, ${theme.colors.accent}, ${theme.colors.secondary});
+    width: 250px;
 `;
 
 function MainMenu({ user, onGameStart, onLogin, onLogout }) {
@@ -113,22 +175,22 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                             $active={activeTab === 'play'} 
                             onClick={() => setActiveTab('play')}
                         >
-                            Hrát
+                            Play
                         </Tab>
                         <Tab 
                             $active={activeTab === 'profile'} 
                             onClick={() => setActiveTab('profile')}
                         >
-                            Profil
+                            Profile
                         </Tab>
                         <Tab 
                             $active={activeTab === 'leaderboard'} 
                             onClick={() => setActiveTab('leaderboard')}
                         >
-                            Žebříček
+                            Leaderboard
                         </Tab>
                         <Tab onClick={onLogout}>
-                            Odhlásit se
+                            Logout
                         </Tab>
                     </TabContainer>
 
@@ -136,14 +198,14 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                         <div>
                             {isSearching ? (
                                 <>
-                                    <LoadingText>Hledám protihráče...</LoadingText>
+                                    <LoadingText>Searching for opponent...</LoadingText>
                                     <CancelButton onClick={handleCancelSearch}>
-                                        Zrušit hledání
+                                        Cancel Search
                                     </CancelButton>
                                 </>
                             ) : (
                                 <PlayButton onClick={handleStartGame}>
-                                    Hrát
+                                    Find Game
                                 </PlayButton>
                             )}
                         </div>
@@ -163,13 +225,13 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                         $active={activeTab === 'login'} 
                         onClick={() => setActiveTab('login')}
                     >
-                        Přihlášení
+                        Login
                     </Tab>
                     <Tab 
                         $active={activeTab === 'register'} 
                         onClick={() => setActiveTab('register')}
                     >
-                        Registrace
+                        Register
                     </Tab>
                     {activeTab === 'login' && (
                         <LoginForm onSuccess={onLogin} />
