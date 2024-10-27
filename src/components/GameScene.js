@@ -88,6 +88,30 @@ const BASE_HEIGHT = 1080; // Základní výška pro full HD
 const MIN_SCALE = 0.5; // Minimální scale faktor
 const MAX_SCALE = 1.2; // Maximální scale faktor
 
+// Přidejte tyto konstanty pod existující BASE konstanty
+const MOBILE_BASE_WIDTH = 1280; // Základní šířka pro mobilní zobrazení
+const MOBILE_BASE_HEIGHT = 720; // Základní výška pro mobilní zobrazení
+const MOBILE_CARD_SCALE = 0.8; // Zmenšení karet pro mobilní zobrazení
+
+// Přidejte hook pro detekci mobilního zařízení
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = window.innerWidth <= 1024 || 
+                           /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  return isMobile;
+};
+
 // Přidejte tento styled component pro wrapper celé hry
 const ScalableGameWrapper = styled.div`
   position: fixed;
@@ -95,8 +119,8 @@ const ScalableGameWrapper = styled.div`
   left: 50%;
   transform: translate(-50%, -50%) scale(${props => props.$scale});
   transform-origin: center center;
-  width: ${BASE_WIDTH}px;
-  height: ${BASE_HEIGHT}px;
+  width: ${props => props.$isMobile ? MOBILE_BASE_WIDTH : BASE_WIDTH}px;
+  height: ${props => props.$isMobile ? MOBILE_BASE_HEIGHT : BASE_HEIGHT}px;
 `;
 
 // Upravíme GameBoard styled component
@@ -131,31 +155,32 @@ const HeroArea = styled.div`
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 150px;
+  margin-top: ${props => props.$isMobile ? '-30px' : '0px'};
+  height: ${props => props.$isMobile ? '130px' : '150px'};
 `;
 
 const FieldArea = styled.div`
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: ${props => props.$isMobile ? '5px' : '10px'};
   flex-wrap: wrap;
   width: 100%;
-  padding: 10px 0;
+  padding: ${props => props.$isMobile ? '5px 0' : '10px 0'};
   box-sizing: border-box;
-  min-height: 220px; // Zvětšeno pro lepší prostor pro přetahování
+  min-height: ${props => props.$isMobile ? '160px' : '220px'};
 `;
 
 const HandArea = styled.div`
-  position: absolute; // Změněno z fixed na absolute
-  bottom: -40px;
+  position: absolute;
+  bottom: ${props => props.$isMobile ? '-20px' : '-40px'};
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 5px;
-  padding: 10px 0;
+  gap: ${props => props.$isMobile ? '2px' : '5px'};
+  padding: ${props => props.$isMobile ? '5px 0' : '10px 0'};
   perspective: 1000px;
-  min-height: 220px; // Přidáno pro zajištění prostoru pro karty
+  min-height: ${props => props.$isMobile ? '160px' : '220px'};
 `;
 
 const PlayerInfo = styled.div`
@@ -163,8 +188,11 @@ const PlayerInfo = styled.div`
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 10px 20px;
+  padding: ${props => props.$isMobile ? '5px 10px' : '10px 20px'};
   background-color: rgba(0, 0, 0, 0.7);
+  position: ${props => props.$isBottom && props.$isMobile ? 'relative' : 'relative'};
+  bottom: ${props => props.$isBottom && props.$isMobile ? 'auto' : 'auto'};
+  margin-top: ${props => props.$isPlayer && props.$isMobile ? '-55px' : '0px'};
 `;
 
 const DeckAndManaContainer = styled.div`
@@ -236,8 +264,18 @@ const DraggableCardWrapper = styled.div`
 `;
 
 const CardComponent = styled.div`
-  width: ${props => props.$isInHand ? '120px' : '140px'};
-  height: ${props => props.$isInHand ? '180px' : '200px'};
+  width: ${props => {
+    if (props.$isMobile) {
+      return props.$isInHand ? '90px' : '105px';
+    }
+    return props.$isInHand ? '120px' : '140px';
+  }};
+  height: ${props => {
+    if (props.$isMobile) {
+      return props.$isInHand ? '135px' : '150px';
+    }
+    return props.$isInHand ? '180px' : '200px';
+  }};
   border: 2px solid ${(props) => {
     if (props.$isSelected) return '#ffd700';
     if (props.$isTargetable) return '#ff9900';
@@ -630,6 +668,8 @@ const cardImages = {
 
 // Upravíme CardDisplay komponentu
 const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
+  const isMobile = useIsMobile();
+
   if (!card) return null;
 
   if (isOpponentCard) {
@@ -653,6 +693,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
       $isDragging={isDragging}
       $isFrozen={card.frozen}
       $rarity={card.rarity}
+      $isMobile={isMobile}
     >
       <ManaCost>{card.manaCost}</ManaCost>
       <RarityGem $rarity={card.rarity} />
@@ -757,6 +798,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
   const [scale, setScale] = useState(1);
+  const isMobile = useIsMobile();
 
   // Přidáme useEffect pro sledování nových zpráv z combat logu
   useEffect(() => {
@@ -796,27 +838,22 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
       
-      const scaleX = windowWidth / BASE_WIDTH;
-      const scaleY = windowHeight / BASE_HEIGHT;
+      const baseWidth = isMobile ? MOBILE_BASE_WIDTH : BASE_WIDTH;
+      const baseHeight = isMobile ? MOBILE_BASE_HEIGHT : BASE_HEIGHT;
       
-      // Použijeme menší z obou hodnot, aby se vše vešlo na obrazovku
+      const scaleX = windowWidth / baseWidth;
+      const scaleY = windowHeight / baseHeight;
+      
       let newScale = Math.min(scaleX, scaleY);
-      
-      // Omezíme scale na minimální a maximální hodnoty
       newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
       
       setScale(newScale);
     };
 
-    // Inicializační výpočet
     calculateScale();
-
-    // Přidáme event listener pro změnu velikosti okna
     window.addEventListener('resize', calculateScale);
-
-    // Cleanup
     return () => window.removeEventListener('resize', calculateScale);
-  }, []);
+  }, [isMobile]);
 
   // Vylepšený onDragEnd s logováním
   const onDragEnd = useCallback((result) => {
@@ -942,11 +979,16 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     );
   }
 
+  // Upravte velikosti textu pro mobilní zobrazení
+  const getTextSize = (baseSize) => {
+    return isMobile ? baseSize * 0.8 : baseSize;
+  };
+
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <ScalableGameWrapper $scale={scale}>
+      <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
         <GameBoard>
-          <PlayerInfo>
+          <PlayerInfo $isMobile={isMobile}>
             <DeckAndManaContainer>
               <DeckContainer>
                 {gameState.opponent.deckSize}
@@ -963,7 +1005,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </DeckAndManaContainer>
           </PlayerInfo>
 
-          <OpponentHandArea>
+          <OpponentHandArea $isMobile={isMobile}>
             {gameState.opponent.hand.map((card, index) => (
               <CardDisplay
                 key={card.id}
@@ -997,7 +1039,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
               )}
             </Droppable>
 
-            <FieldArea>
+            <FieldArea $isMobile={isMobile}>
               {gameState.opponent.field.map((card, index) => (
                 <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
                   {(provided, snapshot) => (
@@ -1051,12 +1093,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
               )}
             </Droppable>
 
-            <HeroArea>
+            <HeroArea $isMobile={isMobile}>
               <HeroDisplay hero={gameState.player.hero} />
             </HeroArea>
           </BattleArea>
 
-          <PlayerInfo>
+          <PlayerInfo $isPlayer={true} $isMobile={isMobile} $isBottom={true}>
             <DeckAndManaContainer>
               <DeckContainer>
                 {gameState.player.deck}
@@ -1082,6 +1124,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
             {(provided) => (
               <HandArea
+                $isMobile={isMobile}
                 ref={provided.innerRef}
                 {...provided.droppableProps}
               >
