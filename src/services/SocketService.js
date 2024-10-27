@@ -99,6 +99,14 @@ class SocketService {
         this.socket.on('disconnect', () => {
             console.log('Socket odpojen');
         });
+
+        this.socket.on('gameStarted', (gameId) => {
+            console.log('Game started:', gameId);
+            // Aktualizujeme lokální stav
+            if (this.userProfile) {
+                this.socket.emit('gameStarted', gameId); // Potvrdíme serveru, že jsme připraveni
+            }
+        });
     }
 
     joinGame() {

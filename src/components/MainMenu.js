@@ -146,6 +146,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
     const [onlinePlayers, setOnlinePlayers] = useState([]);
+    const [gameId, setGameId] = useState(null);
 
     const handleStartGame = () => {
         if (!user) {
@@ -197,6 +198,13 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
             socketService.unsubscribeFromOnlinePlayers();
         };
     }, [user]);
+
+    useEffect(() => {
+        if (gameId) {
+            // Když se spustí hra, odešleme událost na server
+            socketService.socket?.emit('gameStarted', gameId);
+        }
+    }, [gameId]);
 
     return (
         <MenuContainer>
