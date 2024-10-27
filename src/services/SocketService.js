@@ -11,6 +11,10 @@ class SocketService {
         this.errorCallback = null;
         this.localGameState = null; // Pro optimistické aktualizace
         this.serverUrl = SERVER_URL;
+        this.userId = null;
+        this.userProfile = null;
+        this.token = null; // Přidáme property pro JWT token
+        this.autoConnect = true; // Změníme na true pro automatické připojení
     }
 
     isConnected() {
@@ -18,18 +22,36 @@ class SocketService {
     }
 
     connect() {
-        if (this.isConnected()) {
+        if (this.socket?.connected) {
             console.log('Socket je již připojen');
             return;
         }
 
-        console.log('Připojuji k serveru:', process.env.REACT_APP_SERVER_URL);
+        if (!this.token || !this.userId || !this.userProfile) {
+            console.error('Chybí autentizační údaje:', {
+                token: !!this.token,
+                userId: !!this.userId,
+                userProfile: !!this.userProfile
+            });
+            return;
+        }
+
+        console.log('Připojuji socket...', {
+            userId: this.userId,
+            username: this.userProfile.username,
+            hasToken: !!this.token
+        });
+
         this.socket = io(this.serverUrl, {
-            transports: ['websocket'],
+            auth: {
+                token: this.token,
+                userId: this.userId,
+                username: this.userProfile.username
+            },
+            transports: ['websocket', 'polling'],
             reconnection: true,
             reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            autoConnect: true
+            reconnectionDelay: 1000
         });
 
         this.setupSocketListeners();
@@ -39,50 +61,37 @@ class SocketService {
         if (!this.socket) return;
 
         this.socket.on('connect', () => {
-            console.log('Připojeno k serveru, socket ID:', this.socket.id);
+            console.log('Socket připojen');
         });
 
         this.socket.on('connect_error', (error) => {
-            console.error('Chyba připojení:', error);
+            console.error('Chyba připojení socketu:', error);
             if (this.errorCallback) {
-                this.errorCallback('Nepodařilo se připojit k serveru');
+                this.errorCallback('Chyba připojení k serveru');
             }
         });
 
-        this.socket.on('gameState', (serverState) => {
-            console.log('Přijat herní stav:', serverState);
+        this.socket.on('gameState', (state) => {
             if (this.gameStateCallback) {
-                this.gameStateCallback(serverState);
+                this.gameStateCallback(state);
             }
         });
 
         this.socket.on('joinGameResponse', (response) => {
-            console.log('Přijata odpověď na připojení do hry:', response);
-            if (response.status === 'joined' && this.matchFoundCallback) {
+            if (this.matchFoundCallback) {
                 this.matchFoundCallback(response);
             }
         });
 
-        this.socket.on('opponentDisconnected', () => {
-            console.log('Opponent disconnected');
-            if (this.errorCallback) {
-                this.errorCallback('Opponent disconnected');
-            }
-        });
-
         this.socket.on('error', (error) => {
-            console.error('Chyba ze serveru:', error);
+            console.error('Socket error:', error);
             if (this.errorCallback) {
                 this.errorCallback(error);
             }
         });
 
-        this.socket.on('disconnect', (reason) => {
-            console.log('Odpojeno od serveru, důvod:', reason);
-            if (reason === 'io server disconnect') {
-                // Server nás odpojil, zkusíme se znovu připojit
-                this.socket.connect();
-            }
+        this.socket.on('disconnect', () => {
+            console.log('Socket odpojen');
         });
     }
 
@@ -95,8 +104,19 @@ class SocketService {
             return;
         }
 
+        if (!this.userId) {
+            console.error('Uživatel není přihlášen');
+            if (this.errorCallback) {
+                this.errorCallback('Pro hraní se musíte přihlásit');
+            }
+            return;
+        }
+
         console.log('Odesílám požadavek na připojení do hry');
-        this.socket.emit('joinGame');
+        this.socket.emit('joinGame', {
+            userId: this.userId,
+            username: this.userProfile?.username
+        });
     }
 
     cancelSearch() {
@@ -144,6 +164,25 @@ class SocketService {
         if (!this.socket?.connected) return;
         console.log('Končím tah');
         this.socket.emit('endTurn');
+    }
+
+    setUserData(userId, userProfile) {
+        this.userId = userId;
+        this.userProfile = userProfile;
+    }
+
+    // Přidáme metodu pro nastavení autentizačních údajů
+    setAuthData(token, userId, userProfile) {
+        console.log('Nastavuji auth data:', { token: !!token, userId, profile: userProfile });
+        this.token = token;
+        this.userId = userId;
+        this.userProfile = userProfile;
+        
+        if (token && userId && userProfile && this.autoConnect) {
+            this.connect();
+        } else if (!token || !userId || !userProfile) {
+            this.disconnect();
+        }
     }
 }
 
