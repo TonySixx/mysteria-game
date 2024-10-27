@@ -667,6 +667,75 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
   );
 };
 
+// Přidejte tyto styled komponenty po ostatních styled komponentách
+
+const GameOverOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease-in;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const GameOverContent = styled.div`
+  text-align: center;
+  color: #ffd700;
+  animation: slideIn 0.5s ease-out;
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const GameOverTitle = styled.h1`
+  font-size: 4em;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px #ffd700;
+`;
+
+const GameOverMessage = styled.h2`
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  color: ${props => props.$isWinner ? '#4CAF50' : '#f44336'};
+  text-shadow: 0 0 8px ${props => props.$isWinner ? '#4CAF50' : '#f44336'};
+`;
+
+const PlayAgainButton = styled.button`
+  font-size: 1.5em;
+  padding: 15px 30px;
+  background: linear-gradient(45deg, #ffd700, #ff9900);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: bold;
+  
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px #ffd700;
+  }
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -703,25 +772,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     }
   }, [gameState?.notification, gameState?.playerIndex]);
 
-  // Přidáme early return pro případ, že gameState není definován
-  if (!gameState || !gameState.player) {
-    return (
-      <GameBoard>
-        <h1>Waiting for opponent...</h1>
-      </GameBoard>
-    );
-  }
 
-  // Přidáme early return pro konec hry
-  if (gameState.gameOver) {
-    const isWinner = gameState.winner === gameState.playerIndex;
-    return (
-      <GameBoard>
-        <h1>Game Over!</h1>
-        <h2>{isWinner ? 'You won!' : 'You lost!'}</h2>
-      </GameBoard>
-    );
-  }
 
   // Vylepšený onDragEnd s logováním
   const onDragEnd = (result) => {
@@ -813,6 +864,39 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     bottom: auto;
     transform: translateX(-50%) rotate(180deg);
   `;
+
+  // Přidáme early return pro případ, že gameState není definován
+  if (!gameState || !gameState.player) {
+    return (
+      <GameBoard>
+        <h1>Waiting for opponent...</h1>
+      </GameBoard>
+    );
+  }
+
+  // Přidáme early return pro konec hry
+  if (gameState.gameOver) {
+    const isWinner = gameState.winner === gameState.playerIndex;
+    return (
+      <GameBoard>
+        <GameOverOverlay>
+          <GameOverContent>
+            <GameOverTitle>Game Over</GameOverTitle>
+            <GameOverMessage $isWinner={isWinner}>
+              {isWinner ? 'Victory!' : 'Defeat!'}
+            </GameOverMessage>
+            <PlayAgainButton onClick={() => window.location.reload()}>
+              Play Again
+            </PlayAgainButton>
+          </GameOverContent>
+        </GameOverOverlay>
+        {/* Ponecháme původní herní scénu v pozadí */}
+        <BattleArea>
+          {/* ... zbytek vašeho původního kódu ... */}
+        </BattleArea>
+      </GameBoard>
+    );
+  }
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
