@@ -21,10 +21,10 @@ class SocketService {
         return this.socket?.connected || false;
     }
 
-    connect() {
+    async connect() {
         if (this.socket?.connected) {
             console.log('Socket je již připojen');
-            return;
+            return true;
         }
 
         if (!this.token || !this.userId || !this.userProfile) {
@@ -33,28 +33,34 @@ class SocketService {
                 userId: !!this.userId,
                 userProfile: !!this.userProfile
             });
-            return;
+            return false;
         }
 
-        console.log('Připojuji socket...', {
-            userId: this.userId,
-            username: this.userProfile.username,
-            hasToken: !!this.token
-        });
+        return new Promise((resolve) => {
+            this.socket = io(this.serverUrl, {
+                auth: {
+                    token: this.token,
+                    userId: this.userId,
+                    username: this.userProfile.username
+                },
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000
+            });
 
-        this.socket = io(this.serverUrl, {
-            auth: {
-                token: this.token,
-                userId: this.userId,
-                username: this.userProfile.username
-            },
-            transports: ['websocket', 'polling'],
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
-        });
+            this.socket.on('connect', () => {
+                console.log('Socket připojen');
+                resolve(true);
+            });
 
-        this.setupSocketListeners();
+            this.socket.on('connect_error', (error) => {
+                console.error('Chyba připojení socketu:', error);
+                resolve(false);
+            });
+
+            this.setupSocketListeners();
+        });
     }
 
     setupSocketListeners() {
@@ -182,6 +188,40 @@ class SocketService {
             this.connect();
         } else if (!token || !userId || !userProfile) {
             this.disconnect();
+        }
+    }
+
+    subscribeToOnlinePlayers(callback) {
+        if (!this.socket) {
+            console.warn('Socket není inicializován, nelze se přihlásit k odběru online hráčů');
+            return;
+        }
+        
+        // Nejprve se odhlásíme od předchozího odběru
+        this.unsubscribeFromOnlinePlayers();
+        
+        console.log('Subscribing to online players updates');
+        
+        // Uložíme callback pro pozdější odhlášení
+        this.onlinePlayersCallback = callback;
+        
+        this.socket.on('online_players_update', (players) => {
+            console.log('Received online players update:', {
+                socketId: this.socket.id,
+                players
+            });
+            this.onlinePlayersCallback(players);
+        });
+    }
+
+    unsubscribeFromOnlinePlayers() {
+        if (!this.socket) {
+            console.warn('Socket není inicializován, nelze se odhlásit z odběru online hráčů');
+            return;
+        }
+        if (this.onlinePlayersCallback) {
+            this.socket.off('online_players_update');
+            this.onlinePlayersCallback = null;
         }
     }
 }

@@ -6,6 +6,7 @@ import PlayerProfile from './profile/PlayerProfile';
 import Leaderboard from './leaderboard/Leaderboard';
 import socketService from '../services/socketService';
 import { theme } from '../styles/theme';
+import OnlinePlayers from './play/OnlinePlayers';
 
 const MenuContainer = styled.div`
     max-width: 1200px;
@@ -144,6 +145,7 @@ const CancelButton = styled(PlayButton)`
 function MainMenu({ user, onGameStart, onLogin, onLogout }) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
+    const [onlinePlayers, setOnlinePlayers] = useState([]);
 
     const handleStartGame = () => {
         if (!user) {
@@ -165,6 +167,36 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
             onGameStart(gameId);
         });
     }, [onGameStart]);
+
+    useEffect(() => {
+        let isSubscribed = true;
+
+        const setupOnlinePlayers = async () => {
+            if (user) {
+                // Počkáme na připojení socketu
+                if (!socketService.isConnected()) {
+                    await socketService.connect();
+                }
+                
+                if (isSubscribed) {
+                    socketService.subscribeToOnlinePlayers((players) => {
+                        console.log('Updating online players:', {
+                            currentUser: user.id,
+                            players
+                        });
+                        setOnlinePlayers(players);
+                    });
+                }
+            }
+        };
+
+        setupOnlinePlayers();
+
+        return () => {
+            isSubscribed = false;
+            socketService.unsubscribeFromOnlinePlayers();
+        };
+    }, [user]);
 
     return (
         <MenuContainer>
@@ -208,6 +240,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                                     Find Game
                                 </PlayButton>
                             )}
+                            <OnlinePlayers players={onlinePlayers} />
                         </div>
                     )}
 
