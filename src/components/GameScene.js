@@ -901,7 +901,11 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
         return;
       }
 
-      onPlayCard({ cardIndex });
+      // Přidáme destinationIndex pro určení pozice, kam chceme kartu umístit
+      onPlayCard({ 
+        cardIndex,
+        destinationIndex: destination.index // Přidáme index cílové pozice
+      });
     } 
     else if (source.droppableId === 'playerField') {
       const attackerIndex = source.index;
@@ -1087,6 +1091,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                   {...provided.droppableProps}
                   style={{
                     background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
+                    display: 'flex',
+                    gap: '10px',
+                    minHeight: '200px', // Zajistíme minimální výšku pro prázdné pole
                   }}
                 >
                   {gameState.player.field.map((card, index) => (
