@@ -671,6 +671,16 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
 
+  // Přidáme useEffect pro sledování nových zpráv z combat logu
+  useEffect(() => {
+    if (gameState?.combatLogMessage) {
+      setLogEntries(prev => [...prev, {
+        ...gameState.combatLogMessage,
+        id: Math.random().toString(36).substr(2, 9) // Přidáme unikátní ID pro React key
+      }]);
+    }
+  }, [gameState?.combatLogMessage]);
+
   // Zjednodušený useEffect pro notifikace
   useEffect(() => {
     if (gameState?.notification) {
