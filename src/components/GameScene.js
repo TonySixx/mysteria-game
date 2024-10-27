@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import styled from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import earthGolem from '../assets/images/earth-golem.png';
@@ -612,7 +612,7 @@ const cardImages = {
 };
 
 // Upravíme CardDisplay komponentu
-const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
+const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
   if (!card) return null;
 
   if (isOpponentCard) {
@@ -665,7 +665,7 @@ const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDr
       )}
     </CardComponent>
   );
-};
+});
 
 // Přidejte tyto styled komponenty po ostatních styled komponentách
 
@@ -775,7 +775,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
 
 
   // Vylepšený onDragEnd s logováním
-  const onDragEnd = (result) => {
+  const onDragEnd = useCallback((result) => {
     const { source, destination } = result;
     if (!destination || !gameState) return;
 
@@ -837,10 +837,10 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
         });
       }
     }
-  };
+  }, [gameState, onAttack, onPlayCard]);
 
   // Upravíme renderClone pro bezpečné použití gameState
-  const renderClone = (provided, snapshot, rubric) => {
+  const renderClone = useCallback((provided, snapshot, rubric) => {
     const card = gameState?.player?.hand[rubric.source.index];
     if (!card) return null;
 
@@ -857,7 +857,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
         />
       </div>
     );
-  };
+  }, [gameState]);
 
   const OpponentHandArea = styled(HandArea)`
     top: 10px;
