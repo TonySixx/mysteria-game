@@ -21,20 +21,11 @@ class SupabaseService {
                 options: {
                     data: {
                         username: username
-                    },
-                    emailRedirectTo: `${window.location.origin}/auth/callback`
+                    }
                 }
             });
 
             if (authError) throw authError;
-
-            // Pokud není email potvrzen, ale registrace proběhla úspěšně
-            if (!authData.user?.confirmed_at && authData.user?.confirmation_sent_at) {
-                throw new Error('Na váš email byl odeslán potvrzovací odkaz. Prosím potvrďte svůj email a poté se přihlaste.');
-            }
-
-            // Počkáme na potvrzení registrace
-            await new Promise(resolve => setTimeout(resolve, 1000));
 
             // Vytvoření profilu pomocí RPC funkce
             const { data: profileData, error: profileError } = await this.supabase.rpc('create_profile', {
@@ -57,14 +48,23 @@ class SupabaseService {
 
             if (signInError) throw signInError;
 
-            // Nastavíme autentizační data pro socket
+            // Počkáme na načtení profilu
+            const { data: finalProfile, error: finalProfileError } = await this.supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', authData.user.id)
+                .single();
+
+            if (finalProfileError) throw finalProfileError;
+
+            // Nastavíme autentizační data pro socket až když máme kompletní profil
             socketService.setAuthData(
                 signInData.session.access_token,
                 signInData.user.id,
-                profileData
+                finalProfile
             );
 
-            return { user: signInData.user, profile: profileData };
+            return { user: signInData.user, profile: finalProfile };
         } catch (error) {
             console.error('Chyba při registraci:', error);
             throw error;

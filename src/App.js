@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import GameScene from './components/GameScene';
-import MatchmakingScreen from './components/MatchmakingScreen';
 import socketService from './services/socketService';
 import supabaseService from './services/supabaseService';
 import MainMenu from './components/MainMenu';
