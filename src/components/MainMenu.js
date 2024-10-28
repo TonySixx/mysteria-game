@@ -7,6 +7,9 @@ import Leaderboard from './leaderboard/Leaderboard';
 import socketService from '../services/socketService';
 import { theme } from '../styles/theme';
 import OnlinePlayers from './play/OnlinePlayers';
+import { DeckList } from './deck/DeckList';
+import { deckService } from '../services/deckService';
+import DeckBuilder from './deck/DeckBuilder';
 
 const MenuContainer = styled.div`
     max-width: 1200px;
@@ -143,11 +146,33 @@ const CancelButton = styled(PlayButton)`
     width: 250px;
 `;
 
+const Tooltip = styled.span`
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+
+    ${PlayButton}:hover & {
+        opacity: 1;
+    }
+`;
+
 function MainMenu({ user, onGameStart, onLogin, onLogout }) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
     const [onlinePlayers, setOnlinePlayers] = useState([]);
     const [gameId, setGameId] = useState(null);
+    const [decks, setDecks] = useState([]);
+    const [currentScreen, setCurrentScreen] = useState('menu'); // Přidáme state pro navigaci
 
     const handleStartGame = () => {
         if (!user) {
@@ -217,6 +242,48 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
         }
     }, [gameId]);
 
+    // Přidáme načítání balíčků
+    useEffect(() => {
+        if (user && activeTab === 'decks') {
+            loadDecks();
+        }
+    }, [user, activeTab]);
+
+    const loadDecks = async () => {
+        try {
+            const userDecks = await deckService.getDecks(user.id);
+            setDecks(userDecks);
+        } catch (error) {
+            console.error('Error loading decks:', error);
+        }
+    };
+
+    const handleDeckSelect = async (deck) => {
+        try {
+            await deckService.setActiveDeck(user.id, deck.id);
+            // Aktualizujeme seznam balíčků
+            loadDecks();
+        } catch (error) {
+            console.error('Error setting active deck:', error);
+        }
+    };
+
+    const handleCreateDeck = () => {
+        setCurrentScreen('deck-builder');
+    };
+
+    const handleBackToMenu = () => {
+        setCurrentScreen('menu');
+        // Při návratu do menu aktualizujeme seznam balíčků
+        if (user) {
+            loadDecks();
+        }
+    };
+
+    if (currentScreen === 'deck-builder') {
+        return <DeckBuilder onBack={handleBackToMenu} userId={user.id} />;
+    }
+
     return (
         <MenuContainer>
             {user ? (
@@ -227,6 +294,12 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                             onClick={() => setActiveTab('play')}
                         >
                             Play
+                        </Tab>
+                        <Tab 
+                            $active={activeTab === 'decks'} 
+                            onClick={() => setActiveTab('decks')}
+                        >
+                            Decks
                         </Tab>
                         <Tab 
                             $active={activeTab === 'profile'} 
@@ -255,12 +328,26 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                                     </CancelButton>
                                 </>
                             ) : (
-                                <PlayButton onClick={handleStartGame}>
+                                <PlayButton 
+                                    onClick={handleStartGame}
+                                    disabled={!decks.some(deck => deck.is_active)}
+                                    title={!decks.some(deck => deck.is_active) ? 
+                                        "Select an active deck first" : 
+                                        "Find a game"}
+                                >
                                     Find Game
                                 </PlayButton>
                             )}
                             <OnlinePlayers players={onlinePlayers} />
                         </div>
+                    )}
+
+                    {activeTab === 'decks' && (
+                        <DeckList 
+                            decks={decks}
+                            onDeckSelect={handleDeckSelect}
+                            onCreateDeck={handleCreateDeck}
+                        />
                     )}
 
                     {activeTab === 'profile' && (

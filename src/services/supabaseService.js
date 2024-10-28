@@ -4,7 +4,7 @@ import socketService from './socketService';
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
 const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
 class SupabaseService {
     constructor() {
