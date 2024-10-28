@@ -21,6 +21,12 @@ import glacialBurst from '../assets/images/glacial-burst.png';
 import radiantProtector from '../assets/images/radiant-protector.png';
 import infernoWave from '../assets/images/inferno-wave.png';
 import cardBackImage from '../assets/images/card-back.png';
+import shadowAssassin from '../assets/images/shadow-assassin.png';
+import manaWyrm from '../assets/images/mana-wyrm.png';
+import soulCollector from '../assets/images/soul-collector.png';
+import mindControl from '../assets/images/mind-control.png';
+import arcaneExplosion from '../assets/images/arcane-explosion.png';
+import holyNova from '../assets/images/holy-nova.png';
 import { CombatLog } from './CombatLog';
 import { theme } from '../styles/theme';
 
@@ -669,7 +675,13 @@ const cardImages = {
   'glacialBurst': glacialBurst,
   'radiantProtector': radiantProtector,
   'infernoWave': infernoWave,
-  'coinImage': coinImage
+  'coinImage': coinImage,
+  'shadowAssassin': shadowAssassin,
+  'manaWyrm': manaWyrm,
+  'soulCollector': soulCollector,
+  'mindControl': mindControl,
+  'arcaneExplosion': arcaneExplosion,
+  'holyNova': holyNova
 };
 
 // Upravte CardDisplay komponentu
