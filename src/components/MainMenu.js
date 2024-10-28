@@ -48,6 +48,7 @@ const Tab = styled.button`
     text-transform: uppercase;
     letter-spacing: 1px;
     position: relative;
+    width: ${props => props.$vertical ? '150px' : 'auto'};
 
     &:hover {
         color: ${theme.colors.text.primary};
@@ -264,11 +265,13 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                 <TabContainer>
                     <Tab 
                         $active={activeTab === 'login'} 
+                        $vertical={true}
                         onClick={() => setActiveTab('login')}
                     >
                         Login
                     </Tab>
                     <Tab 
+                        $vertical={true}
                         $active={activeTab === 'register'} 
                         onClick={() => setActiveTab('register')}
                     >
