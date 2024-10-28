@@ -14,33 +14,14 @@ import cardTexture from '../assets/images/card-texture.png';
 import playerHeroImage from '../assets/images/player-hero.png';
 import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
-import { VisualFeedbackContainer } from './VisualFeedback';
 import { Notification } from './Notification';
 import nimbleSprite from '../assets/images/nimble-sprite.png';
 import arcaneFamiliar from '../assets/images/arcane-familiar.png';
 import glacialBurst from '../assets/images/glacial-burst.png';
 import radiantProtector from '../assets/images/radiant-protector.png';
 import infernoWave from '../assets/images/inferno-wave.png';
-import { addSpellVisualFeedback, addVisualFeedback } from '../utils/visualFeedbackUtils';
 import cardBackImage from '../assets/images/card-back.png';
-import { Card, UnitCard, SpellCard, Hero } from '../game/CardClasses';
-import { startNextTurn, checkGameOver } from '../game/gameLogic';
-import { attack } from '../game/combatLogic';
-import { playCardCommon, playCoin } from '../game/gameLogic';
-import { performAIAttacks, chooseTarget } from '../game/combatLogic';
 import { CombatLog } from './CombatLog';
-import {
-  calculateFieldStrength,
-  categorizeDeckCards,
-  decideCoinUsage,
-  executeDefensiveStrategy,
-  executeAggressiveStrategy,
-  executeBalancedStrategy,
-  performOptimizedAttacks,
-  canKillOpponent,
-  executeLethalSequence,
-  finalizeTurn // Přidán import finalizeTurn
-} from '../game/aiStrategy';
 import { theme } from '../styles/theme';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
@@ -100,8 +81,8 @@ const useIsMobile = () => {
 
   useEffect(() => {
     const checkMobile = () => {
-      const isMobileDevice = window.innerWidth <= 1024 || 
-                           /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobileDevice = window.innerWidth <= 1024 ||
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobile(isMobileDevice);
     };
 
@@ -356,21 +337,21 @@ const CardComponent = styled.div`
     border-radius: 8px;
     pointer-events: none;
     background: ${props => {
-      switch (props.$rarity) {
-        case 'common':
-          return 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)';
-        case 'uncommon':
-          return 'linear-gradient(45deg, rgba(0,255,0,0.1) 0%, rgba(0,255,0,0) 100%)';
-        case 'rare':
-          return 'linear-gradient(45deg, rgba(0,112,255,0.1) 0%, rgba(0,112,255,0) 100%)';
-        case 'epic':
-          return 'linear-gradient(45deg, rgba(163,53,238,0.1) 0%, rgba(163,53,238,0) 100%)';
-        case 'legendary':
-          return 'linear-gradient(45deg, rgba(255,128,0,0.1) 0%, rgba(255,128,0,0) 100%)';
-        default:
-          return 'none';
-      }
-    }};
+    switch (props.$rarity) {
+      case 'common':
+        return 'linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%)';
+      case 'uncommon':
+        return 'linear-gradient(45deg, rgba(0,255,0,0.1) 0%, rgba(0,255,0,0) 100%)';
+      case 'rare':
+        return 'linear-gradient(45deg, rgba(0,112,255,0.1) 0%, rgba(0,112,255,0) 100%)';
+      case 'epic':
+        return 'linear-gradient(45deg, rgba(163,53,238,0.1) 0%, rgba(163,53,238,0) 100%)';
+      case 'legendary':
+        return 'linear-gradient(45deg, rgba(255,128,0,0.1) 0%, rgba(255,128,0,0) 100%)';
+      default:
+        return 'none';
+    }
+  }};
   }
 `;
 
@@ -531,21 +512,21 @@ const RarityGem = styled.div`
     bottom: 0;
     border-radius: 50%;
     background: ${props => {
-      switch (props.$rarity) {
-        case 'common':
-          return 'linear-gradient(135deg, #9e9e9e, #f5f5f5)';
-        case 'uncommon':
-          return 'linear-gradient(135deg, #1b5e20, #4caf50)';
-        case 'rare':
-          return 'linear-gradient(135deg, #0d47a1, #2196f3)';
-        case 'epic':
-          return 'linear-gradient(135deg, #4a148c, #9c27b0)';
-        case 'legendary':
-          return 'linear-gradient(135deg, #e65100, #ff9800)';
-        default:
-          return '#9e9e9e';
-      }
-    }};
+    switch (props.$rarity) {
+      case 'common':
+        return 'linear-gradient(135deg, #9e9e9e, #f5f5f5)';
+      case 'uncommon':
+        return 'linear-gradient(135deg, #1b5e20, #4caf50)';
+      case 'rare':
+        return 'linear-gradient(135deg, #0d47a1, #2196f3)';
+      case 'epic':
+        return 'linear-gradient(135deg, #4a148c, #9c27b0)';
+      case 'legendary':
+        return 'linear-gradient(135deg, #e65100, #ff9800)';
+      default:
+        return '#9e9e9e';
+    }
+  }};
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   }
 
@@ -556,42 +537,42 @@ const RarityGem = styled.div`
     height: 16px;
     border-radius: 50%;
     background: ${props => {
-      switch (props.$rarity) {
-        case 'common':
-          return 'radial-gradient(circle, #ffffff 30%, #9e9e9e 70%)';
-        case 'uncommon':
-          return 'radial-gradient(circle, #81c784 30%, #1b5e20 70%)';
-        case 'rare':
-          return 'radial-gradient(circle, #64b5f6 30%, #0d47a1 70%)';
-        case 'epic':
-          return 'radial-gradient(circle, #ce93d8 30%, #4a148c 70%)';
-        case 'legendary':
-          return 'radial-gradient(circle, #ffb74d 30%, #e65100 70%)';
-        default:
-          return 'radial-gradient(circle, #ffffff 30%, #9e9e9e 70%)';
-      }
-    }};
+    switch (props.$rarity) {
+      case 'common':
+        return 'radial-gradient(circle, #ffffff 30%, #9e9e9e 70%)';
+      case 'uncommon':
+        return 'radial-gradient(circle, #81c784 30%, #1b5e20 70%)';
+      case 'rare':
+        return 'radial-gradient(circle, #64b5f6 30%, #0d47a1 70%)';
+      case 'epic':
+        return 'radial-gradient(circle, #ce93d8 30%, #4a148c 70%)';
+      case 'legendary':
+        return 'radial-gradient(circle, #ffb74d 30%, #e65100 70%)';
+      default:
+        return 'radial-gradient(circle, #ffffff 30%, #9e9e9e 70%)';
+    }
+  }};
     border: 2px solid ${props => {
-      switch (props.$rarity) {
-        case 'common':
-          return '#f5f5f5';
-        case 'uncommon':
-          return '#4caf50';
-        case 'rare':
-          return '#2196f3';
-        case 'epic':
-          return '#9c27b0';
-        case 'legendary':
-          return '#ff9800';
-        default:
-          return '#f5f5f5';
-      }
-    }};
+    switch (props.$rarity) {
+      case 'common':
+        return '#f5f5f5';
+      case 'uncommon':
+        return '#4caf50';
+      case 'rare':
+        return '#2196f3';
+      case 'epic':
+        return '#9c27b0';
+      case 'legendary':
+        return '#ff9800';
+      default:
+        return '#f5f5f5';
+    }
+  }};
     box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.5);
   }
 `;
 
-function HeroDisplay({ hero, onClick, isTargetable,heroName }) {
+function HeroDisplay({ hero, onClick, isTargetable, heroName }) {
   return (
     <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
       <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
@@ -699,8 +680,8 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
 
   if (isOpponentCard) {
     return (
-      <CardComponent 
-        $isInHand={isInHand} 
+      <CardComponent
+        $isInHand={isInHand}
         $isDragging={isDragging}
         $isMobile={isMobile}
         $isOpponentCard={isOpponentCard} // Přidáme prop pro karty oponenta
@@ -727,14 +708,14 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
     >
       <ManaCost $isMobile={isMobile}>{card.manaCost}</ManaCost>
       <RarityGem $rarity={card.rarity} $isMobile={isMobile} />
-      <CardImage 
-        style={{ 
-          borderRadius: '4px', 
+      <CardImage
+        style={{
+          borderRadius: '4px',
           border: '1px solid #000000',
           height: isMobile ? '45%' : '50%' // Zmenšíme obrázek na mobilních zařízeních
-        }} 
-        src={cardImage} 
-        alt={card.name} 
+        }}
+        src={cardImage}
+        alt={card.name}
       />
       {card.hasTaunt && <TauntLabel $isMobile={isMobile}>Taunt</TauntLabel>}
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
@@ -828,11 +809,81 @@ const PlayAgainButton = styled.button`
   }
 `;
 
+// Upravíme styled komponenty pro animace
+const AnimationOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+`;
+
+const AnimationEmoji = styled.div`
+  position: absolute;
+  font-size: ${props => props.$isMobile ? '32px' : '48px'};
+  transform-origin: center;
+  animation: ${props => props.$animation} 1s ease-out forwards;
+  opacity: 0;
+  
+  @keyframes attackAnimation {
+    0% { 
+      opacity: 0; 
+      transform: translate(${props => props.$startX}px, ${props => props.$startY}px) scale(0.5);
+    }
+    50% { 
+      opacity: 1; 
+      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1.2);
+    }
+    100% { 
+      opacity: 0; 
+      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1);
+    }
+  }
+
+  @keyframes spellAnimation {
+    0% { 
+      opacity: 0; 
+      transform: translate(${props => props.$startX}px, ${props => props.$startY}px) rotate(0deg);
+    }
+    50% { 
+      opacity: 1; 
+      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) rotate(180deg);
+    }
+    100% { 
+      opacity: 0; 
+      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) rotate(360deg);
+    }
+  }
+
+  @keyframes playCardAnimation {
+    0% { 
+      opacity: 0; 
+      transform: translate(${props => props.$startX}px, ${props => props.$startY}px) scale(0.5);
+    }
+    50% { 
+      opacity: 1; 
+      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1.5);
+    }
+    100% { 
+      opacity: 0; 
+      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1);
+    }
+  }
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
   const [scale, setScale] = useState(1);
   const isMobile = useIsMobile();
+  const [animation, setAnimation] = useState(null);
+
+  // Přidáme refs pro sledování pozic karet
+  const opponentFieldRefs = useRef([]);
+  const opponentHeroRef = useRef(null);
+  const opponentHandRef = useRef(null);
 
   // Přidáme useEffect pro sledování nových zpráv z combat logu
   useEffect(() => {
@@ -847,11 +898,11 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   // Zjednodušený useEffect pro notifikace
   useEffect(() => {
     if (gameState?.notification) {
-      const notificationMessage = typeof gameState.notification === 'object' 
-        ? gameState.notification.message 
+      const notificationMessage = typeof gameState.notification === 'object'
+        ? gameState.notification.message
         : gameState.notification;
 
-      const isForThisPlayer = typeof gameState.notification === 'object' 
+      const isForThisPlayer = typeof gameState.notification === 'object'
         ? !gameState.notification.forPlayer || gameState.notification.forPlayer === gameState.playerIndex
         : true;
 
@@ -871,16 +922,16 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     const calculateScale = () => {
       const windowWidth = window.innerWidth;
       const windowHeight = window.innerHeight;
-      
+
       const baseWidth = isMobile ? MOBILE_BASE_WIDTH : BASE_WIDTH;
       const baseHeight = isMobile ? MOBILE_BASE_HEIGHT : BASE_HEIGHT;
-      
+
       const scaleX = windowWidth / baseWidth;
       const scaleY = windowHeight / baseHeight;
-      
+
       let newScale = Math.min(scaleX, scaleY);
       newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
-      
+
       setScale(newScale);
     };
 
@@ -888,6 +939,113 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     window.addEventListener('resize', calculateScale);
     return () => window.removeEventListener('resize', calculateScale);
   }, [isMobile]);
+
+  // Přidáme useEffect pro zpracování animací
+  useEffect(() => {
+    if (gameState?.animation && gameState.playerIndex !== gameState.animation.playerIndex) {
+      setAnimation(gameState.animation);
+
+      // Vyčistíme animaci po 1 sekundě
+      const timer = setTimeout(() => {
+        setAnimation(null);
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [gameState?.animation, gameState?.playerIndex]);
+
+  // Funkce pro získání pozice elementu
+  const getElementPosition = (element) => {
+    if (!element) return { x: 0, y: 0 };
+    const rect = element.getBoundingClientRect();
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+  };
+
+  // Komponenta pro zobrazení animace
+  const AnimationEffect = () => {
+    if (!animation) return null;
+
+    let emoji = '⚔️';
+    let animationType = 'attackAnimation';
+    let startPos = { x: 0, y: 0 };
+    let endPos = { x: 0, y: 0 };
+
+    if (animation.type === 'playCard') {
+      emoji = animation.cardType === 'spell' ? '✨' : '🎴';
+      animationType = animation.cardType === 'spell' ? 'spellAnimation' : 'playCardAnimation';
+
+      // Startovní pozice z ruky protivníka
+      startPos = getElementPosition(opponentHandRef.current);
+
+      // Cílová pozice na herním poli
+      if (animation.targetIndex !== undefined && opponentFieldRefs.current[animation.targetIndex]) {
+        endPos = getElementPosition(opponentFieldRefs.current[animation.targetIndex]);
+      } else {
+        // Fallback pozice uprostřed pole
+        endPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+      }
+    } else if (animation.type === 'attack') {
+      // Startovní pozice útočící karty
+      if (opponentFieldRefs.current[animation.sourceIndex]) {
+        startPos = getElementPosition(opponentFieldRefs.current[animation.sourceIndex]);
+      }
+
+      // Cílová pozice
+      if (animation.isHeroTarget) {
+        endPos = getElementPosition(opponentHeroRef.current);
+      } else if (opponentFieldRefs.current[animation.targetIndex]) {
+        endPos = getElementPosition(opponentFieldRefs.current[animation.targetIndex]);
+      }
+    }
+
+    return (
+      <AnimationOverlay>
+        <AnimationEmoji
+          $animation={animationType}
+          $startX={startPos.x}
+          $startY={startPos.y}
+          $endX={endPos.x}
+          $endY={endPos.y}
+          $isMobile={isMobile}
+        >
+          {emoji}
+        </AnimationEmoji>
+      </AnimationOverlay>
+    );
+  };
+
+  // Upravíme renderování karet protivníka pro přidání refs
+  const renderOpponentField = useCallback(() => (
+    <FieldArea $isMobile={isMobile}>
+      {gameState.opponent.field.map((card, index) => (
+        <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
+          {(provided, snapshot) => (
+            <div
+              ref={(el) => {
+                provided.innerRef(el);
+                opponentFieldRefs.current[index] = el;
+              }}
+              {...provided.droppableProps}
+              style={{
+                position: 'relative',
+                background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
+              }}
+            >
+              <CardDisplay
+                card={card}
+                isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
+              />
+              {snapshot.isDraggingOver ? <div style={{ position: 'absolute', height: '100px', width: '100%', background: 'rgba(255, 0, 0, 0.5)', borderEndStartRadius: '8px', borderEndEndRadius: '8px' }} /> : null}
+            </div>
+          )}
+        </Droppable>
+      ))}
+    </FieldArea>
+
+  ), [gameState.opponent.field, gameState.player.field, isMobile]);
 
   // Vylepšený onDragEnd s logováním
   const onDragEnd = useCallback((result) => {
@@ -909,24 +1067,24 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
       const cardIndex = source.index;
       const card = gameState.player.hand[cardIndex];
-      
+
       if (!card) return;
-      
+
       if (card.manaCost > gameState.player.mana) {
         setNotification('Not enough mana!');
         return;
       }
 
       // Přidáme destinationIndex pro určení pozice, kam chceme kartu umístit
-      onPlayCard({ 
+      onPlayCard({
         cardIndex,
         destinationIndex: destination.index // Přidáme index cílové pozice
       });
-    } 
+    }
     else if (source.droppableId === 'playerField') {
       const attackerIndex = source.index;
       const attacker = gameState.player.field[attackerIndex];
-      
+
       console.log('Útok jednotkou:', {
         attackerIndex,
         attacker,
@@ -945,7 +1103,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           targetIndex: null,
           isHeroTarget: true
         });
-      } 
+      }
       else if (destination.droppableId.startsWith('opponentCard-')) {
         const targetIndex = parseInt(destination.droppableId.split('-')[1]);
         console.log('Útok na jednotku:', { targetIndex });
@@ -1017,10 +1175,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     );
   }
 
-  // Upravte velikosti textu pro mobilní zobrazení
-  const getTextSize = (baseSize) => {
-    return isMobile ? baseSize * 0.8 : baseSize;
-  };
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -1043,7 +1197,10 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </DeckAndManaContainer>
           </PlayerInfo>
 
-          <OpponentHandArea $isMobile={isMobile}>
+          <OpponentHandArea
+            $isMobile={isMobile}
+            ref={opponentHandRef}
+          >
             {gameState.opponent.hand.map((card, index) => (
               <CardDisplay
                 key={card.id}
@@ -1058,13 +1215,13 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             <Droppable droppableId="opponentHero" direction="horizontal">
               {(provided, snapshot) => (
                 <HeroArea
-                  ref={provided.innerRef}
+                 ref={provided.innerRef}
                   {...provided.droppableProps}
                   style={{
                     background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
                   }}
                 >
-                  <HeroDisplay
+                    <HeroDisplay
                     hero={gameState.opponent.hero}
                     heroName={gameState.opponent.username}
                     isTargetable={
@@ -1078,28 +1235,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
               )}
             </Droppable>
 
-            <FieldArea $isMobile={isMobile}>
-              {gameState.opponent.field.map((card, index) => (
-                <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
-                  {(provided, snapshot) => (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      style={{
-                        position: 'relative',
-                        background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
-                      }}
-                    >
-                      <CardDisplay
-                        card={card}
-                        isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
-                      />
-                      {snapshot.isDraggingOver ? <div style={{ position: 'absolute', height: '100px', width: '100%', background: 'rgba(255, 0, 0, 0.5)', borderEndStartRadius: '8px', borderEndEndRadius: '8px' }} /> : null}
-                    </div>
-                  )}
-                </Droppable>
-              ))}
-            </FieldArea>
+            {renderOpponentField()}
 
             <Droppable droppableId="playerField" direction="horizontal">
               {(provided, snapshot) => (
@@ -1136,6 +1272,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </Droppable>
 
             <HeroArea $isMobile={isMobile}>
+            <div style={{position:"absolute"}} ref={opponentHeroRef}></div>
               <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} />
             </HeroArea>
           </BattleArea>
@@ -1155,7 +1292,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                 </Tooltip>
               </ManaInfo>
             </DeckAndManaContainer>
-            <EndTurnButton 
+            <EndTurnButton
               onClick={onEndTurn}
               disabled={gameState.currentPlayer !== gameState.playerIndex}
             >
@@ -1197,6 +1334,8 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           </Droppable>
           <Notification message={notification} />
           <CombatLog logEntries={logEntries} />
+          {/* Přidáme komponentu pro animace */}
+          <AnimationEffect />
         </GameBoard>
       </ScalableGameWrapper>
     </DragDropContext>
