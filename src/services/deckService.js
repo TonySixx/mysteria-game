@@ -35,26 +35,37 @@ export const deckService = {
     },
 
     async createDeck(userId, name, cards) {
-        // Začneme transakci
-        const { data: deck, error: deckError } = await supabase
-            .from('decks')
-            .insert({ user_id: userId, name })
-            .select()
-            .single();
+        try {
+            console.log('Creating deck:', { userId, name, cards });
+            
+            // Začneme transakci
+            const { data: deck, error: deckError } = await supabase
+                .from('decks')
+                .insert({ user_id: userId, name })
+                .select()
+                .single();
 
-        if (deckError) throw deckError;
+            if (deckError) throw deckError;
 
-        // Vlojíme karty do balíčku
-        const { error: cardsError } = await supabase
-            .from('deck_cards')
-            .insert(cards.map(card => ({
-                deck_id: deck.id,
-                card_id: card.id,
-                quantity: card.quantity
-            })));
+            console.log('Deck created:', deck);
 
-        if (cardsError) throw cardsError;
-        return deck;
+            // Vlojíme karty do balíčku
+            const { error: cardsError } = await supabase
+                .from('deck_cards')
+                .insert(cards.map(card => ({
+                    deck_id: deck.id,
+                    card_id: card.card_id,
+                    quantity: card.quantity
+                })));
+
+            if (cardsError) throw cardsError;
+
+            console.log('Cards added to deck');
+            return deck;
+        } catch (error) {
+            console.error('Error in createDeck:', error);
+            throw error;
+        }
     },
 
     async setActiveDeck(userId, deckId) {

@@ -154,7 +154,7 @@ const DeckBuilder = ({ onBack, userId }) => {
             setSelectedCards(prev => ({
                 ...prev,
                 [card.id]: {
-                    card,
+                    card: card,  // Uložíme celou kartu
                     quantity: (prev[card.id]?.quantity || 0) + 1
                 }
             }));
@@ -175,10 +175,18 @@ const DeckBuilder = ({ onBack, userId }) => {
 
     const handleSaveDeck = async () => {
         try {
+            // Upravíme mapování karet pro správné ID
             const cards = Object.entries(selectedCards).map(([cardId, data]) => ({
-                card_id: parseInt(cardId),
+                // Použijeme přímo ID karty z objektu card
+                card_id: data.card.id,
                 quantity: data.quantity
             }));
+
+            console.log('Saving deck:', {
+                userId,
+                name: deckName,
+                cards: cards
+            });
 
             await deckService.createDeck(userId, deckName, cards);
             onBack();
