@@ -15,6 +15,7 @@ class SocketService {
         this.userProfile = null;
         this.token = null; // Přidáme property pro JWT token
         this.autoConnect = true; // Změníme na true pro automatické připojení
+        this.connectionPromise = null; // Přidáme pro sledování stavu připojení
     }
 
     isConnected() {
@@ -22,6 +23,12 @@ class SocketService {
     }
 
     async connect() {
+        // Pokud již probíhá připojování, vrátíme existující Promise
+        if (this.connectionPromise) {
+            return this.connectionPromise;
+        }
+
+        // Pokud je socket již připojen, vrátíme true
         if (this.socket?.connected) {
             console.log('Socket je již připojen');
             return true;
@@ -36,7 +43,12 @@ class SocketService {
             return false;
         }
 
-        return new Promise((resolve) => {
+        this.connectionPromise = new Promise((resolve) => {
+            if (this.socket) {
+                this.socket.disconnect();
+                this.socket = null;
+            }
+
             this.socket = io(this.serverUrl, {
                 auth: {
                     token: this.token,
@@ -51,16 +63,20 @@ class SocketService {
 
             this.socket.on('connect', () => {
                 console.log('Socket připojen');
+                this.connectionPromise = null;
                 resolve(true);
             });
 
             this.socket.on('connect_error', (error) => {
                 console.error('Chyba připojení socketu:', error);
+                this.connectionPromise = null;
                 resolve(false);
             });
 
             this.setupSocketListeners();
         });
+
+        return this.connectionPromise;
     }
 
     setupSocketListeners() {
@@ -200,37 +216,47 @@ class SocketService {
     }
 
     subscribeToOnlinePlayers(callback) {
-        if (!this.socket) {
-            console.warn('Socket není inicializován, nelze se přihlásit k odběru online hráčů');
+        this.onlinePlayersCallback = callback; // Uložíme callback
+
+        if (!this.socket?.connected) {
+            console.warn('Socket není připojen, pokusím se připojit...');
+            this.connect().then((connected) => {
+                if (connected && this.onlinePlayersCallback) {
+                    this.setupOnlinePlayersListener();
+                }
+            });
             return;
         }
+
+        this.setupOnlinePlayersListener();
+    }
+
+    setupOnlinePlayersListener() {
+        if (!this.socket) return;
+
+        // Nejprve odstraníme existující listener
+        this.socket.off('online_players_update');
         
-        // Nejprve se odhlásíme od předchozího odběru
-        this.unsubscribeFromOnlinePlayers();
-        
-        console.log('Subscribing to online players updates');
-        
-        // Uložíme callback pro pozdější odhlášení
-        this.onlinePlayersCallback = callback;
-        
+        // Přidáme nový listener
         this.socket.on('online_players_update', (players) => {
             console.log('Received online players update:', {
                 socketId: this.socket.id,
                 players
             });
-            this.onlinePlayersCallback(players);
+            if (this.onlinePlayersCallback) {
+                this.onlinePlayersCallback(players);
+            }
         });
+
+        // Vyžádáme si aktuální seznam hráčů
+        this.socket.emit('request_online_players');
     }
 
     unsubscribeFromOnlinePlayers() {
-        if (!this.socket) {
-            console.warn('Socket není inicializován, nelze se odhlásit z odběru online hráčů');
-            return;
-        }
-        if (this.onlinePlayersCallback) {
+        if (this.socket) {
             this.socket.off('online_players_update');
-            this.onlinePlayersCallback = null;
         }
+        this.onlinePlayersCallback = null;
     }
 }
 
