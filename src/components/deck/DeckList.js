@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { motion } from 'framer-motion';
 import { theme } from '../../styles/theme';
+import { FaEdit, FaTrash, FaStar } from 'react-icons/fa';
 
 const DeckListContainer = styled(motion.div)`
     display: flex;
@@ -20,14 +21,41 @@ const DeckCard = styled(motion.div)`
     align-items: center;
     padding: 1rem;
     background: rgba(30, 30, 30, 0.9);
-    border: 1px solid ${props => props.isActive ? theme.colors.border.golden : '#444'};
+    border: 2px solid ${props => props.isActive ? theme.colors.primary : '#444'};
     border-radius: 5px;
-    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+
+    ${props => props.isActive && `
+        background: linear-gradient(
+            to right,
+            rgba(255, 215, 0, 0.1),
+            rgba(30, 30, 30, 0.9),
+            rgba(255, 215, 0, 0.1)
+        );
+    `}
 
     &:hover {
         background: rgba(40, 40, 40, 0.9);
-        border-color: ${theme.colors.border.golden};
+        border-color: ${theme.colors.primary};
+
+        .deck-actions {
+            transform: translateX(0);
+            opacity: 1;
+        }
     }
+`;
+
+const DeckInfo = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+`;
+
+const ActiveIndicator = styled(FaStar)`
+    color: ${theme.colors.primary};
+    font-size: 1.2rem;
 `;
 
 const DeckName = styled.h3`
@@ -37,6 +65,41 @@ const DeckName = styled.h3`
 
 const CardCount = styled.span`
     color: ${theme.colors.text.secondary};
+`;
+
+const DeckActions = styled.div`
+    display: flex;
+    gap: 0.5rem;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    position: absolute;
+    right: 1rem;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 0.5rem;
+    border-radius: 5px;
+`;
+
+const ActionButton = styled.button`
+    background: none;
+    border: none;
+    color: ${theme.colors.text.secondary};
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+
+    &:hover {
+        color: ${theme.colors.text.primary};
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.delete:hover {
+        color: ${theme.colors.accent};
+    }
 `;
 
 const CreateDeckButton = styled(motion.button)`
@@ -62,7 +125,14 @@ const EmptyState = styled.div`
     padding: 2rem;
 `;
 
-export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck }) => {
+const handleDeleteClick = (e, deckId,onDeleteDeck) => {
+    e.stopPropagation(); // Zastavíme propagaci události
+    if (window.confirm('Are you sure you want to delete this deck?')) {
+        onDeleteDeck(deckId);
+    }
+};
+
+export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, onDeleteDeck }) => {
     return (
         <DeckListContainer
             initial={{ opacity: 0, y: 20 }}
@@ -89,12 +159,25 @@ export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck }) => {
                         <DeckCard
                             key={deck.id}
                             isActive={deck.is_active}
-                            onClick={() => onDeckSelect(deck)}
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.99 }}
                         >
-                            <DeckName>{deck.name}</DeckName>
-                            <CardCount>{cardCount}/30 cards</CardCount>
+                            <DeckInfo onClick={() => onDeckSelect(deck)}>
+                                {deck.is_active && <ActiveIndicator />}
+                                <DeckName>{deck.name}</DeckName>
+                                <CardCount>{cardCount}/30 cards</CardCount>
+                            </DeckInfo>
+                            <DeckActions className="deck-actions">
+                                <ActionButton onClick={() => onEditDeck(deck)}>
+                                    <FaEdit size={16} />
+                                </ActionButton>
+                                <ActionButton 
+                                    className="delete"
+                                    onClick={(e) => handleDeleteClick(e, deck.id,onDeleteDeck)}
+                                >
+                                    <FaTrash size={16} />
+                                </ActionButton>
+                            </DeckActions>
                         </DeckCard>
                     );
                 })

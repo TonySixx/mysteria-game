@@ -122,15 +122,33 @@ const LoadingText = styled.div`
     }
 `;
 
-const DeckBuilder = ({ onBack, userId }) => {
+const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [availableCards, setAvailableCards] = useState([]);
     const [selectedCards, setSelectedCards] = useState({});
-    const [deckName, setDeckName] = useState('New Deck');
+    const [deckName, setDeckName] = useState(editingDeck ? editingDeck.name : 'New Deck');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         loadCards();
-    }, []);
+        if (editingDeck) {
+            console.log('Loading editing deck:', editingDeck); // Pro debugování
+            // Načteme karty z editovaného balíčku
+            const editedCards = {};
+            // Kontrolujeme, zda deck_cards existuje a je pole
+            if (editingDeck.deck_cards && Array.isArray(editingDeck.deck_cards)) {
+                editingDeck.deck_cards.forEach(deckCard => {
+                    // Kontrolujeme strukturu dat
+                    if (deckCard && deckCard.cards) {
+                        editedCards[deckCard.cards.id] = {
+                            card: deckCard.cards,
+                            quantity: deckCard.quantity
+                        };
+                    }
+                });
+            }
+            setSelectedCards(editedCards);
+        }
+    }, [editingDeck]);
 
     const loadCards = async () => {
         try {
@@ -175,20 +193,22 @@ const DeckBuilder = ({ onBack, userId }) => {
 
     const handleSaveDeck = async () => {
         try {
-            // Upravíme mapování karet pro správné ID
             const cards = Object.entries(selectedCards).map(([cardId, data]) => ({
-                // Použijeme přímo ID karty z objektu card
-                card_id: data.card.id,
+                card_id: parseInt(data.card.id),
                 quantity: data.quantity
             }));
 
             console.log('Saving deck:', {
-                userId,
+                deckId: editingDeck?.id,
                 name: deckName,
                 cards: cards
             });
 
-            await deckService.createDeck(userId, deckName, cards);
+            if (editingDeck) {
+                await deckService.updateDeck(editingDeck.id, deckName, cards);
+            } else {
+                await deckService.createDeck(userId, deckName, cards);
+            }
             onBack();
         } catch (error) {
             console.error('Error saving deck:', error);

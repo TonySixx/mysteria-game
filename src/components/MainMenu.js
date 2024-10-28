@@ -166,6 +166,17 @@ const Tooltip = styled.span`
     }
 `;
 
+const WarningMessage = styled.div`
+    color: ${theme.colors.accent};
+    text-align: center;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: rgba(139, 0, 0, 0.2);
+    border: 1px solid ${theme.colors.accent};
+    border-radius: 5px;
+    font-weight: bold;
+`;
+
 function MainMenu({ user, onGameStart, onLogin, onLogout }) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
@@ -173,6 +184,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
     const [gameId, setGameId] = useState(null);
     const [decks, setDecks] = useState([]);
     const [currentScreen, setCurrentScreen] = useState('menu'); // Přidáme state pro navigaci
+    const [editingDeck, setEditingDeck] = useState(null); // Přidáme state pro editovaný balíček
 
     const handleStartGame = () => {
         if (!user) {
@@ -280,8 +292,30 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
         }
     };
 
+    const handleDeleteDeck = async (deckId) => {
+        try {
+            await deckService.deleteDeck(deckId);
+            // Po smazání znovu načteme seznam balíčků
+            loadDecks();
+        } catch (error) {
+            console.error('Error deleting deck:', error);
+        }
+    };
+
+    const handleEditDeck = (deck) => {
+        // Nastavíme editovaný balíček a přepneme na DeckBuilder
+        setCurrentScreen('deck-builder');
+        setEditingDeck(deck);
+    };
+
     if (currentScreen === 'deck-builder') {
-        return <DeckBuilder onBack={handleBackToMenu} userId={user.id} />;
+        return (
+            <DeckBuilder 
+                onBack={handleBackToMenu} 
+                userId={user.id}
+                editingDeck={editingDeck} // Předáme editovaný balíček
+            />
+        );
     }
 
     return (
@@ -328,15 +362,19 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                                     </CancelButton>
                                 </>
                             ) : (
-                                <PlayButton 
-                                    onClick={handleStartGame}
-                                    disabled={!decks.some(deck => deck.is_active)}
-                                    title={!decks.some(deck => deck.is_active) ? 
-                                        "Select an active deck first" : 
-                                        "Find a game"}
-                                >
-                                    Find Game
-                                </PlayButton>
+                                <>
+                                    {!decks.some(deck => deck.is_active) && (
+                                        <WarningMessage>
+                                            You need to select an active deck before starting a game!
+                                        </WarningMessage>
+                                    )}
+                                    <PlayButton 
+                                        onClick={handleStartGame}
+                                        disabled={!decks.some(deck => deck.is_active)}
+                                    >
+                                        Find Game
+                                    </PlayButton>
+                                </>
                             )}
                             <OnlinePlayers players={onlinePlayers} />
                         </div>
@@ -347,6 +385,8 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                             decks={decks}
                             onDeckSelect={handleDeckSelect}
                             onCreateDeck={handleCreateDeck}
+                            onEditDeck={handleEditDeck}
+                            onDeleteDeck={handleDeleteDeck}
                         />
                     )}
 
