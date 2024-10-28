@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
+import GameTitle from './GameTitle';
 
 const FormContainer = styled.div`
     max-width: 500px;
@@ -120,29 +121,32 @@ function LoginForm({ onSuccess }) {
     };
 
     return (
-        <FormContainer>
-            <h2>Login</h2>
-            <form onSubmit={handleSubmit}>
-                <Input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                />
-                <Input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
-                {error && <ErrorMessage>{error}</ErrorMessage>}
-                <Button type="submit" disabled={loading}>
-                    {loading ? 'Logging in...' : 'Login'}
-                </Button>
-            </form>
-        </FormContainer>
+        <div className="login-container">
+            <GameTitle />
+            <FormContainer>
+                <h2>Login</h2>
+                <form onSubmit={handleSubmit}>
+                    <Input
+                        type="email"
+                        placeholder="Email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                    />
+                    <Input
+                        type="password"
+                        placeholder="Password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                    />
+                    {error && <ErrorMessage>{error}</ErrorMessage>}
+                    <Button type="submit" disabled={loading}>
+                        {loading ? 'Logging in...' : 'Login'}
+                    </Button>
+                </form>
+            </FormContainer>
+        </div>
     );
 }
 
