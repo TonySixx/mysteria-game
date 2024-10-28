@@ -5,6 +5,53 @@ import { FaArrowLeft, FaSave } from 'react-icons/fa';
 import { deckService } from '../../services/deckService';
 import { theme } from '../../styles/theme';
 import { CARD_RARITY, DECK_RULES } from '../../constants';
+import cardTexture from '../../assets/images/card-texture.png';
+
+// Importujeme všechny obrázky karet
+import earthGolem from '../../assets/images/earth-golem.png';
+import fireball from '../../assets/images/fireball.png';
+import healingTouch from '../../assets/images/healing-touch.png';
+import lightningBolt from '../../assets/images/lightning-bolt.png';
+import arcaneIntellect from '../../assets/images/arcane-intellect.png';
+import fireElemental from '../../assets/images/fire-elemental.png';
+import shieldBearer from '../../assets/images/shield-bearer.png';
+import waterElemental from '../../assets/images/water-elemental.png';
+import coinImage from '../../assets/images/mana-coin.png';
+import nimbleSprite from '../../assets/images/nimble-sprite.png';
+import arcaneFamiliar from '../../assets/images/arcane-familiar.png';
+import glacialBurst from '../../assets/images/glacial-burst.png';
+import radiantProtector from '../../assets/images/radiant-protector.png';
+import infernoWave from '../../assets/images/inferno-wave.png';
+import shadowAssassin from '../../assets/images/shadow-assassin.png';
+import manaWyrm from '../../assets/images/mana-wyrm.png';
+import soulCollector from '../../assets/images/soul-collector.png';
+import mindControl from '../../assets/images/mind-control.png';
+import arcaneExplosion from '../../assets/images/arcane-explosion.png';
+import holyNova from '../../assets/images/holy-nova.png';
+
+// Vytvoříme stejnou mapu obrázků jako v GameScene
+const cardImages = {
+  'fireElemental': fireElemental,
+  'earthGolem': earthGolem,
+  'fireball': fireball,
+  'healingTouch': healingTouch,
+  'lightningBolt': lightningBolt,
+  'arcaneIntellect': arcaneIntellect,
+  'shieldBearer': shieldBearer,
+  'waterElemental': waterElemental,
+  'nimbleSprite': nimbleSprite,
+  'arcaneFamiliar': arcaneFamiliar,
+  'glacialBurst': glacialBurst,
+  'radiantProtector': radiantProtector,
+  'infernoWave': infernoWave,
+  'coinImage': coinImage,
+  'shadowAssassin': shadowAssassin,
+  'manaWyrm': manaWyrm,
+  'soulCollector': soulCollector,
+  'mindControl': mindControl,
+  'arcaneExplosion': arcaneExplosion,
+  'holyNova': holyNova
+};
 
 const DeckBuilderContainer = styled(motion.div)`
     display: grid;
@@ -12,7 +59,7 @@ const DeckBuilderContainer = styled(motion.div)`
     gap: 20px;
     padding: 20px;
     height: calc(100vh - 80px);
-    background: rgba(0, 0, 0, 0.8);
+    background: ${theme.colors.background};
     color: white;
 `;
 
@@ -25,6 +72,34 @@ const CardCollection = styled.div`
     height: 100%;
     background: rgba(30, 30, 30, 0.9);
     border-radius: 10px;
+
+    /* Stylování scrollbaru */
+    &::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: linear-gradient(
+            to bottom,
+            ${theme.colors.primary} 0%,
+            ${theme.colors.secondary} 100%
+        );
+        border-radius: 6px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(
+            to bottom,
+            ${theme.colors.primaryHover} 0%,
+            ${theme.colors.secondary} 100%
+        );
+    }
 `;
 
 const DeckPreview = styled.div`
@@ -35,15 +110,64 @@ const DeckPreview = styled.div`
     flex-direction: column;
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Stylování scrollbaru */
+    &::-webkit-scrollbar {
+        width: 12px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: linear-gradient(
+            to bottom,
+            ${theme.colors.primary} 0%,
+            ${theme.colors.secondary} 100%
+        );
+        border-radius: 6px;
+        border: 2px solid rgba(0, 0, 0, 0.2);
+    }
+
+    &::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(
+            to bottom,
+            ${theme.colors.primaryHover} 0%,
+            ${theme.colors.secondary} 100%
+        );
+    }
 `;
 
 const Card = styled(motion.div)`
-    background: ${props => `linear-gradient(45deg, #1a1a1a, ${CARD_RARITY[props.rarity]?.color || '#808080'}22)`};
     border: 2px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
     border-radius: 8px;
-    padding: 10px;
+    padding: 15px;
     cursor: pointer;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 0;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url(${cardTexture});
+        background-size: 130%;
+        background-position: center;
+        filter: grayscale(80%);
+        opacity: 0.2;
+        z-index: -1;
+        border-radius: 6px;
+        pointer-events: none;
+    }
     
     &:hover {
         transform: translateY(-5px);
@@ -51,46 +175,153 @@ const Card = styled(motion.div)`
     }
 `;
 
-const Button = styled(motion.button)`
-    background: ${props => props.variant === 'primary' ? theme.colors.primary : theme.colors.secondary};
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    cursor: pointer;
+const CardHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+`;
+
+const ManaCost = styled.div`
+    background: ${theme.colors.primary};
+    color: ${theme.colors.background};
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2em;
+    box-shadow: ${theme.shadows.golden};
+`;
+
+const CardImage = styled.div`
+    height: 120px;
+    background: url(${props => cardImages[props.$image] || ''}) center/cover;
+    border-radius: 4px;
+    border: 1px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
+    margin: -5px -5px 5px -5px;
+`;
+
+const CardName = styled.h4`
+    margin: 0;
+    color: ${props => CARD_RARITY[props.rarity]?.color || 'white'};
+    font-size: 1.1em;
+    text-align: center;
+`;
+
+const CardEffect = styled.div`
+    color: ${theme.colors.text.light};
+    font-size: 0.9em;
+    text-align: center;
+    font-style: italic;
+    min-height: 40px;
+`;
+
+const CardStats = styled.div`
+    display: flex;
+    justify-content: ${props => props.type === 'unit' ? 'space-between' : 'center'};
+    align-items: center;
+    margin-top: auto;
+`;
+
+const StatBox = styled.div`
     display: flex;
     align-items: center;
     gap: 5px;
+    color: ${theme.colors.text.primary};
+    font-weight: bold;
+`;
+
+const InDeckIndicator = styled.div`
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: ${theme.colors.accent};
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    font-weight: bold;
+`;
+
+const RarityIndicator = styled.div`
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    color: ${props => CARD_RARITY[props.rarity]?.color || 'white'};
+    font-size: 0.8em;
+    font-weight: bold;
+    text-transform: uppercase;
+`;
+
+const Button = styled(motion.button)`
+    padding: 15px 30px;
+    background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    color: ${theme.colors.text.primary};
+    font-size: 1.1em;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: ${theme.shadows.golden};
+    }
 
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        &:hover {
+            transform: none;
+            box-shadow: none;
+        }
     }
 `;
 
 const DeckStats = styled.div`
     display: flex;
     justify-content: space-between;
-    padding: 10px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 5px;
+    padding: 15px;
+    background: linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.backgroundLight} 100%);
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    border-radius: 8px;
     margin-bottom: 20px;
+    color: ${theme.colors.text.primary};
+    font-size: 1.1em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: ${theme.shadows.golden};
 `;
 
 const DeckName = styled.input`
     background: transparent;
     border: none;
-    border-bottom: 2px solid #666;
-    color: white;
+    border-bottom: 2px solid ${theme.colors.backgroundLight};
+    color: ${theme.colors.text.primary};
     font-size: 1.2em;
     padding: 5px;
-    margin-bottom: 20px;
+    margin: 15px 0;
     width: 100%;
+    transition: all 0.3s;
 
     &:focus {
         outline: none;
         border-bottom-color: ${theme.colors.primary};
+    }
+
+    &::placeholder {
+        color: ${theme.colors.text.secondary};
     }
 `;
 
@@ -108,18 +339,78 @@ const LoadingContainer = styled.div`
     height: 100vh;
     background: ${theme.colors.background};
     color: ${theme.colors.text.primary};
+    text-transform: uppercase;
+    letter-spacing: 2px;
 `;
 
 const LoadingText = styled.div`
     font-size: 1.5em;
     text-align: center;
     animation: pulse 1.5s infinite;
+    text-shadow: ${theme.shadows.golden};
 
     @keyframes pulse {
         0% { opacity: 1; }
         50% { opacity: 0.5; }
         100% { opacity: 1; }
     }
+`;
+
+// Upravíme styled komponenty pro karty v DeckPreview
+const PreviewCard = styled(motion.div)`
+    background: ${props => `linear-gradient(45deg, #1a1a1a, ${CARD_RARITY[props.rarity]?.color || '#808080'}22)`};
+    border: 2px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
+    border-radius: 8px;
+    padding: 8px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    
+    &:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+`;
+
+const PreviewCardInfo = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+`;
+
+const PreviewManaCost = styled.div`
+    background: ${theme.colors.primary};
+    color: ${theme.colors.background};
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9em;
+`;
+
+const PreviewCardName = styled.div`
+    color: ${theme.colors.text.primary};
+    font-size: 0.9em;
+`;
+
+const PreviewCardStats = styled.div`
+    display: flex;
+    gap: 8px;
+    color: ${theme.colors.text.secondary};
+    font-size: 0.9em;
+`;
+
+const PreviewQuantity = styled.div`
+    color: ${theme.colors.text.secondary};
+    font-weight: bold;
+    margin-left: auto;
+    padding-left: 8px;
 `;
 
 const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
@@ -244,20 +535,19 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                     <span>Cards: {totalCards}/30</span>
                 </DeckStats>
                 {Object.entries(selectedCards).map(([cardId, { card, quantity }]) => (
-                    <Card
+                    <PreviewCard
                         key={cardId}
                         rarity={card.rarity.toUpperCase()}
                         onClick={() => handleRemoveCard(cardId)}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
-                        <div>
-                            {card.name} x{quantity}
-                        </div>
-                        <div>
-                            Mana: {card.mana_cost}
-                        </div>
-                    </Card>
+                        <PreviewCardInfo>
+                            <PreviewManaCost>{card.mana_cost}</PreviewManaCost>
+                            <PreviewCardName>{card.name}</PreviewCardName>
+                            <PreviewQuantity>x{quantity}</PreviewQuantity>
+                        </PreviewCardInfo>
+                    </PreviewCard>
                 ))}
                 <ButtonGroup>
                     <Button
@@ -281,14 +571,38 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                     >
-                        <div>{card.name}</div>
-                        <div>Mana: {card.mana_cost}</div>
-                        {card.type === 'unit' && (
-                            <div>{card.attack} / {card.health}</div>
-                        )}
-                        <div>{card.effect}</div>
+                        <CardHeader>
+                            <ManaCost>{card.mana_cost}</ManaCost>
+                        </CardHeader>
+                        
+                        <CardImage 
+                            $image={card.image}
+                            rarity={card.rarity.toUpperCase()}
+                        />
+                        
+                        <CardName rarity={card.rarity.toUpperCase()}>
+                            {card.name}
+                        </CardName>
+                        
+                        <CardEffect>{card.effect}</CardEffect>
+                        
+                        <CardStats type={card.type}>
+                            {card.type === 'unit' && (
+                                <>
+                                    <StatBox>
+                                        ⚔️ {card.attack}
+                                    </StatBox>
+                                    <StatBox>
+                                        ❤️ {card.health}
+                                    </StatBox>
+                                </>
+                            )}
+                        </CardStats>
+
                         {selectedCards[card.id] && (
-                            <div>In deck: {selectedCards[card.id].quantity}</div>
+                            <InDeckIndicator>
+                                {selectedCards[card.id].quantity}x
+                            </InDeckIndicator>
                         )}
                     </Card>
                 ))}

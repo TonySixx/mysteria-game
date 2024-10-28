@@ -20,24 +20,19 @@ const DeckCard = styled(motion.div)`
     justify-content: space-between;
     align-items: center;
     padding: 1rem;
-    background: rgba(30, 30, 30, 0.9);
-    border: 2px solid ${props => props.isActive ? theme.colors.primary : '#444'};
-    border-radius: 5px;
+    background: linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.backgroundLight} 100%);
+    border: 2px solid ${props => props.isActive ? theme.colors.primary : 'transparent'};
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    border-radius: 8px;
     position: relative;
     overflow: hidden;
-
-    ${props => props.isActive && `
-        background: linear-gradient(
-            to right,
-            rgba(255, 215, 0, 0.1),
-            rgba(30, 30, 30, 0.9),
-            rgba(255, 215, 0, 0.1)
-        );
-    `}
+    margin-bottom: 10px;
+    box-shadow: ${props => props.isActive ? theme.shadows.golden : 'none'};
 
     &:hover {
-        background: rgba(40, 40, 40, 0.9);
-        border-color: ${theme.colors.primary};
+        transform: translateY(-2px);
+        box-shadow: ${theme.shadows.golden};
 
         .deck-actions {
             transform: translateX(0);
@@ -82,10 +77,10 @@ const DeckActions = styled.div`
 
 const ActionButton = styled.button`
     background: none;
-    border: none;
+    border: 2px solid transparent;
     color: ${theme.colors.text.secondary};
     cursor: pointer;
-    padding: 0.5rem;
+    padding: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -94,28 +89,61 @@ const ActionButton = styled.button`
 
     &:hover {
         color: ${theme.colors.text.primary};
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 215, 0, 0.1);
+        border-image: ${theme.colors.border.golden};
+        border-image-slice: 1;
+        box-shadow: ${theme.shadows.golden};
     }
 
     &.delete:hover {
         color: ${theme.colors.accent};
+        border-color: ${theme.colors.accent};
     }
 `;
 
 const CreateDeckButton = styled(motion.button)`
-    padding: 1rem 2rem;
-    background: linear-gradient(135deg, ${theme.colors.primary} 0%, ${theme.colors.secondary} 100%);
-    border: none;
-    border-radius: 5px;
-    color: white;
-    font-size: 1.1rem;
+    width: 100%;
+    padding: 15px;
+    margin: 20px 0;
+    background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    color: ${theme.colors.text.primary};
+    font-size: 1.2em;
     cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 2rem;
+    transition: all 0.3s;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    overflow: hidden;
 
     &:hover {
         transform: translateY(-2px);
         box-shadow: ${theme.shadows.golden};
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            45deg,
+            transparent 0%,
+            rgba(255, 215, 0, 0.1) 50%,
+            transparent 100%
+        );
+        transform: translateY(-100%);
+        opacity: 0;
+        transition: all 0.3s;
+    }
+
+    &:hover::after {
+        transform: translateY(0);
+        opacity: 1;
     }
 `;
 
@@ -173,7 +201,7 @@ export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, o
                                 </ActionButton>
                                 <ActionButton 
                                     className="delete"
-                                    onClick={(e) => handleDeleteClick(e, deck.id,onDeleteDeck)}
+                                    onClick={(e) => handleDeleteClick(e, deck.id, onDeleteDeck)}
                                 >
                                     <FaTrash size={16} />
                                 </ActionButton>
