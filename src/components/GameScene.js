@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import styled from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import earthGolem from '../assets/images/earth-golem.png';
@@ -965,7 +965,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   };
 
   // Komponenta pro zobrazení animace
-  const AnimationEffect = useMemo(() => {
+  const AnimationEffect = useCallback(() => {
     if (!animation) return null;
 
     let emoji = '⚔️';
