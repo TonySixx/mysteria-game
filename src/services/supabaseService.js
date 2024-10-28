@@ -14,6 +14,17 @@ class SupabaseService {
 
     async signUp(email, password, username) {
         try {
+            // Nejdřív zkontrolujeme, zda username již neexistuje
+            const { data: existingUser, error: checkError } = await this.supabase
+                .from('profiles')
+                .select('username')
+                .eq('username', username)
+                .single();
+
+            if (existingUser) {
+                throw new Error('Username already taken');
+            }
+
             // Registrace uživatele
             const { data: authData, error: authError } = await this.supabase.auth.signUp({
                 email,
