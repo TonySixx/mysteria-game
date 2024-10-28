@@ -200,6 +200,16 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
         };
     }, [user]);
 
+  
+        // Přidáme useEffect pro změnu tabu při přihlášení
+        useEffect(() => {
+            if (user) {
+                setActiveTab('play');
+            } else {
+                setActiveTab('login');
+            }
+        }, [user]); // Reagujeme na změnu user prop
+
     useEffect(() => {
         if (gameId) {
             // Když se spustí hra, odešleme událost na server
