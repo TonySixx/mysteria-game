@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import styled from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import earthGolem from '../assets/images/earth-golem.png';
@@ -965,7 +965,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   };
 
   // Komponenta pro zobrazení animace
-  const AnimationEffect = () => {
+  const AnimationEffect = useMemo(() => {
     if (!animation) return null;
 
     let emoji = '⚔️';
@@ -1015,7 +1015,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
         </AnimationEmoji>
       </AnimationOverlay>
     );
-  };
+  },[animation, isMobile]);
 
   // Upravíme renderování karet protivníka pro přidání refs
   const renderOpponentField = useCallback(() => (
@@ -1167,9 +1167,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             </PlayAgainButton>
           </GameOverContent>
         </GameOverOverlay>
-        {/* Ponecháme původní herní scénu v pozadí */}
         <BattleArea>
-          {/* ... zbytek vašeho původního kódu ... */}
         </BattleArea>
       </GameBoard>
     );
