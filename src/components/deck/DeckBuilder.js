@@ -28,9 +28,23 @@ import soulCollector from '../../assets/images/soul-collector.png';
 import mindControl from '../../assets/images/mind-control.png';
 import arcaneExplosion from '../../assets/images/arcane-explosion.png';
 import holyNova from '../../assets/images/holy-nova.png';
+import manaGolem from '../../assets/images/mana-golem.png';
+import mirrorEntity from '../../assets/images/mirror-entity.png';
+import timeWeaver from '../../assets/images/time-weaver.png';
+import arcaneStorm from '../../assets/images/arcane-storm.png';
+import soulExchange from '../../assets/images/soul-exchange.png';
+import healingWisp from '../../assets/images/healing-wisp.png';
+import manaSurge from '../../assets/images/mana-surge.png';
+import manaCrystal from '../../assets/images/mana-crystal.png';
+import manaLeech from '../../assets/images/mana-leech.png';
+import spellSeeker from '../../assets/images/spell-seeker.png';
+import spiritHealer from '../../assets/images/spirit-healer.png';
+import mirrorImage from '../../assets/images/mirror-image.png';
+import arcaneGuardian from '../../assets/images/arcane-guardian.png';
+
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
-const cardImages = {
+export const cardImages = {
   'fireElemental': fireElemental,
   'earthGolem': earthGolem,
   'fireball': fireball,
@@ -50,7 +64,20 @@ const cardImages = {
   'soulCollector': soulCollector,
   'mindControl': mindControl,
   'arcaneExplosion': arcaneExplosion,
-  'holyNova': holyNova
+  'holyNova': holyNova,
+  'manaGolem': manaGolem,
+  'mirrorEntity': mirrorEntity,
+  'timeWeaver': timeWeaver,
+  'arcaneStorm': arcaneStorm,
+  'soulExchange': soulExchange,
+  'healingWisp': healingWisp,
+  'manaSurge': manaSurge,
+  'manaCrystal': manaCrystal,
+  'manaLeech': manaLeech,
+  'spellSeeker': spellSeeker,
+  'spiritHealer': spiritHealer,
+  'mirrorImage': mirrorImage,
+  'arcaneGuardian': arcaneGuardian
 };
 
 const DeckBuilderContainer = styled(motion.div)`

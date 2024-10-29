@@ -29,6 +29,7 @@ import arcaneExplosion from '../assets/images/arcane-explosion.png';
 import holyNova from '../assets/images/holy-nova.png';
 import { CombatLog } from './CombatLog';
 import { theme } from '../styles/theme';
+import { cardImages } from './deck/DeckBuilder';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`
@@ -661,28 +662,28 @@ const CardBack = styled.div`
 `;
 
 // Nejdřív vytvoříme mapu obrázků
-const cardImages = {
-  'fireElemental': fireElemental,
-  'earthGolem': earthGolem,
-  'fireball': fireball,
-  'healingTouch': healingTouch,
-  'lightningBolt': lightningBolt,
-  'arcaneIntellect': arcaneIntellect,
-  'shieldBearer': shieldBearer,
-  'waterElemental': waterElemental,
-  'nimbleSprite': nimbleSprite,
-  'arcaneFamiliar': arcaneFamiliar,
-  'glacialBurst': glacialBurst,
-  'radiantProtector': radiantProtector,
-  'infernoWave': infernoWave,
-  'coinImage': coinImage,
-  'shadowAssassin': shadowAssassin,
-  'manaWyrm': manaWyrm,
-  'soulCollector': soulCollector,
-  'mindControl': mindControl,
-  'arcaneExplosion': arcaneExplosion,
-  'holyNova': holyNova
-};
+// const cardImages = {
+//   'fireElemental': fireElemental,
+//   'earthGolem': earthGolem,
+//   'fireball': fireball,
+//   'healingTouch': healingTouch,
+//   'lightningBolt': lightningBolt,
+//   'arcaneIntellect': arcaneIntellect,
+//   'shieldBearer': shieldBearer,
+//   'waterElemental': waterElemental,
+//   'nimbleSprite': nimbleSprite,
+//   'arcaneFamiliar': arcaneFamiliar,
+//   'glacialBurst': glacialBurst,
+//   'radiantProtector': radiantProtector,
+//   'infernoWave': infernoWave,
+//   'coinImage': coinImage,
+//   'shadowAssassin': shadowAssassin,
+//   'manaWyrm': manaWyrm,
+//   'soulCollector': soulCollector,
+//   'mindControl': mindControl,
+//   'arcaneExplosion': arcaneExplosion,
+//   'holyNova': holyNova
+// };
 
 // Upravte CardDisplay komponentu
 const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
