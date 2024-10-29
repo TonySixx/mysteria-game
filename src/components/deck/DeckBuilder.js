@@ -210,32 +210,30 @@ const Card = styled(motion.div)`
     }
 `;
 
-const CardHeader = styled.div`
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-`;
-
 const ManaCost = styled.div`
+    position: absolute;
+    top: -16px;
+    left: -16px;
     background: ${theme.colors.primary};
     color: ${theme.colors.background};
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: bold;
     font-size: 1.2em;
     box-shadow: ${theme.shadows.golden};
+    z-index: 1;
 `;
 
 const CardImage = styled.div`
-    height: 120px;
+    height: 140px;
     background: url(${props => cardImages[props.$image] || ''}) center/cover;
     border-radius: 4px;
     border: 1px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
-    margin: -5px -5px 5px -5px;
+    margin: 0 -5px 5px -5px;
 `;
 
 const CardName = styled.h4`
@@ -699,9 +697,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                         >
-                            <CardHeader>
-                                <ManaCost>{card.mana_cost}</ManaCost>
-                            </CardHeader>
+                            <ManaCost>{card.mana_cost}</ManaCost>
                             
                             <CardImage 
                                 $image={card.image}
