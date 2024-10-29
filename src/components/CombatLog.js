@@ -145,7 +145,7 @@ const formatTime = (timestamp) => {
   return `${hours}:${minutes}:${seconds}`;
 };
 
- const _CombatLog = ({ logEntries }) => {
+const _CombatLog = ({ logEntries }) => {
   const logRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [position, setPosition] = useState({ x: 20, y: 90 });
@@ -210,8 +210,8 @@ const formatTime = (timestamp) => {
         </ResetButton>
       </Header>
       <LogContainer ref={logRef}>
-        {logEntries.map((entry, index) => (
-          <LogEntry key={index} $isPlayer={entry.isPlayer}>
+        {logEntries.map((entry) => (
+          <LogEntry key={entry.id} $isPlayer={entry.isPlayer}>
             <span className="timestamp">[{formatTime(entry.timestamp)}]</span>
             <span className="message" dangerouslySetInnerHTML={{ __html: entry.message }} />
           </LogEntry>
@@ -220,4 +220,5 @@ const formatTime = (timestamp) => {
     </DraggableContainer>
   );
 };
+
 export const CombatLog = memo(_CombatLog);

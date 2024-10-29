@@ -900,13 +900,15 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
 
   // Přidáme useEffect pro sledování nových zpráv z combat logu
   useEffect(() => {
-    if (gameState?.combatLogMessage) {
-      setLogEntries(prev => [...prev, {
-        ...gameState.combatLogMessage,
+    if (gameState?.combatLogMessages && gameState.combatLogMessages.length > 0) {
+      // Přidáme všechny nové zprávy s unikátními ID
+      const newEntries = gameState.combatLogMessages.map(message => ({
+        ...message,
         id: Math.random().toString(36).substr(2, 9) // Přidáme unikátní ID pro React key
-      }]);
+      }));
+      setLogEntries(prev => [...prev, ...newEntries]);
     }
-  }, [gameState?.combatLogMessage]);
+  }, [gameState?.combatLogMessages]);
 
   // Zjednodušený useEffect pro notifikace
   useEffect(() => {
