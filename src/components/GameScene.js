@@ -686,7 +686,7 @@ const CardBack = styled.div`
 // };
 
 // Upravte CardDisplay komponentu
-const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard }) => {
+const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame }) => {
   const isMobile = useIsMobile();
 
   if (!card) return null;
@@ -697,7 +697,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
         $isInHand={isInHand}
         $isDragging={isDragging}
         $isMobile={isMobile}
-        $isOpponentCard={isOpponentCard} // Přidáme prop pro karty oponenta
+        $isOpponentCard={isOpponentCard}
       >
         <CardBack />
       </CardComponent>
@@ -706,6 +706,12 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
 
   // Získáme správný obrázek z mapy
   const cardImage = cardImages[card.image] || cardBackImage;
+
+  // Upravíme popis efektu pro Arcane Storm
+  let effectText = card.effect;
+  if (card.name === 'Arcane Storm' && spellsPlayedThisGame !== undefined) {
+    effectText = `Deal ${spellsPlayedThisGame} damage to all characters (${card.effect})`;
+  }
 
   return (
     <CardComponent
@@ -725,7 +731,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
         style={{
           borderRadius: '4px',
           border: '1px solid #000000',
-          height: isMobile ? '45%' : '50%' // Zmenšíme obrázek na mobilních zařízeních
+          height: isMobile ? '45%' : '50%'
         }}
         src={cardImage}
         alt={card.name}
@@ -734,7 +740,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
       {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
       <CardContent>
         <CardName $isMobile={isMobile}>{card.name}</CardName>
-        <CardDescription $isMobile={isMobile}>{card.effect}</CardDescription>
+        <CardDescription $isMobile={isMobile}>{effectText}</CardDescription>
         <CardStats $isMobile={isMobile}>
           {card.type === 'unit' && (
             <>
@@ -1146,6 +1152,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
           card={card}
           isInHand={true}
           isDragging={true}
+          gameState={gameState}
         />
       </div>
     );
@@ -1333,6 +1340,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                         }}
                       >
                         <CardDisplay
+                          spellsPlayedThisGame={gameState?.spellsPlayedThisGame}
                           card={card}
                           isInHand={true}
                           isDragging={snapshot.isDragging}
