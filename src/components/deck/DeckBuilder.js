@@ -88,6 +88,14 @@ const DeckBuilderContainer = styled(motion.div)`
     height: calc(100vh - 80px);
     background: ${theme.colors.background};
     color: white;
+    overflow: hidden;
+`;
+
+const RightSection = styled.div`
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 `;
 
 const CardCollection = styled.div`
@@ -96,7 +104,6 @@ const CardCollection = styled.div`
     gap: 15px;
     padding: 20px;
     overflow-y: auto;
-    height: auto;
     background: rgba(30, 30, 30, 0.9);
     border-radius: 10px;
 
@@ -649,7 +656,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                 </ButtonGroup>
             </DeckPreview>
 
-            <div>
+            <RightSection>
                 <FilterContainer>
                     <FilterGroup>
                         <FilterLabel>Mana Cost</FilterLabel>
@@ -728,7 +735,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                         </Card>
                     ))}
                 </CardCollection>
-            </div>
+            </RightSection>
         </DeckBuilderContainer>
     );
 };
