@@ -254,12 +254,19 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
         }
     }, [gameId]);
 
-    // Přidáme načítání balíčků
+    // Upravíme useEffect pro načítání balíčků
     useEffect(() => {
-        if (user && activeTab === 'decks') {
+        if (user && (activeTab === 'decks' || activeTab === 'play')) {
             loadDecks();
         }
-    }, [user, activeTab]);
+    }, [user, activeTab]); // Reagujeme na změnu uživatele a aktivní záložky
+
+    // Přidáme nový useEffect pro inicializační načtení balíčků
+    useEffect(() => {
+        if (user) {
+            loadDecks();
+        }
+    }, [user]); // Načteme balíčky při přihlášení uživatele
 
     const loadDecks = async () => {
         try {

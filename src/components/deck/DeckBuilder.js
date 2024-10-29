@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
 import { deckService } from '../../services/deckService';
 import { theme } from '../../styles/theme';
@@ -400,6 +400,7 @@ const PreviewCard = styled(motion.div)`
     display: flex;
     align-items: center;
     margin-bottom: 5px;
+    transform-origin: left center;
     
     &:hover {
         transform: translateX(5px);
@@ -626,21 +627,50 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                 <DeckStats>
                     <span>Cards: {totalCards}/30</span>
                 </DeckStats>
-                {getSortedDeckCards().map(([cardId, { card, quantity }]) => (
-                    <PreviewCard
-                        key={cardId}
-                        rarity={card.rarity.toUpperCase()}
-                        onClick={() => handleRemoveCard(cardId)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        <PreviewCardInfo>
-                            <PreviewManaCost>{card.mana_cost}</PreviewManaCost>
-                            <PreviewCardName>{card.name}</PreviewCardName>
-                            <PreviewQuantity>x{quantity}</PreviewQuantity>
-                        </PreviewCardInfo>
-                    </PreviewCard>
-                ))}
+                <AnimatePresence mode="popLayout">
+                    {getSortedDeckCards().map(([cardId, { card, quantity }]) => (
+                        <PreviewCard
+                            key={cardId}
+                            rarity={card.rarity.toUpperCase()}
+                            onClick={() => handleRemoveCard(cardId)}
+                            initial={{ 
+                                opacity: 0, 
+                                x: 300,  // Začne z pravé strany
+                                scale: 0.5 
+                            }}
+                            animate={{ 
+                                opacity: 1, 
+                                x: 0,    // Přesune se na své místo
+                                scale: 1 
+                            }}
+                            exit={{ 
+                                opacity: 0, 
+                                x: -300,  // Při odstranění odletí doleva
+                                scale: 0.5 
+                            }}
+                            layout  // Pro plynulé přeuspořádání
+                            transition={{
+                                type: "spring",
+                                stiffness: 500,
+                                damping: 30,
+                                mass: 1
+                            }}
+                        >
+                            <PreviewCardInfo>
+                                <PreviewManaCost>{card.mana_cost}</PreviewManaCost>
+                                <PreviewCardName>{card.name}</PreviewCardName>
+                                <PreviewQuantity
+                                    as={motion.div}
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    key={quantity} // Pro animaci při změně množství
+                                >
+                                    x{quantity}
+                                </PreviewQuantity>
+                            </PreviewCardInfo>
+                        </PreviewCard>
+                    ))}
+                </AnimatePresence>
                 <ButtonGroup>
                     <Button
                         variant="primary"

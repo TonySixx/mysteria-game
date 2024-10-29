@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { theme } from '../../styles/theme';
 import { FaEdit, FaTrash, FaStar } from 'react-icons/fa';
 
@@ -29,6 +29,7 @@ const DeckCard = styled(motion.div)`
     overflow: hidden;
     margin-bottom: 10px;
     box-shadow: ${props => props.isActive ? theme.shadows.golden : 'none'};
+    z-index: ${props => props.isActive ? 2 : 1};
 
     &:hover {
         transform: translateY(-2px);
@@ -161,6 +162,16 @@ const handleDeleteClick = (e, deckId,onDeleteDeck) => {
 };
 
 export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, onDeleteDeck }) => {
+    // Seřadíme balíčky
+    const sortedDecks = [...decks].sort((a, b) => {
+        // Nejdřív podle aktivního stavu
+        if (a.is_active && !b.is_active) return -1;
+        if (!a.is_active && b.is_active) return 1;
+        
+        // Pak podle data poslední úpravy (nejnovější první)
+        return new Date(b.updated_at) - new Date(a.updated_at);
+    });
+
     return (
         <DeckListContainer
             initial={{ opacity: 0, y: 20 }}
@@ -175,41 +186,64 @@ export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, o
                 Create New Deck
             </CreateDeckButton>
 
-            {decks.length === 0 ? (
-                <EmptyState>
-                    No decks created yet. Create your first deck!
-                </EmptyState>
-            ) : (
-                decks.map(deck => {
-                    const cardCount = deck.deck_cards?.reduce((sum, card) => sum + card.quantity, 0) || 0;
-                    
-                    return (
-                        <DeckCard
-                            key={deck.id}
-                            isActive={deck.is_active}
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
-                        >
-                            <DeckInfo onClick={() => onDeckSelect(deck)}>
-                                {deck.is_active && <ActiveIndicator />}
-                                <DeckName>{deck.name}</DeckName>
-                                <CardCount>{cardCount}/30 cards</CardCount>
-                            </DeckInfo>
-                            <DeckActions className="deck-actions">
-                                <ActionButton onClick={() => onEditDeck(deck)}>
-                                    <FaEdit size={16} />
-                                </ActionButton>
-                                <ActionButton 
-                                    className="delete"
-                                    onClick={(e) => handleDeleteClick(e, deck.id, onDeleteDeck)}
-                                >
-                                    <FaTrash size={16} />
-                                </ActionButton>
-                            </DeckActions>
-                        </DeckCard>
-                    );
-                })
-            )}
+            <AnimatePresence mode="popLayout">
+                {sortedDecks.length === 0 ? (
+                    <EmptyState>
+                        No decks created yet. Create your first deck!
+                    </EmptyState>
+                ) : (
+                    sortedDecks.map((deck, index) => {
+                        const cardCount = deck.deck_cards?.reduce((sum, card) => sum + card.quantity, 0) || 0;
+                        
+                        return (
+                            <DeckCard
+                                key={deck.id}
+                                isActive={deck.is_active}
+                                layout
+                                layoutId={deck.id.toString()}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={{ 
+                                    type: "spring",
+                                    stiffness: 500,
+                                    damping: 50,
+                                    mass: 1
+                                }}
+                                whileHover={{ scale: 1.01 }}
+                                whileTap={{ scale: 0.99 }}
+                            >
+                                <DeckInfo onClick={() => onDeckSelect(deck)}>
+                                    <AnimatePresence>
+                                        {deck.is_active && (
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                exit={{ scale: 0 }}
+                                            >
+                                                <ActiveIndicator />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                    <DeckName>{deck.name}</DeckName>
+                                    <CardCount>{cardCount}/30 cards</CardCount>
+                                </DeckInfo>
+                                <DeckActions className="deck-actions">
+                                    <ActionButton onClick={() => onEditDeck(deck)}>
+                                        <FaEdit size={16} />
+                                    </ActionButton>
+                                    <ActionButton 
+                                        className="delete"
+                                        onClick={(e) => handleDeleteClick(e, deck.id, onDeleteDeck)}
+                                    >
+                                        <FaTrash size={16} />
+                                    </ActionButton>
+                                </DeckActions>
+                            </DeckCard>
+                        );
+                    })
+                )}
+            </AnimatePresence>
         </DeckListContainer>
     );
 };
