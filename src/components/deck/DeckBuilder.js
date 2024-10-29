@@ -96,7 +96,7 @@ const CardCollection = styled.div`
     gap: 15px;
     padding: 20px;
     overflow-y: auto;
-    height: 100%;
+    height: auto;
     background: rgba(30, 30, 30, 0.9);
     border-radius: 10px;
 
@@ -169,6 +169,7 @@ const DeckPreview = styled.div`
 `;
 
 const Card = styled(motion.div)`
+    height: 280px;
     border: 2px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
     border-radius: 8px;
     padding: 15px;
@@ -440,11 +441,52 @@ const PreviewQuantity = styled.div`
     padding-left: 8px;
 `;
 
+// Přidáme nové styled komponenty po existující styled komponenty
+const FilterContainer = styled.div`
+    background: rgba(30, 30, 30, 0.9);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+`;
+
+const FilterGroup = styled.div`
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+`;
+
+const FilterLabel = styled.label`
+    color: ${theme.colors.text.primary};
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+`;
+
+const FilterSelect = styled.select`
+    background: ${theme.colors.backgroundLight};
+    color: ${theme.colors.text.primary};
+    border: 1px solid ${theme.colors.border.primary};
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:focus {
+        outline: none;
+        border-color: ${theme.colors.primary};
+    }
+`;
+
 const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [availableCards, setAvailableCards] = useState([]);
     const [selectedCards, setSelectedCards] = useState({});
     const [deckName, setDeckName] = useState(editingDeck ? editingDeck.name : 'New Deck');
     const [loading, setLoading] = useState(true);
+    const [manaFilter, setManaFilter] = useState('all');
+    const [rarityFilter, setRarityFilter] = useState('all');
+    const [typeFilter, setTypeFilter] = useState('all');
 
     useEffect(() => {
         loadCards();
@@ -535,6 +577,24 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
 
     const totalCards = Object.values(selectedCards).reduce((sum, card) => sum + card.quantity, 0);
 
+    // Funkce pro filtrování karet
+    const getFilteredCards = () => {
+        return availableCards.filter(card => {
+            const manaMatch = manaFilter === 'all' || 
+                            (manaFilter === '7+' ? card.mana_cost >= 7 : card.mana_cost === parseInt(manaFilter));
+            const rarityMatch = rarityFilter === 'all' || card.rarity.toLowerCase() === rarityFilter;
+            const typeMatch = typeFilter === 'all' || card.type.toLowerCase() === typeFilter;
+
+            return manaMatch && rarityMatch && typeMatch;
+        });
+    };
+
+    // Funkce pro řazení karet v preview
+    const getSortedDeckCards = () => {
+        return Object.entries(selectedCards)
+            .sort(([, a], [, b]) => a.card.mana_cost - b.card.mana_cost);
+    };
+
     if (loading) {
         return (
             <LoadingContainer>
@@ -561,7 +621,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                 <DeckStats>
                     <span>Cards: {totalCards}/30</span>
                 </DeckStats>
-                {Object.entries(selectedCards).map(([cardId, { card, quantity }]) => (
+                {getSortedDeckCards().map(([cardId, { card, quantity }]) => (
                     <PreviewCard
                         key={cardId}
                         rarity={card.rarity.toUpperCase()}
@@ -589,51 +649,86 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                 </ButtonGroup>
             </DeckPreview>
 
-            <CardCollection>
-                {availableCards.map(card => (
-                    <Card
-                        key={card.id}
-                        rarity={card.rarity.toUpperCase()}
-                        onClick={() => handleAddCard(card)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                    >
-                        <CardHeader>
-                            <ManaCost>{card.mana_cost}</ManaCost>
-                        </CardHeader>
-                        
-                        <CardImage 
-                            $image={card.image}
-                            rarity={card.rarity.toUpperCase()}
-                        />
-                        
-                        <CardName rarity={card.rarity.toUpperCase()}>
-                            {card.name}
-                        </CardName>
-                        
-                        <CardEffect>{card.effect}</CardEffect>
-                        
-                        <CardStats type={card.type}>
-                            {card.type === 'unit' && (
-                                <>
-                                    <StatBox>
-                                        ⚔️ {card.attack}
-                                    </StatBox>
-                                    <StatBox>
-                                        ❤️ {card.health}
-                                    </StatBox>
-                                </>
-                            )}
-                        </CardStats>
+            <div>
+                <FilterContainer>
+                    <FilterGroup>
+                        <FilterLabel>Mana Cost</FilterLabel>
+                        <FilterSelect value={manaFilter} onChange={(e) => setManaFilter(e.target.value)}>
+                            <option value="all">All</option>
+                            {[0, 1, 2, 3, 4, 5, 6, '7+'].map(cost => (
+                                <option key={cost} value={cost}>{cost}</option>
+                            ))}
+                        </FilterSelect>
+                    </FilterGroup>
 
-                        {selectedCards[card.id] && (
-                            <InDeckIndicator>
-                                {selectedCards[card.id].quantity}x
-                            </InDeckIndicator>
-                        )}
-                    </Card>
-                ))}
-            </CardCollection>
+                    <FilterGroup>
+                        <FilterLabel>Rarity</FilterLabel>
+                        <FilterSelect value={rarityFilter} onChange={(e) => setRarityFilter(e.target.value)}>
+                            <option value="all">All</option>
+                            <option value="common">Common</option>
+                            <option value="uncommon">Uncommon</option>
+                            <option value="rare">Rare</option>
+                            <option value="epic">Epic</option>
+                            <option value="legendary">Legendary</option>
+                        </FilterSelect>
+                    </FilterGroup>
+
+                    <FilterGroup>
+                        <FilterLabel>Type</FilterLabel>
+                        <FilterSelect value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                            <option value="all">All</option>
+                            <option value="unit">Minion</option>
+                            <option value="spell">Spell</option>
+                        </FilterSelect>
+                    </FilterGroup>
+                </FilterContainer>
+
+                <CardCollection>
+                    {getFilteredCards().map(card => (
+                        <Card
+                            key={card.id}
+                            rarity={card.rarity.toUpperCase()}
+                            onClick={() => handleAddCard(card)}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                        >
+                            <CardHeader>
+                                <ManaCost>{card.mana_cost}</ManaCost>
+                            </CardHeader>
+                            
+                            <CardImage 
+                                $image={card.image}
+                                rarity={card.rarity.toUpperCase()}
+                            />
+                            
+                            <CardName rarity={card.rarity.toUpperCase()}>
+                                {card.name}
+                            </CardName>
+                            
+                            <CardEffect>{card.effect}</CardEffect>
+                            
+                            <CardStats type={card.type}>
+                                {card.type === 'unit' && (
+                                    <>
+                                        <StatBox>
+                                            ⚔️ {card.attack}
+                                        </StatBox>
+                                        <StatBox>
+                                            ❤️ {card.health}
+                                        </StatBox>
+                                    </>
+                                )}
+                            </CardStats>
+
+                            {selectedCards[card.id] && (
+                                <InDeckIndicator>
+                                    {selectedCards[card.id].quantity}x
+                                </InDeckIndicator>
+                            )}
+                        </Card>
+                    ))}
+                </CardCollection>
+            </div>
         </DeckBuilderContainer>
     );
 };
