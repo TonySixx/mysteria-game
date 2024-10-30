@@ -177,7 +177,7 @@ const WarningMessage = styled.div`
     font-weight: bold;
 `;
 
-function MainMenu({ user, onGameStart, onLogin, onLogout }) {
+function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
     const [onlinePlayers, setOnlinePlayers] = useState([]);
@@ -377,9 +377,14 @@ function MainMenu({ user, onGameStart, onLogin, onLogout }) {
                                     )}
                                     <PlayButton 
                                         onClick={handleStartGame}
-                                        disabled={!decks.some(deck => deck.is_active)}
+                                        disabled={!decks.some(deck => deck.is_active) || !isConnected}
                                     >
-                                        Find Game
+                                        {isConnected ? 'Find Game' : 'Connecting to server...'}
+                                        {!isConnected && (
+                                            <Tooltip>
+                                                Please wait while connecting to the server
+                                            </Tooltip>
+                                        )}
                                     </PlayButton>
                                 </>
                             )}

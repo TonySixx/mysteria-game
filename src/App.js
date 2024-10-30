@@ -3,13 +3,18 @@ import GameScene from './components/GameScene';
 import socketService from './services/socketService';
 import supabaseService from './services/supabaseService';
 import MainMenu from './components/MainMenu';
+import ConnectionStatus from './components/ConnectionStatus';
 
 function App() {
     const [gameId, setGameId] = useState(null);
     const [gameState, setGameState] = useState(null);
     const [error, setError] = useState(null);
     const [isInitialized, setIsInitialized] = useState(false);
-    const [user, setUser] = useState(null); // Přidáme stav pro uživatele
+    const [user, setUser] = useState(null);
+    const [connectionStatus, setConnectionStatus] = useState({
+        isConnected: false,
+        show: false
+    });
 
     useEffect(() => {
         // Inicializace session při načtení aplikace
@@ -20,7 +25,10 @@ function App() {
                 setIsInitialized(true);
             } catch (error) {
                 console.error('Chyba při inicializaci aplikace:', error);
-                setError('Nepodařilo se inicializovat aplikaci');
+                setConnectionStatus({
+                    isConnected: false,
+                    show: true
+                });
             }
         };
 
@@ -47,20 +55,39 @@ function App() {
     useEffect(() => {
         if (!isInitialized) return;
 
+        const handleConnect = () => {
+            setConnectionStatus({
+                isConnected: true,
+                show: true
+            });
+            // Skryjeme zprávu o úspěšném připojení po 3 sekundách
+            setTimeout(() => {
+                setConnectionStatus(prev => ({ ...prev, show: false }));
+            }, 3000);
+        };
+
+        const handleDisconnect = () => {
+            setConnectionStatus({
+                isConnected: false,
+                show: true
+            });
+        };
+
         // Nastavení callbacků pro Socket.IO
         socketService.onGameState((state) => {
-            console.log('Received game state in App:', state);
             setGameState(state);
         });
 
         socketService.onError((errorMessage) => {
-            console.error('Game error:', errorMessage);
-            setError(errorMessage);
             if (errorMessage === 'Opponent disconnected') {
                 setGameId(null);
                 setGameState(null);
             }
         });
+
+        // Přidáme posluchače pro připojení/odpojení
+        socketService.onConnect(handleConnect);
+        socketService.onDisconnect(handleDisconnect);
 
         return () => {
             socketService.disconnect();
@@ -68,13 +95,15 @@ function App() {
     }, [isInitialized]);
 
     const handleGameStart = useCallback((newGameId) => {
-        console.log('Game started with ID:', newGameId);
         setGameId(newGameId);
     }, []);
 
     return (
         <div>
-            {error && <div className="error-message">{error}</div>}
+            <ConnectionStatus 
+                isConnected={connectionStatus.isConnected}
+                show={connectionStatus.show}
+            />
             {!gameId ? (
                 <MainMenu 
                     user={user} 
@@ -84,22 +113,14 @@ function App() {
                         supabaseService.signOut();
                         setUser(null);
                     }}
+                    isConnected={connectionStatus.isConnected}
                 />
             ) : (
                 gameState && <GameScene 
                     gameState={gameState}
-                    onPlayCard={(cardData) => {
-                        console.log('Playing card:', cardData);
-                        socketService.playCard(cardData);
-                    }}
-                    onAttack={(attackData) => {
-                        console.log('Attacking:', attackData);
-                        socketService.attack(attackData);
-                    }}
-                    onEndTurn={() => {
-                        console.log('Ending turn');
-                        socketService.endTurn();
-                    }}
+                    onPlayCard={(cardData) => socketService.playCard(cardData)}
+                    onAttack={(attackData) => socketService.attack(attackData)}
+                    onEndTurn={() => socketService.endTurn()}
                 />
             )}
         </div>

@@ -16,6 +16,8 @@ class SocketService {
         this.token = null; // Přidáme property pro JWT token
         this.autoConnect = true; // Změníme na true pro automatické připojení
         this.connectionPromise = null; // Přidáme pro sledování stavu připojení
+        this.connectCallback = null;
+        this.disconnectCallback = null;
     }
 
     isConnected() {
@@ -84,6 +86,16 @@ class SocketService {
 
         this.socket.on('connect', () => {
             console.log('Socket připojen');
+            if (this.connectCallback) {
+                this.connectCallback();
+            }
+        });
+
+        this.socket.on('disconnect', () => {
+            console.log('Socket odpojen');
+            if (this.disconnectCallback) {
+                this.disconnectCallback();
+            }
         });
 
         this.socket.on('connect_error', (error) => {
@@ -110,10 +122,6 @@ class SocketService {
             if (this.errorCallback) {
                 this.errorCallback(error);
             }
-        });
-
-        this.socket.on('disconnect', () => {
-            console.log('Socket odpojen');
         });
 
         this.socket.on('gameStarted', (gameId) => {
@@ -257,6 +265,14 @@ class SocketService {
             this.socket.off('online_players_update');
         }
         this.onlinePlayersCallback = null;
+    }
+
+    onConnect(callback) {
+        this.connectCallback = callback;
+    }
+
+    onDisconnect(callback) {
+        this.disconnectCallback = callback;
     }
 }
 
