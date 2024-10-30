@@ -4,6 +4,7 @@ import socketService from './services/socketService';
 import supabaseService from './services/supabaseService';
 import MainMenu from './components/MainMenu';
 import ConnectionStatus from './components/ConnectionStatus';
+import GlobalStyles from './styles/GlobalStyles';
 
 function App() {
     const [gameId, setGameId] = useState(null);
@@ -98,32 +99,47 @@ function App() {
         setGameId(newGameId);
     }, []);
 
+    useEffect(() => {
+        const handleContextMenu = (e) => {
+            e.preventDefault();
+        };
+
+        document.addEventListener('contextmenu', handleContextMenu);
+
+        return () => {
+            document.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }, []);
+
     return (
-        <div>
-            <ConnectionStatus 
-                isConnected={connectionStatus.isConnected}
-                show={connectionStatus.show}
-            />
-            {!gameId ? (
-                <MainMenu 
-                    user={user} 
-                    onGameStart={handleGameStart}
-                    onLogin={(userData) => setUser(userData.user)}
-                    onLogout={() => {
-                        supabaseService.signOut();
-                        setUser(null);
-                    }}
+        <>
+            <GlobalStyles />
+            <div>
+                <ConnectionStatus 
                     isConnected={connectionStatus.isConnected}
+                    show={connectionStatus.show}
                 />
-            ) : (
-                gameState && <GameScene 
-                    gameState={gameState}
-                    onPlayCard={(cardData) => socketService.playCard(cardData)}
-                    onAttack={(attackData) => socketService.attack(attackData)}
-                    onEndTurn={() => socketService.endTurn()}
-                />
-            )}
-        </div>
+                {!gameId ? (
+                    <MainMenu 
+                        user={user} 
+                        onGameStart={handleGameStart}
+                        onLogin={(userData) => setUser(userData.user)}
+                        onLogout={() => {
+                            supabaseService.signOut();
+                            setUser(null);
+                        }}
+                        isConnected={connectionStatus.isConnected}
+                    />
+                ) : (
+                    gameState && <GameScene 
+                        gameState={gameState}
+                        onPlayCard={(cardData) => socketService.playCard(cardData)}
+                        onAttack={(attackData) => socketService.attack(attackData)}
+                        onEndTurn={() => socketService.endTurn()}
+                    />
+                )}
+            </div>
+        </>
     );
 }
 
