@@ -372,10 +372,13 @@ const CardContent = styled.div`
 
 const CardImage = styled.img`
   width: 100%;
-  height: 50%;
+  aspect-ratio: 1.5;
   object-fit: cover;
   border-radius: 4px;
   margin-bottom: 2px;
+  min-height: ${props => props.$isMobile ? '45%' : '50%'};
+  height: ${props => props.$isMobile ? '45%' : '50%'};
+  flex-shrink: 0;
 `;
 
 // Upravte TauntLabel pro mobilní zobrazení
@@ -396,7 +399,7 @@ const CardName = styled.div`
   font-weight: bold;
   text-align: center;
   font-size: ${props => props.$isMobile ? '10px' : '14px'};
-  margin-bottom: ${props => props.$isMobile ? '2px' : '5px'};
+  margin-bottom: ${props => props.$isMobile ? '2px' : '0px'};
   color: white;
   position: relative;
   z-index: 2;
@@ -729,10 +732,10 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
       <ManaCost $isMobile={isMobile}>{card.manaCost}</ManaCost>
       <RarityGem $rarity={card.rarity} $isMobile={isMobile} />
       <CardImage
+        $isMobile={isMobile}
         style={{
           borderRadius: '4px',
-          border: '1px solid #000000',
-          height: isMobile ? '45%' : '50%'
+          border: '1px solid #000000'
         }}
         src={cardImage}
         alt={card.name}
