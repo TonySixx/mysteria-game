@@ -6,7 +6,6 @@ const DraggableContainer = styled.div`
   left: ${props => props.$position.x}px;
   top: ${props => props.$position.y}px;
   z-index: 1000;
-  cursor: move;
 `;
 
 const LogContainer = styled.div`
@@ -46,6 +45,8 @@ const Header = styled.div`
   justify-content: space-between;
   align-items: center;
   user-select: none;
+  cursor: move;
+
 `;
 
 const TabsContainer = styled.div`
