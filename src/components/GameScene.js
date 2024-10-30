@@ -896,6 +896,74 @@ const AnimationEmoji = styled.div`
   }
 `;
 
+// Přidáme nové styled komponenty pro drop zóny
+const DropZoneOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 5;
+  
+  ${props => props.$type === 'attack' && `
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(255, 0, 0, 0.2) 100%);
+    border: 2px solid rgba(255, 0, 0, 0.3);
+    box-shadow: 
+      inset 0 0 20px rgba(255, 0, 0, 0.2),
+      0 0 15px rgba(255, 0, 0, 0.3);
+    
+    &::after {
+      content: '⚔️';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  `}
+  
+  ${props => props.$type === 'play' && `
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.2) 100%);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 
+      inset 0 0 20px rgba(255, 215, 0, 0.2),
+      0 0 15px rgba(255, 215, 0, 0.3);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  `}
+  
+  ${props => props.$type === 'hero' && `
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(255, 0, 0, 0.2) 100%);
+    border: 2px solid rgba(255, 0, 0, 0.3);
+    border-radius: 50%;
+    box-shadow: 
+      inset 0 0 20px rgba(255, 0, 0, 0.2),
+      0 0 15px rgba(255, 0, 0, 0.3);
+    
+    &::after {
+      content: '⚔️';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  `}
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -1054,22 +1122,21 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                 opponentFieldRefs.current[index] = el;
               }}
               {...provided.droppableProps}
-              style={{
-                position: 'relative',
-                background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
-              }}
+              style={{ position: 'relative' }}
             >
               <CardDisplay
                 card={card}
-                isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
+                isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) && 
+                  (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
               />
-              {snapshot.isDraggingOver ? <div style={{ position: 'absolute', height: '100px', width: '100%', background: 'rgba(255, 0, 0, 0.5)', borderEndStartRadius: '8px', borderEndEndRadius: '8px' }} /> : null}
+              {snapshot.isDraggingOver && (
+                <DropZoneOverlay $type="attack" />
+              )}
             </div>
           )}
         </Droppable>
       ))}
     </FieldArea>
-
   ), [gameState.opponent.field, gameState.player.field, isMobile]);
 
   // Vylepšený onDragEnd s logováním
@@ -1239,13 +1306,11 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             <Droppable droppableId="opponentHero" direction="horizontal">
               {(provided, snapshot) => (
                 <HeroArea
-                 ref={provided.innerRef}
+                  ref={provided.innerRef}
                   {...provided.droppableProps}
-                  style={{
-                    background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
-                  }}
+                  style={{ position: 'relative' }}
                 >
-                    <HeroDisplay
+                  <HeroDisplay
                     hero={gameState.opponent.hero}
                     heroName={gameState.opponent.username}
                     isTargetable={
@@ -1254,6 +1319,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                       gameState.opponent.field.every(card => !card.hasTaunt)
                     }
                   />
+                  {snapshot.isDraggingOver && (
+                    <DropZoneOverlay $type="hero" />
+                  )}
                   {provided.placeholder}
                 </HeroArea>
               )}
@@ -1266,11 +1334,11 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                 <FieldArea
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  style={{
-                    background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
+                  style={{ 
+                    position: 'relative',
                     display: 'flex',
                     gap: '10px',
-                    minHeight: '200px', // Zajistíme minimální výšku pro prázdné pole
+                    minHeight: '200px'
                   }}
                 >
                   {gameState.player.field.map((card, index) => (
@@ -1291,6 +1359,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                     </Draggable>
                   ))}
                   {provided.placeholder}
+                  {snapshot.isDraggingOver && (
+                    <DropZoneOverlay $type="play" />
+                  )}
                 </FieldArea>
               )}
             </Droppable>
