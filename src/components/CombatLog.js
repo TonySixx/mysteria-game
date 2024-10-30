@@ -280,10 +280,14 @@ const _CombatLog = ({ logEntries, socket, playerUsername, opponentUsername }) =>
   const lastReadLogRef = useRef(0);
   const lastReadChatRef = useRef(0);
 
-  // Efekt pro scrollování na nové zprávy
+  // Upravíme efekt pro scrollování
   useEffect(() => {
     if (activeTab === 'log' && logRef.current) {
-      logRef.current.scrollTop = logRef.current.scrollHeight;
+      const container = logRef.current;
+      // Přidáme malé zpoždění pro zajištění, že obsah je již vyrenderován
+      setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
     } else if (activeTab === 'chat' && chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
@@ -412,16 +416,16 @@ const _CombatLog = ({ logEntries, socket, playerUsername, opponentUsername }) =>
           </Tab>
         </TabsContainer>
       </Header>
-      <LogContainer>
+      <LogContainer ref={logRef}>
         {activeTab === 'log' ? (
-          <div ref={logRef}>
+          <>
             {logEntries.map((entry) => (
               <LogEntry key={entry.id} $isPlayer={entry.isPlayer}>
                 <span className="timestamp">[{formatTime(entry.timestamp)}]</span>
                 <span className="message" dangerouslySetInnerHTML={{ __html: entry.message }} />
               </LogEntry>
             ))}
-          </div>
+          </>
         ) : (
           <ChatContainer>
             <ChatMessages ref={chatRef}>
