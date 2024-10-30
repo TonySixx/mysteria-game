@@ -1,6 +1,7 @@
 import React from 'react';
 import styled, { keyframes } from 'styled-components';
 import { theme } from '../styles/theme';
+import socketService from '../services/socketService';
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translate(-50%, -70%); }
@@ -52,7 +53,9 @@ const Message = styled.span`
 `;
 
 const ConnectionStatus = ({ isConnected, show }) => {
-    if (!show) return null;
+    const isLoggedIn = socketService.token && socketService.userId;
+
+    if (!show || (!isConnected && !isLoggedIn)) return null;
 
     return (
         <StatusContainer $isError={!isConnected} $show={show}>

@@ -389,6 +389,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
                                     </PlayButton>
                                 </>
                             )}
+                            {console.log('MainMenu - Rendering OnlinePlayers with:', onlinePlayers)}
                             <OnlinePlayers players={onlinePlayers} />
                         </div>
                     )}

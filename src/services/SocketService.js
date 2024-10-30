@@ -224,13 +224,17 @@ class SocketService {
     }
 
     subscribeToOnlinePlayers(callback) {
-        this.onlinePlayersCallback = callback; // Uložíme callback
+        console.log('SocketService - Subscribing to online players with callback:', !!callback);
+        this.onlinePlayersCallback = callback;
 
         if (!this.socket?.connected) {
             console.warn('Socket není připojen, pokusím se připojit...');
             this.connect().then((connected) => {
-                if (connected && this.onlinePlayersCallback) {
+                if (connected) {
+                    console.log('SocketService - Connected, setting up listener');
                     this.setupOnlinePlayersListener();
+                } else {
+                    console.error('SocketService - Failed to connect');
                 }
             });
             return;
@@ -240,23 +244,35 @@ class SocketService {
     }
 
     setupOnlinePlayersListener() {
-        if (!this.socket) return;
+        if (!this.socket) {
+            console.error('SocketService - No socket available');
+            return;
+        }
 
+        console.log('SocketService - Setting up online players listener');
+        
         // Nejprve odstraníme existující listener
         this.socket.off('online_players_update');
         
         // Přidáme nový listener
-        this.socket.on('online_players_update', (players) => {
-            console.log('Received online players update:', {
-                socketId: this.socket.id,
-                players
-            });
+        this.socket.on('online_players_update', (data) => {
+            console.log('SocketService - Received raw data:', data);
+            
+            // Kontrola, zda data obsahují pole players
+            const players = data.players || data;
+            
+            console.log('SocketService - Processed players:', players);
+            
             if (this.onlinePlayersCallback) {
+                console.log('SocketService - Calling callback');
                 this.onlinePlayersCallback(players);
+            } else {
+                console.warn('SocketService - No callback registered');
             }
         });
 
         // Vyžádáme si aktuální seznam hráčů
+        console.log('SocketService - Requesting online players list');
         this.socket.emit('request_online_players');
     }
 

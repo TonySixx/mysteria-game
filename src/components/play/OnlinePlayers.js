@@ -1,6 +1,11 @@
-import React from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useState } from 'react';
+import styled, { keyframes } from 'styled-components';
 import { theme } from '../../styles/theme';
+
+const fadeIn = keyframes`
+    from { opacity: 0; }
+    to { opacity: 1; }
+`;
 
 const OnlinePlayersContainer = styled.div`
     margin-top: 30px;
@@ -10,6 +15,11 @@ const OnlinePlayersContainer = styled.div`
     border-image-slice: 1;
     border-radius: 8px;
     overflow: hidden;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    animation: ${fadeIn} 0.3s ease-in-out forwards;
 `;
 
 const Title = styled.h3`
@@ -22,9 +32,22 @@ const Title = styled.h3`
     text-shadow: ${theme.shadows.golden};
 `;
 
+const ContentContainer = styled.div`
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: ${props => props.$centered ? 'center' : 'flex-start'};
+    align-items: center;
+    padding: 20px;
+    transition: all 0.3s ease;
+`;
+
 const Table = styled.table`
     width: 100%;
     border-collapse: collapse;
+    opacity: 0;
+    animation: ${fadeIn} 0.3s ease-in-out forwards;
+    animation-delay: 0.2s;
 `;
 
 const Th = styled.th`
@@ -79,7 +102,44 @@ const StatusIndicator = styled.span`
     }
 `;
 
+const LoadingSpinner = styled.div`
+    width: 40px;
+    height: 40px;
+    border: 3px solid ${theme.colors.backgroundLight};
+    border-top: 3px solid ${theme.colors.primary};
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+`;
+
+const LoadingText = styled.div`
+    text-align: center;
+    color: ${theme.colors.text.light};
+    font-style: italic;
+    opacity: 0.8;
+`;
+
+const NoPlayersText = styled(LoadingText)`
+    color: ${theme.colors.text.secondary};
+`;
+
 function OnlinePlayers({ players }) {
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (players && Array.isArray(players)) {
+            const timer = setTimeout(() => {
+                setIsLoading(false);
+            }, 300);
+            return () => clearTimeout(timer);
+        }
+    }, [players]);
+
     const getStatusText = (status) => {
         switch (status) {
             case 'searching': return 'Searching for game';
@@ -91,28 +151,39 @@ function OnlinePlayers({ players }) {
     return (
         <OnlinePlayersContainer>
             <Title>Online Players</Title>
-            <Table>
-                <thead>
-                    <tr>
-                        <Th>Player</Th>
-                        <Th>Rank</Th>
-                        <Th>Status</Th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {players.map((player) => (
-                        <Tr key={player.id}>
-                            <Td>{player.username}</Td>
-                            <Td>{player.rank}</Td>
-                            <Td>
-                                <StatusIndicator status={player.status}>
-                                    {getStatusText(player.status)}
-                                </StatusIndicator>
-                            </Td>
-                        </Tr>
-                    ))}
-                </tbody>
-            </Table>
+            <ContentContainer $centered={isLoading || !players || players.length === 0}>
+                {isLoading ? (
+                    <>
+                        <LoadingSpinner />
+                        <LoadingText>Loading players...</LoadingText>
+                    </>
+                ) : !players || players.length === 0 ? (
+                    <NoPlayersText>No players online</NoPlayersText>
+                ) : (
+                    <Table>
+                        <thead>
+                            <tr>
+                                <Th>Player</Th>
+                                <Th>Rank</Th>
+                                <Th>Status</Th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {players.map((player) => (
+                                <Tr key={player.id || player.userId}>
+                                    <Td>{player.username}</Td>
+                                    <Td>{player.rank || 'Unranked'}</Td>
+                                    <Td>
+                                        <StatusIndicator status={player.status}>
+                                            {getStatusText(player.status)}
+                                        </StatusIndicator>
+                                    </Td>
+                                </Tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                )}
+            </ContentContainer>
         </OnlinePlayersContainer>
     );
 }
