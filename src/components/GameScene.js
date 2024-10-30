@@ -30,6 +30,7 @@ import holyNova from '../assets/images/holy-nova.png';
 import { CombatLog } from './CombatLog';
 import { theme } from '../styles/theme';
 import { cardImages } from './deck/DeckBuilder';
+import socketService from '../services/socketService';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`
@@ -1354,7 +1355,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
             )}
           </Droppable>
           <Notification message={notification} />
-          <CombatLog logEntries={logEntries} />
+          <CombatLog 
+            logEntries={logEntries} 
+            socket={socketService.socket}
+            playerUsername={gameState.player.username}
+            opponentUsername={gameState.opponent.username}
+          />
           {/* Přidáme komponentu pro animace */}
           <AnimationEffect />
         </GameBoard>
