@@ -288,6 +288,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
     };
 
     const handleCreateDeck = () => {
+        setEditingDeck(null); // Vyčistíme stav editovaného balíčku
         setCurrentScreen('deck-builder');
     };
 
