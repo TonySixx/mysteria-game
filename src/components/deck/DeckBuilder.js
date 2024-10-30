@@ -41,6 +41,11 @@ import spellSeeker from '../../assets/images/spell-seeker.png';
 import spiritHealer from '../../assets/images/spirit-healer.png';
 import mirrorImage from '../../assets/images/mirror-image.png';
 import arcaneGuardian from '../../assets/images/arcane-guardian.png';
+import spellBreaker from '../../assets/images/spell-breaker.png';
+import twinBlade from '../../assets/images/twin-blade.png';
+import manaCollector from '../../assets/images/mana-collector.png';
+import defensiveScout from '../../assets/images/defensive-scout.png';
+import manaSiphon from '../../assets/images/mana-siphon.png';
 
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
@@ -77,7 +82,12 @@ export const cardImages = {
   'spellSeeker': spellSeeker,
   'spiritHealer': spiritHealer,
   'mirrorImage': mirrorImage,
-  'arcaneGuardian': arcaneGuardian
+  'arcaneGuardian': arcaneGuardian,
+  'spellBreaker': spellBreaker,
+  'twinBlade': twinBlade,
+  'manaCollector': manaCollector,
+  'defensiveScout': defensiveScout,
+  'manaSiphon': manaSiphon
 };
 
 const DeckBuilderContainer = styled(motion.div)`
