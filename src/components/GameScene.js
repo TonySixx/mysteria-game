@@ -690,7 +690,7 @@ const CardBack = styled.div`
 // };
 
 // Upravte CardDisplay komponentu
-const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame }) => {
+const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame, isPlayerTurn }) => {
   const isMobile = useIsMobile();
 
   if (!card) return null;
@@ -708,10 +708,8 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
     );
   }
 
-  // Získáme správný obrázek z mapy
   const cardImage = cardImages[card.image] || cardBackImage;
 
-  // Upravíme popis efektu pro Arcane Storm
   let effectText = card.effect;
   if (card.name === 'Arcane Storm' && spellsPlayedThisGame !== undefined) {
     effectText = `Deal ${spellsPlayedThisGame} damage to all characters (${card.effect})`;
@@ -962,6 +960,41 @@ const DropZoneOverlay = styled.div`
       opacity: 0.7;
     }
   `}
+`;
+
+// Přidáme nové styled komponenty pro indikátor tahu
+const TurnIndicator = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, 
+    ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'} 0%, 
+    ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)'} 100%
+  );
+  border: 2px solid ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)'};
+  border-radius: 8px;
+  color: ${theme.colors.text.primary};
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 
+    inset 0 0 20px ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'},
+    0 0 15px ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)'};
+  z-index: 100;
+  text-shadow: ${theme.shadows.golden};
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  &::before {
+    content: '👑';
+    margin-right: 8px;
+  }
 `;
 
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
@@ -1266,11 +1299,16 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     );
   }
 
+  const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
       <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
         <GameBoard>
+          <TurnIndicator $isPlayerTurn={isPlayerTurn}>
+            {isPlayerTurn ? 'Your Turn' : 'Opponent\'s Turn'}
+          </TurnIndicator>
+
           <PlayerInfo $isMobile={isMobile}>
             <DeckAndManaContainer>
               <DeckContainer>
@@ -1342,7 +1380,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                   }}
                 >
                   {gameState.player.field.map((card, index) => (
-                    <Draggable key={card.id} draggableId={card.id} index={index} isDragDisabled={card.hasAttacked || card.frozen}>
+                    <Draggable 
+                      key={card.id} 
+                      draggableId={card.id} 
+                      index={index} 
+                      isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
+                    >
                       {(provided, snapshot) => (
                         <div
                           ref={provided.innerRef}
@@ -1351,8 +1394,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                         >
                           <CardDisplay
                             card={card}
-                            canAttack={gameState.currentPlayer === gameState.playerIndex && !card.hasAttacked && !card.frozen}
+                            canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
                             isDragging={snapshot.isDragging}
+                            isPlayerTurn={isPlayerTurn}
                           />
                         </div>
                       )}
@@ -1403,7 +1447,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                 {...provided.droppableProps}
               >
                 {gameState.player.hand.map((card, index) => (
-                  <Draggable key={card.id} draggableId={card.id} index={index}>
+                  <Draggable 
+                    key={card.id} 
+                    draggableId={card.id} 
+                    index={index}
+                    isDragDisabled={!isPlayerTurn} // Zakážeme drag když není hráč na tahu
+                  >
                     {(provided, snapshot) => (
                       <DraggableCardWrapper
                         ref={provided.innerRef}
@@ -1419,6 +1468,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                           card={card}
                           isInHand={true}
                           isDragging={snapshot.isDragging}
+                          isPlayerTurn={isPlayerTurn}
                         />
                       </DraggableCardWrapper>
                     )}
