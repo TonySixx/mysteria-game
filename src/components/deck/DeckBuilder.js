@@ -46,6 +46,9 @@ import twinBlade from '../../assets/images/twin-blade.png';
 import manaCollector from '../../assets/images/mana-collector.png';
 import defensiveScout from '../../assets/images/defensive-scout.png';
 import manaSiphon from '../../assets/images/mana-siphon.png';
+import mountainGiant from '../../assets/images/mountain-giant.png';
+import ancientGuardian from '../../assets/images/ancient-guardian.png';
+import arcaneProtector from '../../assets/images/arcane-protector.png';
 
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
@@ -87,7 +90,10 @@ export const cardImages = {
   'twinBlade': twinBlade,
   'manaCollector': manaCollector,
   'defensiveScout': defensiveScout,
-  'manaSiphon': manaSiphon
+  'manaSiphon': manaSiphon,
+  'mountainGiant': mountainGiant,
+  'ancientGuardian': ancientGuardian,
+  'arcaneProtector': arcaneProtector
 };
 
 const DeckBuilderContainer = styled(motion.div)`
