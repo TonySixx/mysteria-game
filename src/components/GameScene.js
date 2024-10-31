@@ -454,15 +454,15 @@ const ManaCost = styled.div`
   width: ${props => props.$isMobile ? '25px' : '30px'};
   height: ${props => props.$isMobile ? '25px' : '30px'};
   font-size: ${props => props.$isMobile ? '14px' : '16px'};
-  background-color: #4fc3f7;
+  background-color: ${props => props.$backgroundColor};
   color: white;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-weight: bold;
-  border: 2px solid #2196f3;
-  box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
+  border: 2px solid ${props => props.$borderColor};
+  box-shadow: 0 0 5px ${props => props.$increasedCost ? 'rgba(255, 0, 0, 0.5)' : 'rgba(33, 150, 243, 0.5)'};
   z-index: 10;
 `;
 
@@ -690,7 +690,7 @@ const CardBack = styled.div`
 // };
 
 // Upravte CardDisplay komponentu
-const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame, isPlayerTurn }) => {
+const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame, isPlayerTurn, gameState }) => {
   const isMobile = useIsMobile();
 
   if (!card) return null;
@@ -715,6 +715,10 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
     effectText = `Deal ${spellsPlayedThisGame} damage to all characters (${card.effect})`;
   }
 
+  // Spočítáme počet Spell Breaker karet na poli protivníka
+  const spellBreakerCount = gameState?.opponent?.field?.filter(unit => unit.name === 'Spell Breaker')?.length || 0;
+  const isSpellWithIncreasedCost = card.type === 'spell' && spellBreakerCount > 0;
+
   return (
     <CardComponent
       $type={card.type}
@@ -727,7 +731,14 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
       $rarity={card.rarity}
       $isMobile={isMobile}
     >
-      <ManaCost $isMobile={isMobile}>{card.manaCost}</ManaCost>
+      <ManaCost 
+        $isMobile={isMobile} 
+        $increasedCost={isSpellWithIncreasedCost}
+        $backgroundColor={isSpellWithIncreasedCost ? '#ff4444' : '#4fc3f7'}
+        $borderColor={isSpellWithIncreasedCost ? '#cc0000' : '#2196f3'}
+      >
+        {card.manaCost + (isSpellWithIncreasedCost ? spellBreakerCount : 0)}
+      </ManaCost>
       <RarityGem $rarity={card.rarity} $isMobile={isMobile} />
       <CardImage
         $isMobile={isMobile}
@@ -1469,6 +1480,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
                           isInHand={true}
                           isDragging={snapshot.isDragging}
                           isPlayerTurn={isPlayerTurn}
+                          gameState={gameState}
                         />
                       </DraggableCardWrapper>
                     )}
