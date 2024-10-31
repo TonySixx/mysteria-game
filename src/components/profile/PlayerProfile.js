@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
+import { FaChevronDown } from 'react-icons/fa';
 
 const ProfileContainer = styled.div`
     max-width: 800px;
@@ -117,20 +118,81 @@ const LoadingSpinner = styled.div`
     }
 `;
 
+const LoadMoreButton = styled.button`
+    width: 100%;
+    padding: 15px;
+    margin-top: 20px;
+    background: linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.backgroundLight} 100%);
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    border-radius: 8px;
+    color: ${theme.colors.text.primary};
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: ${theme.shadows.golden};
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    svg {
+        transition: transform 0.3s ease;
+        position: relative;
+        top: 1px;
+    }
+
+    &:hover svg {
+        animation: bounceDown 1s infinite;
+    }
+
+    @keyframes bounceDown {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(4px);
+        }
+    }
+`;
+
+const LoadingIndicator = styled.div`
+    text-align: center;
+    padding: 10px;
+    color: ${theme.colors.text.secondary};
+`;
+
 function PlayerProfile({ userId }) {
     const [profile, setProfile] = useState(null);
     const [gameHistory, setGameHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState('');
+    const [page, setPage] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
         const loadProfileData = async () => {
             try {
                 const profileData = await supabaseService.getProfile(userId);
-                const historyData = await supabaseService.getGameHistory(userId);
+                const historyData = await supabaseService.getGameHistory(userId, 0);
                 
                 setProfile(profileData);
-                setGameHistory(historyData);
+                setGameHistory(historyData.data);
+                setHasMore(historyData.hasMore);
             } catch (error) {
                 setError('Failed to load profile data');
                 console.error(error);
@@ -141,6 +203,24 @@ function PlayerProfile({ userId }) {
 
         loadProfileData();
     }, [userId]);
+
+    const handleLoadMore = async () => {
+        if (loadingMore || !hasMore) return;
+
+        try {
+            setLoadingMore(true);
+            const nextPage = page + 1;
+            const historyData = await supabaseService.getGameHistory(userId, nextPage);
+            
+            setGameHistory(prev => [...prev, ...historyData.data]);
+            setHasMore(historyData.hasMore);
+            setPage(nextPage);
+        } catch (error) {
+            console.error('Failed to load more history:', error);
+        } finally {
+            setLoadingMore(false);
+        }
+    };
 
     if (loading) {
         return <LoadingSpinner>Loading...</LoadingSpinner>;
@@ -192,16 +272,33 @@ function PlayerProfile({ userId }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {gameHistory.map((game) => (
-                        <tr key={game.id}>
-                            <td>{new Date(game.created_at).toLocaleDateString()}</td>
-                            <td>{game.opponent.username}</td>
-                            <td>{game.winner_id === userId ? 'Victory' : 'Defeat'}</td>
-                            <td>{game.game_duration}</td>
-                        </tr>
-                    ))}
+                    {gameHistory.map((game) => {
+                        const isPlayer1 = game.player_id === userId;
+                        const opponentUsername = isPlayer1 ? game.opponent.username : game.player.username;
+                        
+                        const isWinner = game.winner_id === userId;
+
+                        return (
+                            <tr key={game.id}>
+                                <td>{new Date(game.created_at).toLocaleDateString()}</td>
+                                <td>{opponentUsername}</td>
+                                <td>{isWinner ? 'Victory' : 'Defeat'}</td>
+                                <td>{game.game_duration}</td>
+                            </tr>
+                        );
+                    })}
                 </tbody>
             </GameHistoryTable>
+
+            {loadingMore && (
+                <LoadingIndicator>Loading more games...</LoadingIndicator>
+            )}
+
+            {hasMore && !loadingMore && (
+                <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
+                    Load More Games <FaChevronDown />
+                </LoadMoreButton>
+            )}
         </ProfileContainer>
     );
 }

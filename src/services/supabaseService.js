@@ -172,27 +172,37 @@ class SupabaseService {
         }
     }
 
-    async getGameHistory(userId) {
-        try {
-            const { data, error } = await this.supabase
-                .from('game_history')
-                .select(`
-                    *,
-                    winner:winner_id(username),
-                    player:player_id(username),
-                    opponent:opponent_id(username)
-                `)
-                .or(`player_id.eq.${userId},opponent_id.eq.${userId}`)
-                .order('created_at', { ascending: false })
-                .limit(10);
+    async getGameHistory(userId, page = 0, pageSize = 10) {
+        const from = page * pageSize;
+        const to = from + pageSize - 1;
 
-            if (error) throw error;
+        // Nejdřív získáme celkový počet záznamů
+        const { count, error: countError } = await supabase
+            .from('game_history')
+            .select('id', { count: 'exact' })
+            .or(`player_id.eq.${userId},opponent_id.eq.${userId}`);
 
-            return data;
-        } catch (error) {
-            console.error('Chyba při načítání historie her:', error.message);
-            throw error;
-        }
+        if (countError) throw countError;
+
+        // Pak získáme záznamy pro aktuální stránku
+        const { data, error } = await supabase
+            .from('game_history')
+            .select(`
+                *,
+                player:profiles!game_history_player_id_fkey(username),
+                opponent:profiles!game_history_opponent_id_fkey(username)
+            `)
+            .or(`player_id.eq.${userId},opponent_id.eq.${userId}`)
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+        if (error) throw error;
+
+        return {
+            data,
+            totalCount: count,
+            hasMore: count > to + 1
+        };
     }
 
     async getLeaderboard() {
