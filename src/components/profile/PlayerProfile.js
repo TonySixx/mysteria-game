@@ -3,6 +3,11 @@ import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
 import { FaChevronDown } from 'react-icons/fa';
+import CardPackStore from './CardPackStore';
+import CardPackOpening from './CardPackOpening';
+import ChallengesPanel from './ChallengesPanel';
+import RewardPopup from '../rewards/RewardPopup';
+import socketService from '../../services/socketService';
 
 const ProfileContainer = styled.div`
     max-width: 800px;
@@ -175,6 +180,23 @@ const LoadingIndicator = styled.div`
     color: ${theme.colors.text.secondary};
 `;
 
+const GoldDisplay = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.backgroundLight} 100%);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 2px solid ${theme.colors.border.golden};
+
+    span {
+        color: ${theme.colors.gold};
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+`;
+
 function PlayerProfile({ userId }) {
     const [profile, setProfile] = useState(null);
     const [gameHistory, setGameHistory] = useState([]);
@@ -183,6 +205,11 @@ function PlayerProfile({ userId }) {
     const [error, setError] = useState('');
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [showPackOpening, setShowPackOpening] = useState(false);
+    const [openedCards, setOpenedCards] = useState([]);
+    const [playerGold, setPlayerGold] = useState(0);
+    const [showReward, setShowReward] = useState(false);
+    const [currentReward, setCurrentReward] = useState(null);
 
     useEffect(() => {
         const loadProfileData = async () => {
@@ -202,7 +229,50 @@ function PlayerProfile({ userId }) {
         };
 
         loadProfileData();
+        loadPlayerCurrency();
+        
+        // Přidáme socket listener pro odměny
+        socketService.socket.on('rewardEarned', handleRewardEarned);
+        
+        return () => {
+            socketService.socket.off('rewardEarned', handleRewardEarned);
+        };
     }, [userId]);
+
+    const loadPlayerCurrency = async () => {
+        try {
+            const currency = await supabaseService.getPlayerCurrency(userId);
+            setPlayerGold(currency.gold_amount);
+        } catch (error) {
+            console.error('Error loading currency:', error);
+        }
+    };
+
+    const handleRewardEarned = (reward) => {
+        setCurrentReward(reward);
+        setShowReward(true);
+        loadPlayerCurrency(); // Aktualizujeme zobrazení zlata
+    };
+
+    const handlePackPurchase = async (packId) => {
+        try {
+            const cards = await supabaseService.purchaseCardPack(userId, packId);
+            
+            // Ověříme, že cards je pole nebo ho převedeme na pole
+            const cardsArray = Array.isArray(cards) ? cards : JSON.parse(cards);
+            
+            if (cardsArray && cardsArray.length > 0) {
+                setOpenedCards(cardsArray);
+                setShowPackOpening(true);
+                await loadPlayerCurrency(); // Aktualizujeme zobrazení zlata po nákupu
+            } else {
+                throw new Error('Nepodařilo se získat karty z balíčku');
+            }
+        } catch (error) {
+            console.error('Error purchasing pack:', error);
+            // Zde můžete přidat notifikaci o chybě
+        }
+    };
 
     const handleLoadMore = async () => {
         if (loadingMore || !hasMore) return;
@@ -238,6 +308,10 @@ function PlayerProfile({ userId }) {
         <ProfileContainer>
             <h1>{profile.username}</h1>
             
+            <GoldDisplay>
+                🪙 <span>{playerGold}</span> zlaťáků
+            </GoldDisplay>
+
             <StatsGrid>
                 <StatCard>
                     <h3>Rank</h3>
@@ -260,6 +334,30 @@ function PlayerProfile({ userId }) {
                     <div>{winRate}%</div>
                 </StatCard>
             </StatsGrid>
+
+            <ChallengesPanel userId={userId} />
+            
+            <CardPackStore 
+                onPurchase={handlePackPurchase} 
+                userId={userId}
+            />
+
+            {showPackOpening && (
+                <CardPackOpening
+                    cards={openedCards}
+                    onClose={() => {
+                        setShowPackOpening(false);
+                        setOpenedCards([]);
+                    }}
+                />
+            )}
+
+            {showReward && (
+                <RewardPopup
+                    rewards={currentReward}
+                    onClose={() => setShowReward(false)}
+                />
+            )}
 
             <h2>Game History</h2>
             <GameHistoryTable>

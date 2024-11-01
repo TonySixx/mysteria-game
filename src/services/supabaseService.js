@@ -256,6 +256,145 @@ class SupabaseService {
             return null;
         }
     }
+
+    // Přidáme nové metody pro práci s kartami a měnou
+
+    async getPlayerCurrency(userId) {
+        try {
+            const { data, error } = await this.supabase
+                .from('player_currency')
+                .select('*')
+                .eq('player_id', userId)
+                .single();
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Chyba při načítání měny:', error.message);
+            throw error;
+        }
+    }
+
+    async getPlayerCards(userId) {
+        try {
+            const { data, error } = await this.supabase
+                .from('player_cards')
+                .select(`
+                    *,
+                    card:cards(*)
+                `)
+                .eq('player_id', userId);
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Chyba při načítání karet:', error.message);
+            throw error;
+        }
+    }
+
+    async getCardPacks() {
+        try {
+            const { data, error } = await this.supabase
+                .from('card_packs')
+                .select('*');
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Chyba při načítání balíčků:', error.message);
+            throw error;
+        }
+    }
+
+    async purchaseCardPack(userId, packId) {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('purchase_card_pack', {
+                    p_pack_id: parseInt(packId),
+                    p_user_id: userId
+                });
+
+            if (error) throw error;
+
+            if (typeof data === 'string') {
+                return JSON.parse(data);
+            }
+
+            return data;
+        } catch (error) {
+            console.error('Chyba při nákupu balíčku:', error.message);
+            throw error;
+        }
+    }
+
+    async getPlayerChallenges(userId) {
+        try {
+            const { data, error } = await this.supabase
+                .from('player_challenges')
+                .select(`
+                    *,
+                    challenge:challenges(*)
+                `)
+                .eq('player_id', userId);
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Chyba při načítání výzev:', error.message);
+            throw error;
+        }
+    }
+
+    // Přidáme novou metodu pro aktualizaci progressu výzev
+    async updateChallengeProgress(userId, challengeId, progress) {
+        try {
+            // Nejprve získáme informace o výzvě
+            const { data: challengeData, error: challengeError } = await this.supabase
+                .from('challenges')
+                .select('condition_value')
+                .eq('id', challengeId)
+                .single();
+    
+            if (challengeError) throw challengeError;
+    
+            const { data, error } = await this.supabase
+                .from('player_challenges')
+                .upsert({
+                    player_id: userId,
+                    challenge_id: challengeId,
+                    progress: progress,
+                    completed: progress >= challengeData.condition_value
+                })
+                .select(`
+                    *,
+                    challenge:challenges(*)
+                `)
+                .single();
+    
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Chyba při aktualizaci progressu výzvy:', error.message);
+            throw error;
+        }
+    }
+
+    // Přidáme metodu pro kontrolu a reset denních/týdenních výzev
+    async checkAndResetChallenges(userId) {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('check_and_reset_challenges', {
+                    user_id: userId
+                });
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Chyba při kontrole a resetu výzev:', error.message);
+            throw error;
+        }
+    }
 }
 
 const supabaseService = new SupabaseService();

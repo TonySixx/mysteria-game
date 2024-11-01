@@ -6,6 +6,7 @@ import { deckService } from '../../services/deckService';
 import { theme } from '../../styles/theme';
 import { CARD_RARITY, DECK_RULES } from '../../constants';
 import cardTexture from '../../assets/images/card-texture.png';
+import supabaseService from '../../services/supabaseService';
 
 // Importujeme všechny obrázky karet
 import earthGolem from '../../assets/images/earth-golem.png';
@@ -191,17 +192,48 @@ const DeckPreview = styled.div`
     }
 `;
 
+// Přidáme novou styled komponentu pro tooltip
+const Tooltip = styled.div`
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 1em;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    top: ${props => props.$position === 'top' ? '-30px' : '30px'};
+    right: 0;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        ${props => props.$position === 'top' ? 'bottom: -5px;' : 'top: -5px;'}
+        right: 10px;
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-${props => props.$position === 'top' ? 'top' : 'bottom'}: 5px solid rgba(0, 0, 0, 0.9);
+    }
+`;
+
 const Card = styled(motion.div)`
     height: 280px;
     border: 2px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
     border-radius: 8px;
     padding: 15px;
-    cursor: pointer;
+    cursor: ${props => props.$owned ? 'pointer' : 'not-allowed'};
     position: relative;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    z-index: 0;
+    z-index: 1;
+    opacity: ${props => props.$owned ? 1 : 0.6};
+    filter: ${props => props.$owned ? 'none' : 'grayscale(40%)'};
     
     &::before {
         content: '';
@@ -223,7 +255,27 @@ const Card = styled(motion.div)`
     &:hover {
         transform: translateY(-5px);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        opacity: 1;
+        filter: none;
     }
+
+    ${props => !props.$owned && `
+        &::after {
+            content: 'Not Owned';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            background: ${theme.colors.accent}99;
+            color: white;
+            padding: 5px 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+        }
+    `}
 `;
 
 const ManaCost = styled.div`
@@ -292,16 +344,30 @@ const InDeckIndicator = styled.div`
     border-radius: 10px;
     font-size: 0.8em;
     font-weight: bold;
+    cursor: help;
+    z-index: 2;
+
+    &:hover ${Tooltip} {
+        opacity: 1;
+    }
 `;
 
-const RarityIndicator = styled.div`
+const OwnedCardsIndicator = styled.div`
     position: absolute;
-    bottom: 10px;
+    top: ${props => props.$hasInDeck ? '32px' : '10px'};
     right: 10px;
-    color: ${props => CARD_RARITY[props.rarity]?.color || 'white'};
+    background: rgba(128, 128, 128, 0.8);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
     font-size: 0.8em;
     font-weight: bold;
-    text-transform: uppercase;
+    cursor: help;
+    z-index: 2;
+
+    &:hover ${Tooltip} {
+        opacity: 1;
+    }
 `;
 
 const Button = styled(motion.button)`
@@ -478,6 +544,8 @@ const FilterGroup = styled.div`
     display: flex;
     flex-direction: column;
     gap: 5px;
+    min-width: 150px;
+    justify-content: flex-end;
 `;
 
 const FilterLabel = styled.label`
@@ -501,6 +569,24 @@ const FilterSelect = styled.select`
     }
 `;
 
+const FilterCheckbox = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: ${theme.colors.text.primary};
+    height: 32px;
+    margin-top: auto;
+
+    input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: ${theme.colors.primary};
+    }
+`;
+
+
+
 const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [availableCards, setAvailableCards] = useState([]);
     const [selectedCards, setSelectedCards] = useState({});
@@ -509,9 +595,12 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [manaFilter, setManaFilter] = useState('all');
     const [rarityFilter, setRarityFilter] = useState('all');
     const [typeFilter, setTypeFilter] = useState('all');
+    const [ownedCardsOnly, setOwnedCardsOnly] = useState(true);
+    const [ownedCards, setOwnedCards] = useState({});
 
     useEffect(() => {
         loadCards();
+        loadOwnedCards();
         if (editingDeck) {
             console.log('Loading editing deck:', editingDeck); // Pro debugování
             // Načteme karty z editovaného balíčku
@@ -545,16 +634,35 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
         }
     };
 
+    const loadOwnedCards = async () => {
+        try {
+            const playerCards = await supabaseService.getPlayerCards(userId);
+            const ownedCardsMap = {};
+            playerCards.forEach(pc => {
+                ownedCardsMap[pc.card_id] = pc.quantity;
+            });
+            setOwnedCards(ownedCardsMap);
+        } catch (error) {
+            console.error('Error loading owned cards:', error);
+        }
+    };
+
     const handleAddCard = (card) => {
+        if (!ownedCards[card.id] || ownedCards[card.id] <= 0) {
+            return;
+        }
+
         const currentCount = selectedCards[card.id]?.quantity || 0;
         const maxCopies = card.rarity === 'legendary' ? 1 : 2;
         const totalCards = Object.values(selectedCards).reduce((sum, card) => sum + card.quantity, 0);
 
-        if (currentCount < maxCopies && totalCards < DECK_RULES.MAX_CARDS) {
+        if (currentCount < maxCopies && 
+            totalCards < DECK_RULES.MAX_CARDS && 
+            currentCount < ownedCards[card.id]) {
             setSelectedCards(prev => ({
                 ...prev,
                 [card.id]: {
-                    card: card,  // Uložíme celou kartu
+                    card: card,
                     quantity: (prev[card.id]?.quantity || 0) + 1
                 }
             }));
@@ -606,8 +714,9 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             (manaFilter === '7+' ? card.mana_cost >= 7 : card.mana_cost === parseInt(manaFilter));
             const rarityMatch = rarityFilter === 'all' || card.rarity.toLowerCase() === rarityFilter;
             const typeMatch = typeFilter === 'all' || card.type.toLowerCase() === typeFilter;
+            const ownedMatch = !ownedCardsOnly || (ownedCards[card.id] && ownedCards[card.id] > 0);
 
-            return manaMatch && rarityMatch && typeMatch;
+            return manaMatch && rarityMatch && typeMatch && ownedMatch;
         });
     };
 
@@ -732,6 +841,17 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             <option value="spell">Spell</option>
                         </FilterSelect>
                     </FilterGroup>
+
+                    <FilterGroup>
+                        <FilterCheckbox>
+                            <input
+                                type="checkbox"
+                                checked={ownedCardsOnly}
+                                onChange={(e) => setOwnedCardsOnly(e.target.checked)}
+                            />
+                            <FilterLabel>Show Only Owned Cards</FilterLabel>
+                        </FilterCheckbox>
+                    </FilterGroup>
                 </FilterContainer>
 
                 <CardCollection>
@@ -742,6 +862,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             onClick={() => handleAddCard(card)}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
+                            $owned={ownedCards[card.id] && ownedCards[card.id] > 0}
                         >
                             <ManaCost>{card.mana_cost}</ManaCost>
                             
@@ -769,9 +890,21 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                                 )}
                             </CardStats>
 
+                            {ownedCards[card.id] > 0 && (
+                                <OwnedCardsIndicator $hasInDeck={selectedCards[card.id]}>
+                                    {ownedCards[card.id]}x
+                                    <Tooltip $position="bottom">
+                                        Number of copies you own of this card
+                                    </Tooltip>
+                                </OwnedCardsIndicator>
+                            )}
+
                             {selectedCards[card.id] && (
                                 <InDeckIndicator>
                                     {selectedCards[card.id].quantity}x
+                                    <Tooltip $position="top">
+                                        Number of copies of this card in your deck
+                                    </Tooltip>
                                 </InDeckIndicator>
                             )}
                         </Card>
