@@ -395,6 +395,65 @@ class SupabaseService {
             throw error;
         }
     }
+
+    // Získání dostupných výzev
+    async getAvailableChallenges() {
+        try {
+            // Nejprve získáme všechny výzvy
+            const { data: allChallenges, error: challengesError } = await this.supabase
+                .from('challenges')
+                .select('*')
+                .order('id');
+
+            if (challengesError) throw challengesError;
+
+            // Získáme aktuální session
+            const { data: { session }, error: sessionError } = await this.supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+            
+            if (!session) throw new Error('No active session');
+
+            // Získáme ID všech aktivních výzev uživatele
+            const { data: activePlayerChallenges, error: playerChallengesError } = await this.supabase
+                .from('player_challenges')
+                .select('challenge_id')
+                .eq('player_id', session.user.id);
+
+            if (playerChallengesError) throw playerChallengesError;
+
+            // Vytvoříme set ID aktivních výzev pro rychlejší vyhledávání
+            const activeIds = new Set(activePlayerChallenges.map(pc => pc.challenge_id));
+
+            // Odfiltrujeme výzvy, které už uživatel má aktivní
+            const availableChallenges = allChallenges.filter(challenge => !activeIds.has(challenge.id));
+
+            return availableChallenges;
+        } catch (error) {
+            console.error('Error getting available challenges:', error);
+            throw error;
+        }
+    }
+
+    // Přijetí výzvy
+    async acceptChallenge(userId, challengeId) {
+        try {
+            const { data, error } = await this.supabase
+                .from('player_challenges')
+                .insert([{
+                    player_id: userId,
+                    challenge_id: challengeId,
+                    progress: 0,
+                    completed: false,
+                    last_reset: new Date().toISOString()
+                }]);
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error accepting challenge:', error);
+            throw error;
+        }
+    }
 }
 
 const supabaseService = new SupabaseService();
