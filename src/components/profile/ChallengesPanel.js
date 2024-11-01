@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { theme } from '../../styles/theme';
 import supabaseService from '../../services/supabaseService';
-import socketService from '../../services/socketService';
+import RewardNotification from '../rewards/RewardNotification';
 
 const progressAnimation = (width) => keyframes`
     from { width: 0; }
@@ -237,7 +237,30 @@ const AcceptButton = styled.button`
 `;
 
 const ClaimButton = styled(AcceptButton)`
-    background: linear-gradient(135deg, ${theme.colors.success} 0%, ${theme.colors.primary} 100%);
+    background: linear-gradient(135deg, 
+        ${theme.colors.success} 0%, 
+        ${theme.colors.primary} 100%
+    );
+    color: ${theme.colors.background};
+    font-weight: bold;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    border: 1px solid ${theme.colors.success};
+    
+    &:hover {
+        background: linear-gradient(135deg, 
+            ${theme.colors.success} 20%, 
+            ${theme.colors.primary} 120%
+        );
+        color: ${theme.colors.background};
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+
+    &:active {
+        background: linear-gradient(135deg, 
+            ${theme.colors.primary} 0%, 
+            ${theme.colors.success} 100%
+        );
+    }
 `;
 
 const ChallengeTypeTag = styled.div`
@@ -312,10 +335,28 @@ const EmptyState = styled.div`
     }
 `;
 
+const LoadingSpinner = styled.div`
+    text-align: center;
+    padding: 20px;
+    color: ${theme.colors.text.primary};
+    font-size: 1.2em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    animation: pulse 1.5s infinite;
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+`;
+
 function ChallengesPanel({ userId, onGoldUpdate }) {
     const [challenges, setChallenges] = useState([]);
     const [availableChallenges, setAvailableChallenges] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [reward, setReward] = useState(null);
+    const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
         loadChallenges();
@@ -343,13 +384,17 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
     };
 
     const handleAcceptChallenge = async (challengeId) => {
+        if (actionLoading) return;
+
         try {
+            setActionLoading(true);
             await supabaseService.acceptChallenge(userId, challengeId);
-            // Refresh both lists
             await loadChallenges();
             await loadAvailableChallenges();
         } catch (error) {
             console.error('Error accepting challenge:', error);
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -376,36 +421,40 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
     };
 
     const handleClaimReward = async (challengeId, rewardGold) => {
+        if (actionLoading) return;
+
         try {
+            setActionLoading(true);
             await supabaseService.claimChallengeReward(userId, challengeId);
-            
-            // Aktualizujeme seznamy výzev
             await loadChallenges();
             await loadAvailableChallenges();
-            
-            // Aktualizujeme zlaťáky v nadřazené komponentě
             if (onGoldUpdate) {
                 onGoldUpdate();
             }
-
-            // Zobrazíme notifikaci pomocí RewardNotification
-            const rewardData = {
+            setReward({
                 gold: rewardGold,
-                message: `You claimed ${rewardGold} gold from challenge completion!`
-            };
-            
-            // Použijeme socket pro zobrazení notifikace
-            socketService.socket.emit('rewardEarned', rewardData);
-
+                completedChallenges: [{
+                    challengeName: challenges.find(c => c.challenge.id === challengeId)?.challenge.name,
+                    reward: rewardGold
+                }]
+            });
         } catch (error) {
             console.error('Error claiming reward:', error);
+        } finally {
+            setActionLoading(false);
         }
     };
 
-    if (loading) return <div>Loading challenges...</div>;
+    if (loading) return <LoadingSpinner>Loading challenges...</LoadingSpinner>;
 
     return (
         <Container>
+            {reward && (
+                <RewardNotification 
+                    reward={reward} 
+                    onClose={() => setReward(null)}
+                />
+            )}
             <Title>Active Challenges</Title>
             <ChallengeList>
                 {challenges.length > 0 ? (
@@ -443,6 +492,7 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
                                             challenge.challenge.id,
                                             challenge.challenge.reward_gold
                                         )}
+                                        disabled={actionLoading}
                                     >
                                         Claim Reward
                                     </ClaimButton>
@@ -474,6 +524,7 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
                             <Reward>{challenge.reward_gold}</Reward>
                             <AcceptButton 
                                 onClick={() => handleAcceptChallenge(challenge.id)}
+                                disabled={actionLoading}
                             >
                                 Accept Challenge
                             </AcceptButton>

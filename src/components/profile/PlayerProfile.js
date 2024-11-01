@@ -248,7 +248,7 @@ function PlayerProfile({ userId }) {
             try {
                 const profileData = await supabaseService.getProfile(userId);
                 const historyData = await supabaseService.getGameHistory(userId, 0);
-                
+
                 setProfile(profileData);
                 setGameHistory(historyData.data);
                 setHasMore(historyData.hasMore);
@@ -276,9 +276,9 @@ function PlayerProfile({ userId }) {
     const handlePackPurchase = async (packId) => {
         try {
             const cards = await supabaseService.purchaseCardPack(userId, packId);
-            
+
             const cardsArray = Array.isArray(cards) ? cards : JSON.parse(cards);
-            
+
             if (cardsArray && cardsArray.length > 0) {
                 setOpenedCards(cardsArray);
                 setShowPackOpening(true);
@@ -298,7 +298,7 @@ function PlayerProfile({ userId }) {
             setLoadingMore(true);
             const nextPage = page + 1;
             const historyData = await supabaseService.getGameHistory(userId, nextPage);
-            
+
             setGameHistory(prev => [...prev, ...historyData.data]);
             setHasMore(historyData.hasMore);
             setPage(nextPage);
@@ -317,29 +317,29 @@ function PlayerProfile({ userId }) {
         return <div>{error}</div>;
     }
 
-    const winRate = profile.total_games > 0 
-        ? ((profile.wins / profile.total_games) * 100).toFixed(1) 
+    const winRate = profile.total_games > 0
+        ? ((profile.wins / profile.total_games) * 100).toFixed(1)
         : 0;
 
     return (
         <ProfileContainer>
             <h1>{profile.username}</h1>
-            
+
             <ProfileTabs>
-                <ProfileTab 
-                    $active={activeTab === 'dashboard'} 
+                <ProfileTab
+                    $active={activeTab === 'dashboard'}
                     onClick={() => setActiveTab('dashboard')}
                 >
                     <FaUser /> Dashboard
                 </ProfileTab>
-                <ProfileTab 
-                    $active={activeTab === 'challenges'} 
+                <ProfileTab
+                    $active={activeTab === 'challenges'}
                     onClick={() => setActiveTab('challenges')}
                 >
                     <FaTrophy /> Challenges
                 </ProfileTab>
-                <ProfileTab 
-                    $active={activeTab === 'store'} 
+                <ProfileTab
+                    $active={activeTab === 'store'}
                     onClick={() => setActiveTab('store')}
                 >
                     <FaStore /> Store
@@ -387,7 +387,7 @@ function PlayerProfile({ userId }) {
                             {gameHistory.map((game) => {
                                 const isPlayer1 = game.player_id === userId;
                                 const opponentUsername = isPlayer1 ? game.opponent.username : game.player.username;
-                                
+
                                 const isWinner = game.winner_id === userId;
 
                                 return (
@@ -401,13 +401,22 @@ function PlayerProfile({ userId }) {
                             })}
                         </tbody>
                     </GameHistoryTable>
+                    {loadingMore && (
+                        <LoadingIndicator>Loading more games...</LoadingIndicator>
+                    )}
+
+                    {hasMore && !loadingMore && (
+                        <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
+                            Load More Games <FaChevronDown />
+                        </LoadMoreButton>
+                    )}
                 </>
             )}
 
             {activeTab === 'challenges' && (
-                <ChallengesPanel 
-                    userId={userId} 
-                    onGoldUpdate={loadPlayerCurrency} 
+                <ChallengesPanel
+                    userId={userId}
+                    onGoldUpdate={loadPlayerCurrency}
                 />
             )}
 
@@ -416,8 +425,8 @@ function PlayerProfile({ userId }) {
                     <GoldDisplay>
                         🪙 <span>{playerGold}</span> Gold
                     </GoldDisplay>
-                    <CardPackStore 
-                        onPurchase={handlePackPurchase} 
+                    <CardPackStore
+                        onPurchase={handlePackPurchase}
                         userId={userId}
                         playerGold={playerGold}
                     />

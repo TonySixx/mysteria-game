@@ -4,6 +4,7 @@ import { theme } from '../../styles/theme';
 
 const slideIn = keyframes`
     0% { transform: translate(-50%, -200%); opacity: 0; }
+    20% { transform: translate(-50%, 0); opacity: 1; }
     100% { transform: translate(-50%, 0); opacity: 1; }
 `;
 
@@ -17,10 +18,12 @@ const Container = styled.div`
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 1000;
-    animation: ${props => props.$isClosing ? slideOut : slideIn} 0.5s ease-in-out;
+    z-index: 1001;
+    animation: ${props => props.$isClosing ? slideOut : slideIn} ${props => props.$isClosing ? '0.5s' : '0.3s'} ease-in-out;
+    animation-fill-mode: forwards;
     min-width: 300px;
     max-width: 500px;
+    opacity: ${props => props.$isClosing ? 0 : 1};
 `;
 
 const NotificationCard = styled.div`
@@ -35,6 +38,11 @@ const NotificationCard = styled.div`
     padding: 20px;
     color: ${theme.colors.text.primary};
     box-shadow: ${theme.shadows.intense};
+    transition: transform 0.3s ease;
+
+    &:hover {
+        transform: translateY(-2px);
+    }
 `;
 
 const Title = styled.h3`
@@ -77,12 +85,18 @@ function RewardNotification({ reward, onClose }) {
     const [isClosing, setIsClosing] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        let closeTimer;
+        let fadeTimer;
+
+        closeTimer = setTimeout(() => {
             setIsClosing(true);
-            setTimeout(onClose, 500); // Počkáme na dokončení animace
+            fadeTimer = setTimeout(onClose, 500);
         }, 5000);
 
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(closeTimer);
+            clearTimeout(fadeTimer);
+        };
     }, [onClose]);
 
     if (!reward) return null;
@@ -93,12 +107,14 @@ function RewardNotification({ reward, onClose }) {
                 <Title>Rewards Earned!</Title>
                 {reward.gold > 0 && (
                     <RewardItem>
-                        {reward.gold} gold earned for winning!
+                        {reward.gold} gold earned {reward.message ? 'for winning!' : 'from challenge!'}
                     </RewardItem>
                 )}
                 {reward.completedChallenges?.map((challenge, index) => (
                     <ChallengeItem key={index}>
-                        {challenge.challengeName} completed! (+{challenge.reward} gold)
+                        {challenge.challengeName} completed! 
+                        {!reward.message && `(+${challenge.reward} gold)`}
+                        {reward.message && ' (Claim reward in Challenges)'}
                     </ChallengeItem>
                 ))}
             </NotificationCard>
