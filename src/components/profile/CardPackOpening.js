@@ -4,6 +4,7 @@ import { theme } from '../../styles/theme';
 import cardTexture from '../../assets/images/card-texture.png';
 import cardBack from '../../assets/images/card-back.png';
 import { cardImages } from '../deck/DeckBuilder';
+import { CARD_RARITY } from '../../constants';
 
 const glowAnimation = (color) => keyframes`
     0% { box-shadow: 0 0 5px ${color}, 0 0 10px ${color}, 0 0 15px ${color}; }
@@ -67,8 +68,7 @@ const CardFace = styled.div`
 
 const CardBack = styled(CardFace)`
     background: url(${cardBack}) center/cover no-repeat;
-    border: 2px solid;
-    border-color: ${theme.colors.border.golden};
+    border: 1px solid rgba(255, 215, 0, 0.3);
     animation: 
         ${props => props.isHovered ? glowAnimation(props.glowColor) : 'none'} 1.5s infinite,
         ${props => props.isHovered ? floatAnimation : 'none'} 2s ease-in-out infinite;
@@ -172,38 +172,14 @@ const CardEffect = styled.div`
 `;
 
 const getRarityColors = (rarity) => {
-    switch (rarity) {
-        case 'legendary':
-            return {
-                glow: '#FFD700',
-                border: '#FFD700',
-                bg: '#423303'
-            };
-        case 'epic':
-            return {
-                glow: '#A335EE',
-                border: '#A335EE',
-                bg: '#2E1040'
-            };
-        case 'rare':
-            return {
-                glow: '#0070DD',
-                border: '#0070DD',
-                bg: '#002147'
-            };
-        case 'uncommon':
-            return {
-                glow: '#1EFF00',
-                border: '#1EFF00',
-                bg: '#0A2A00'
-            };
-        default:
-            return {
-                glow: '#FFFFFF',
-                border: '#9D9D9D',
-                bg: '#292929'
-            };
-    }
+    const rarityKey = rarity.toUpperCase();
+    const rarityColor = CARD_RARITY[rarityKey]?.color;
+    
+    return {
+        glow: rarityColor || '#FFFFFF',
+        border: rarityColor || '#9D9D9D',
+        bg: rarityColor ? `${rarityColor}22` : '#292929'
+    };
 };
 
 const CloseButton = styled.button`
