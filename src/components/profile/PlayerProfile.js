@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
-import { FaChevronDown } from 'react-icons/fa';
+import { FaChevronDown, FaUser, FaTrophy, FaStore } from 'react-icons/fa';
 import CardPackStore from './CardPackStore';
 import CardPackOpening from './CardPackOpening';
 import ChallengesPanel from './ChallengesPanel';
@@ -197,6 +197,41 @@ const GoldDisplay = styled.div`
     }
 `;
 
+const ProfileTabs = styled.div`
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    justify-content: center;
+`;
+
+const ProfileTab = styled.button`
+    padding: 15px 30px;
+    background: ${props => props.$active ? theme.colors.backgroundLight : 'transparent'};
+    border: 2px solid transparent;
+    border-image: ${props => props.$active ? theme.colors.border.golden : 'none'};
+    border-image-slice: ${props => props.$active ? 1 : 'none'};
+    color: ${props => props.$active ? theme.colors.text.primary : theme.colors.text.secondary};
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    &:hover {
+        color: ${theme.colors.text.primary};
+        box-shadow: ${theme.shadows.golden};
+        transform: translateY(-2px);
+    }
+
+    svg {
+        font-size: 1.2em;
+    }
+`;
+
 function PlayerProfile({ userId }) {
     const [profile, setProfile] = useState(null);
     const [gameHistory, setGameHistory] = useState([]);
@@ -210,6 +245,7 @@ function PlayerProfile({ userId }) {
     const [playerGold, setPlayerGold] = useState(0);
     const [showReward, setShowReward] = useState(false);
     const [currentReward, setCurrentReward] = useState(null);
+    const [activeTab, setActiveTab] = useState('dashboard');
 
     useEffect(() => {
         const loadProfileData = async () => {
@@ -308,39 +344,101 @@ function PlayerProfile({ userId }) {
         <ProfileContainer>
             <h1>{profile.username}</h1>
             
-            <GoldDisplay>
-                🪙 <span>{playerGold}</span> zlaťáků
-            </GoldDisplay>
+            <ProfileTabs>
+                <ProfileTab 
+                    $active={activeTab === 'dashboard'} 
+                    onClick={() => setActiveTab('dashboard')}
+                >
+                    <FaUser /> Dashboard
+                </ProfileTab>
+                <ProfileTab 
+                    $active={activeTab === 'challenges'} 
+                    onClick={() => setActiveTab('challenges')}
+                >
+                    <FaTrophy /> Challenges
+                </ProfileTab>
+                <ProfileTab 
+                    $active={activeTab === 'store'} 
+                    onClick={() => setActiveTab('store')}
+                >
+                    <FaStore /> Store
+                </ProfileTab>
+            </ProfileTabs>
 
-            <StatsGrid>
-                <StatCard>
-                    <h3>Rank</h3>
-                    <div>{profile.rank}</div>
-                </StatCard>
-                <StatCard>
-                    <h3>Total Games</h3>
-                    <div>{profile.total_games}</div>
-                </StatCard>
-                <StatCard>
-                    <h3>Wins</h3>
-                    <div>{profile.wins}</div>
-                </StatCard>
-                <StatCard>
-                    <h3>Losses</h3>
-                    <div>{profile.losses}</div>
-                </StatCard>
-                <StatCard>
-                    <h3>Win Rate</h3>
-                    <div>{winRate}%</div>
-                </StatCard>
-            </StatsGrid>
+            {activeTab === 'dashboard' && (
+                <>
+                    <GoldDisplay>
+                        🪙 <span>{playerGold}</span> Gold
+                    </GoldDisplay>
+                    <StatsGrid>
+                        <StatCard>
+                            <h3>Rank</h3>
+                            <div>{profile.rank}</div>
+                        </StatCard>
+                        <StatCard>
+                            <h3>Total Games</h3>
+                            <div>{profile.total_games}</div>
+                        </StatCard>
+                        <StatCard>
+                            <h3>Wins</h3>
+                            <div>{profile.wins}</div>
+                        </StatCard>
+                        <StatCard>
+                            <h3>Losses</h3>
+                            <div>{profile.losses}</div>
+                        </StatCard>
+                        <StatCard>
+                            <h3>Win Rate</h3>
+                            <div>{winRate}%</div>
+                        </StatCard>
+                    </StatsGrid>
+                    <h2>Game History</h2>
+                    <GameHistoryTable>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Opponent</th>
+                                <th>Result</th>
+                                <th>Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {gameHistory.map((game) => {
+                                const isPlayer1 = game.player_id === userId;
+                                const opponentUsername = isPlayer1 ? game.opponent.username : game.player.username;
+                                
+                                const isWinner = game.winner_id === userId;
 
-            <ChallengesPanel userId={userId} />
-            
-            <CardPackStore 
-                onPurchase={handlePackPurchase} 
-                userId={userId}
-            />
+                                return (
+                                    <tr key={game.id}>
+                                        <td>{new Date(game.created_at).toLocaleDateString()}</td>
+                                        <td>{opponentUsername}</td>
+                                        <td>{isWinner ? 'Victory' : 'Defeat'}</td>
+                                        <td>{game.game_duration}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </GameHistoryTable>
+                </>
+            )}
+
+            {activeTab === 'challenges' && (
+                <ChallengesPanel userId={userId} />
+            )}
+
+            {activeTab === 'store' && (
+                <>
+                    <GoldDisplay>
+                        🪙 <span>{playerGold}</span> Gold
+                    </GoldDisplay>
+                    <CardPackStore 
+                        onPurchase={handlePackPurchase} 
+                        userId={userId}
+                        playerGold={playerGold}
+                    />
+                </>
+            )}
 
             {showPackOpening && (
                 <CardPackOpening
@@ -357,45 +455,6 @@ function PlayerProfile({ userId }) {
                     rewards={currentReward}
                     onClose={() => setShowReward(false)}
                 />
-            )}
-
-            <h2>Game History</h2>
-            <GameHistoryTable>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Opponent</th>
-                        <th>Result</th>
-                        <th>Duration</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {gameHistory.map((game) => {
-                        const isPlayer1 = game.player_id === userId;
-                        const opponentUsername = isPlayer1 ? game.opponent.username : game.player.username;
-                        
-                        const isWinner = game.winner_id === userId;
-
-                        return (
-                            <tr key={game.id}>
-                                <td>{new Date(game.created_at).toLocaleDateString()}</td>
-                                <td>{opponentUsername}</td>
-                                <td>{isWinner ? 'Victory' : 'Defeat'}</td>
-                                <td>{game.game_duration}</td>
-                            </tr>
-                        );
-                    })}
-                </tbody>
-            </GameHistoryTable>
-
-            {loadingMore && (
-                <LoadingIndicator>Loading more games...</LoadingIndicator>
-            )}
-
-            {hasMore && !loadingMore && (
-                <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
-                    Load More Games <FaChevronDown />
-                </LoadMoreButton>
             )}
         </ProfileContainer>
     );
