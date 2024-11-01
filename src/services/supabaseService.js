@@ -331,121 +331,117 @@ class SupabaseService {
     async getPlayerChallenges(userId) {
         try {
             const { data, error } = await this.supabase
-                .from('player_challenges')
-                .select(`
-                    *,
-                    challenge:challenges(*)
-                `)
-                .eq('player_id', userId);
-
-            if (error) throw error;
-            return data;
-        } catch (error) {
-            console.error('Chyba při načítání výzev:', error.message);
-            throw error;
-        }
-    }
-
-    // Přidáme novou metodu pro aktualizaci progressu výzev
-    async updateChallengeProgress(userId, challengeId, progress) {
-        try {
-            // Nejprve získáme informace o výzvě
-            const { data: challengeData, error: challengeError } = await this.supabase
-                .from('challenges')
-                .select('condition_value')
-                .eq('id', challengeId)
-                .single();
-    
-            if (challengeError) throw challengeError;
-    
-            const { data, error } = await this.supabase
-                .from('player_challenges')
-                .upsert({
-                    player_id: userId,
-                    challenge_id: challengeId,
-                    progress: progress,
-                    completed: progress >= challengeData.condition_value
-                })
-                .select(`
-                    *,
-                    challenge:challenges(*)
-                `)
-                .single();
-    
-            if (error) throw error;
-            return data;
-        } catch (error) {
-            console.error('Chyba při aktualizaci progressu výzvy:', error.message);
-            throw error;
-        }
-    }
-
-    // Přidáme metodu pro kontrolu a reset denních/týdenních výzev
-    async checkAndResetChallenges(userId) {
-        try {
-            const { data, error } = await this.supabase
-                .rpc('check_and_reset_challenges', {
-                    user_id: userId
+                .rpc('get_player_challenges', {
+                    p_player_id: userId
                 });
 
             if (error) throw error;
+            
+            // Transformujeme data do původního formátu
+            return data.map(row => ({
+                challenge_id: row.challenge_id,
+                player_id: row.player_id,
+                progress: row.progress,
+                completed: row.completed,
+                last_reset: row.last_reset,
+                reward_claimed: row.reward_claimed,
+                challenge: {
+                    id: row.challenge_id,
+                    name: row.challenge_name,
+                    description: row.challenge_description,
+                    reward_gold: row.challenge_reward,
+                    condition_type: row.challenge_condition_type,
+                    condition_value: row.challenge_condition_value,
+                    reset_period: row.challenge_reset_period
+                }
+            }));
+        } catch (error) {
+            console.error('Error loading player challenges:', error);
+            throw error;
+        }
+    }
+
+    async claimChallengeReward(userId, challengeId) {
+        try {
+            const { data, error } = await this.supabase
+                .rpc('award_challenge_completion', {
+                    p_player_id: userId,
+                    p_challenge_id: challengeId
+                });
+
+            if (error) throw error;
+
+            // Pro Unlimited výzvy je smažeme po vyzvednutí odměny
+            const { data: challengeData } = await this.supabase
+                .from('challenges')
+                .select('reset_period')
+                .eq('id', challengeId)
+                .single();
+
+            if (!challengeData.reset_period) {
+                await this.supabase
+                    .from('player_challenges')
+                    .delete()
+                    .eq('player_id', userId)
+                    .eq('challenge_id', challengeId);
+            }
+
             return data;
         } catch (error) {
-            console.error('Chyba při kontrole a resetu výzev:', error.message);
+            console.error('Error claiming challenge reward:', error);
             throw error;
         }
     }
 
-    // Získání dostupných výzev
     async getAvailableChallenges() {
         try {
-            // Nejprve získáme všechny výzvy
-            const { data: allChallenges, error: challengesError } = await this.supabase
-                .from('challenges')
-                .select('*')
-                .order('id');
+            const { data: { user } } = await this.supabase.auth.getUser();
+            if (!user) throw new Error('User not authenticated');
 
-            if (challengesError) throw challengesError;
-
-            // Získáme aktuální session
-            const { data: { session }, error: sessionError } = await this.supabase.auth.getSession();
-            if (sessionError) throw sessionError;
-            
-            if (!session) throw new Error('No active session');
-
-            // Získáme ID všech aktivních výzev uživatele
-            const { data: activePlayerChallenges, error: playerChallengesError } = await this.supabase
+            // Nejprve získáme ID výzev, které už hráč má
+            const { data: playerChallenges } = await this.supabase
                 .from('player_challenges')
                 .select('challenge_id')
-                .eq('player_id', session.user.id);
+                .eq('player_id', user.id);
 
-            if (playerChallengesError) throw playerChallengesError;
+            const existingChallengeIds = playerChallenges?.map(pc => pc.challenge_id) || [];
 
-            // Vytvoříme set ID aktivních výzev pro rychlejší vyhledávání
-            const activeIds = new Set(activePlayerChallenges.map(pc => pc.challenge_id));
+            // Získáme všechny výzvy, které hráč ještě nemá přijaté
+            const { data, error } = await this.supabase
+                .from('challenges')
+                .select('*')
+                .not('id', 'in', `(${existingChallengeIds.join(',')})`);
 
-            // Odfiltrujeme výzvy, které už uživatel má aktivní
-            const availableChallenges = allChallenges.filter(challenge => !activeIds.has(challenge.id));
+            if (error) throw error;
+            
+            // Pokud hráč nemá žádné výzvy, vrátíme všechny dostupné
+            if (existingChallengeIds.length === 0) {
+                const { data: allChallenges, error: allError } = await this.supabase
+                    .from('challenges')
+                    .select('*');
+                    
+                if (allError) throw allError;
+                return allChallenges;
+            }
 
-            return availableChallenges;
+            return data;
         } catch (error) {
-            console.error('Error getting available challenges:', error);
+            console.error('Error loading available challenges:', error);
             throw error;
         }
     }
 
-    // Přijetí výzvy
     async acceptChallenge(userId, challengeId) {
         try {
             const { data, error } = await this.supabase
                 .from('player_challenges')
-                .insert([{
+                .insert({
                     player_id: userId,
                     challenge_id: challengeId,
                     progress: 0,
                     completed: false,
                     last_reset: new Date().toISOString()
-                }]);
+                });
 
             if (error) throw error;
             return data;

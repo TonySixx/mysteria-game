@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { theme } from '../../styles/theme';
 import supabaseService from '../../services/supabaseService';
+import socketService from '../../services/socketService';
 
 const progressAnimation = (width) => keyframes`
     from { width: 0; }
@@ -235,6 +236,10 @@ const AcceptButton = styled.button`
     }
 `;
 
+const ClaimButton = styled(AcceptButton)`
+    background: linear-gradient(135deg, ${theme.colors.success} 0%, ${theme.colors.primary} 100%);
+`;
+
 const ChallengeTypeTag = styled.div`
     background: ${props => {
         switch (props.type) {
@@ -307,7 +312,7 @@ const EmptyState = styled.div`
     }
 `;
 
-function ChallengesPanel({ userId }) {
+function ChallengesPanel({ userId, onGoldUpdate }) {
     const [challenges, setChallenges] = useState([]);
     const [availableChallenges, setAvailableChallenges] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -370,6 +375,33 @@ function ChallengesPanel({ userId }) {
         return `Resets in ${hours}h ${minutes}m`;
     };
 
+    const handleClaimReward = async (challengeId, rewardGold) => {
+        try {
+            await supabaseService.claimChallengeReward(userId, challengeId);
+            
+            // Aktualizujeme seznamy výzev
+            await loadChallenges();
+            await loadAvailableChallenges();
+            
+            // Aktualizujeme zlaťáky v nadřazené komponentě
+            if (onGoldUpdate) {
+                onGoldUpdate();
+            }
+
+            // Zobrazíme notifikaci pomocí RewardNotification
+            const rewardData = {
+                gold: rewardGold,
+                message: `You claimed ${rewardGold} gold from challenge completion!`
+            };
+            
+            // Použijeme socket pro zobrazení notifikace
+            socketService.socket.emit('rewardEarned', rewardData);
+
+        } catch (error) {
+            console.error('Error claiming reward:', error);
+        }
+    };
+
     if (loading) return <div>Loading challenges...</div>;
 
     return (
@@ -389,7 +421,7 @@ function ChallengesPanel({ userId }) {
                                 <ChallengeName>
                                     {challenge.challenge.name}
                                     <ChallengeTypeTag type={challenge.challenge.reset_period}>
-                                        {challenge.challenge.reset_period || 'One-time'}
+                                        {challenge.challenge.reset_period || 'Unlimited'}
                                     </ChallengeTypeTag>
                                 </ChallengeName>
                                 <ChallengeDescription>
@@ -404,6 +436,16 @@ function ChallengesPanel({ userId }) {
                                 <Reward>{challenge.challenge.reward_gold}</Reward>
                                 {timeRemaining && (
                                     <ResetTimer>{timeRemaining}</ResetTimer>
+                                )}
+                                {challenge.completed && !challenge.reward_claimed && (
+                                    <ClaimButton 
+                                        onClick={() => handleClaimReward(
+                                            challenge.challenge.id,
+                                            challenge.challenge.reward_gold
+                                        )}
+                                    >
+                                        Claim Reward
+                                    </ClaimButton>
                                 )}
                             </ChallengeCard>
                         );
@@ -423,7 +465,7 @@ function ChallengesPanel({ userId }) {
                             <ChallengeName>
                                 {challenge.name}
                                 <ChallengeTypeTag type={challenge.reset_period}>
-                                    {challenge.reset_period || 'One-time'}
+                                    {challenge.reset_period || 'Unlimited'}
                                 </ChallengeTypeTag>
                             </ChallengeName>
                             <ChallengeDescription>

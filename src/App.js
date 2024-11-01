@@ -5,6 +5,7 @@ import supabaseService from './services/supabaseService';
 import MainMenu from './components/MainMenu';
 import ConnectionStatus from './components/ConnectionStatus';
 import GlobalStyles from './styles/GlobalStyles';
+import RewardNotification from './components/rewards/RewardNotification';
 
 function App() {
     const [gameId, setGameId] = useState(null);
@@ -16,6 +17,7 @@ function App() {
         isConnected: false,
         show: false
     });
+    const [reward, setReward] = useState(null);
 
     useEffect(() => {
         // Inicializace session při načtení aplikace
@@ -90,8 +92,14 @@ function App() {
         socketService.onConnect(handleConnect);
         socketService.onDisconnect(handleDisconnect);
 
+        // Přidáme handler pro rewardEarned
+        socketService.socket.on('rewardEarned', (rewardData) => {
+            setReward(rewardData);
+        });
+
         return () => {
             socketService.disconnect();
+            socketService.socket.off('rewardEarned');
         };
     }, [isInitialized]);
 
@@ -119,6 +127,12 @@ function App() {
                     isConnected={connectionStatus.isConnected}
                     show={connectionStatus.show}
                 />
+                {reward && (
+                    <RewardNotification 
+                        reward={reward} 
+                        onClose={() => setReward(null)}
+                    />
+                )}
                 {!gameId ? (
                     <MainMenu 
                         user={user} 

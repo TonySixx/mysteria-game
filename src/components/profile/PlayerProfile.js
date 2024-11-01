@@ -6,8 +6,6 @@ import { FaChevronDown, FaUser, FaTrophy, FaStore } from 'react-icons/fa';
 import CardPackStore from './CardPackStore';
 import CardPackOpening from './CardPackOpening';
 import ChallengesPanel from './ChallengesPanel';
-import RewardPopup from '../rewards/RewardPopup';
-import socketService from '../../services/socketService';
 
 const ProfileContainer = styled.div`
     max-width: 800px;
@@ -243,8 +241,6 @@ function PlayerProfile({ userId }) {
     const [showPackOpening, setShowPackOpening] = useState(false);
     const [openedCards, setOpenedCards] = useState([]);
     const [playerGold, setPlayerGold] = useState(0);
-    const [showReward, setShowReward] = useState(false);
-    const [currentReward, setCurrentReward] = useState(null);
     const [activeTab, setActiveTab] = useState('dashboard');
 
     useEffect(() => {
@@ -266,13 +262,6 @@ function PlayerProfile({ userId }) {
 
         loadProfileData();
         loadPlayerCurrency();
-        
-        // Přidáme socket listener pro odměny
-        socketService.socket.on('rewardEarned', handleRewardEarned);
-        
-        return () => {
-            socketService.socket.off('rewardEarned', handleRewardEarned);
-        };
     }, [userId]);
 
     const loadPlayerCurrency = async () => {
@@ -284,29 +273,21 @@ function PlayerProfile({ userId }) {
         }
     };
 
-    const handleRewardEarned = (reward) => {
-        setCurrentReward(reward);
-        setShowReward(true);
-        loadPlayerCurrency(); // Aktualizujeme zobrazení zlata
-    };
-
     const handlePackPurchase = async (packId) => {
         try {
             const cards = await supabaseService.purchaseCardPack(userId, packId);
             
-            // Ověříme, že cards je pole nebo ho převedeme na pole
             const cardsArray = Array.isArray(cards) ? cards : JSON.parse(cards);
             
             if (cardsArray && cardsArray.length > 0) {
                 setOpenedCards(cardsArray);
                 setShowPackOpening(true);
-                await loadPlayerCurrency(); // Aktualizujeme zobrazení zlata po nákupu
+                await loadPlayerCurrency();
             } else {
-                throw new Error('Nepodařilo se získat karty z balíčku');
+                throw new Error('Failed to get cards from pack');
             }
         } catch (error) {
             console.error('Error purchasing pack:', error);
-            // Zde můžete přidat notifikaci o chybě
         }
     };
 
@@ -424,7 +405,10 @@ function PlayerProfile({ userId }) {
             )}
 
             {activeTab === 'challenges' && (
-                <ChallengesPanel userId={userId} />
+                <ChallengesPanel 
+                    userId={userId} 
+                    onGoldUpdate={loadPlayerCurrency} 
+                />
             )}
 
             {activeTab === 'store' && (
@@ -447,13 +431,6 @@ function PlayerProfile({ userId }) {
                         setShowPackOpening(false);
                         setOpenedCards([]);
                     }}
-                />
-            )}
-
-            {showReward && (
-                <RewardPopup
-                    rewards={currentReward}
-                    onClose={() => setShowReward(false)}
                 />
             )}
         </ProfileContainer>
