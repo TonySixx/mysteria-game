@@ -50,7 +50,12 @@ import manaSiphon from '../../assets/images/mana-siphon.png';
 import mountainGiant from '../../assets/images/mountain-giant.png';
 import ancientGuardian from '../../assets/images/ancient-guardian.png';
 import arcaneProtector from '../../assets/images/arcane-protector.png';
-
+import freezingDragon from '../../assets/images/freezing-dragon.png';
+import elvenCommander from '../../assets/images/elven-commander.png';
+import lavaGolem from '../../assets/images/lava-golem.png';
+import wolfWarrior from '../../assets/images/wolf-warrior.png';
+import blindAssassin from '../../assets/images/blind-assassin.png';
+import sleepingGiant from '../../assets/images/sleeping-giant.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -94,7 +99,13 @@ export const cardImages = {
   'manaSiphon': manaSiphon,
   'mountainGiant': mountainGiant,
   'ancientGuardian': ancientGuardian,
-  'arcaneProtector': arcaneProtector
+  'arcaneProtector': arcaneProtector,
+  'freezingDragon': freezingDragon,
+  'elvenCommander': elvenCommander,
+  'lavaGolem': lavaGolem,
+  'wolfWarrior': wolfWarrior,
+  'blindAssassin': blindAssassin,
+  'sleepingGiant': sleepingGiant
 };
 
 const DeckBuilderContainer = styled(motion.div)`

@@ -665,29 +665,6 @@ const CardBack = styled.div`
   border-radius: 8px;
 `;
 
-// Nejdřív vytvoříme mapu obrázků
-// const cardImages = {
-//   'fireElemental': fireElemental,
-//   'earthGolem': earthGolem,
-//   'fireball': fireball,
-//   'healingTouch': healingTouch,
-//   'lightningBolt': lightningBolt,
-//   'arcaneIntellect': arcaneIntellect,
-//   'shieldBearer': shieldBearer,
-//   'waterElemental': waterElemental,
-//   'nimbleSprite': nimbleSprite,
-//   'arcaneFamiliar': arcaneFamiliar,
-//   'glacialBurst': glacialBurst,
-//   'radiantProtector': radiantProtector,
-//   'infernoWave': infernoWave,
-//   'coinImage': coinImage,
-//   'shadowAssassin': shadowAssassin,
-//   'manaWyrm': manaWyrm,
-//   'soulCollector': soulCollector,
-//   'mindControl': mindControl,
-//   'arcaneExplosion': arcaneExplosion,
-//   'holyNova': holyNova
-// };
 
 // Upravte CardDisplay komponentu
 const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame, isPlayerTurn, gameState }) => {
