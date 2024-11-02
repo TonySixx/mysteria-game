@@ -92,20 +92,21 @@ function App() {
         socketService.onConnect(handleConnect);
         socketService.onDisconnect(handleDisconnect);
 
-        // Přidáme handler pro rewardEarned pouze pokud je uživatel přihlášen
-        if (user) {
+        return () => {
+            socketService.disconnect();
+        };
+    }, [isInitialized]);
+
+    useEffect(() => {
+        if (user && isInitialized) {
             socketService.socket?.on('rewardEarned', (rewardData) => {
                 setReward(rewardData);
             });
+            return () => {
+                socketService.socket.off('rewardEarned');
+            };
         }
-
-        return () => {
-            socketService.disconnect();
-            if (user) {
-                socketService.socket?.off('rewardEarned');
-            }
-        };
-    }, [isInitialized, user]);
+    }, [user, isInitialized]);
 
     const handleGameStart = useCallback((newGameId) => {
         setGameId(newGameId);
@@ -127,19 +128,19 @@ function App() {
         <>
             <GlobalStyles />
             <div>
-                <ConnectionStatus 
+                <ConnectionStatus
                     isConnected={connectionStatus.isConnected}
                     show={connectionStatus.show}
                 />
                 {reward && (
-                    <RewardNotification 
-                        reward={reward} 
+                    <RewardNotification
+                        reward={reward}
                         onClose={() => setReward(null)}
                     />
                 )}
                 {!gameId ? (
-                    <MainMenu 
-                        user={user} 
+                    <MainMenu
+                        user={user}
                         onGameStart={handleGameStart}
                         onLogin={(userData) => setUser(userData.user)}
                         onLogout={() => {
@@ -149,7 +150,7 @@ function App() {
                         isConnected={connectionStatus.isConnected}
                     />
                 ) : (
-                    gameState && <GameScene 
+                    gameState && <GameScene
                         gameState={gameState}
                         onPlayCard={(cardData) => socketService.playCard(cardData)}
                         onAttack={(attackData) => socketService.attack(attackData)}
