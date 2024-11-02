@@ -92,16 +92,20 @@ function App() {
         socketService.onConnect(handleConnect);
         socketService.onDisconnect(handleDisconnect);
 
-        // Přidáme handler pro rewardEarned
-        socketService.socket.on('rewardEarned', (rewardData) => {
-            setReward(rewardData);
-        });
+        // Přidáme handler pro rewardEarned pouze pokud je uživatel přihlášen
+        if (user) {
+            socketService.socket?.on('rewardEarned', (rewardData) => {
+                setReward(rewardData);
+            });
+        }
 
         return () => {
             socketService.disconnect();
-            socketService.socket.off('rewardEarned');
+            if (user) {
+                socketService.socket?.off('rewardEarned');
+            }
         };
-    }, [isInitialized]);
+    }, [isInitialized, user]);
 
     const handleGameStart = useCallback((newGameId) => {
         setGameId(newGameId);
