@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
@@ -145,22 +145,52 @@ const PriceTag = styled.div`
 
 const ErrorMessage = styled(motion.div)`
     position: fixed;
-    top: 20px;
-    right: 20px;
-    background: ${theme.colors.accent};
-    color: white;
-    padding: 15px 25px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, 
+        ${theme.colors.background} 0%,
+        ${theme.colors.secondary} 100%
+    );
+    border: 2px solid ${theme.colors.accent};
     border-radius: 8px;
+    padding: 20px 30px;
+    color: ${theme.colors.text.primary};
     z-index: 1000;
+    text-align: center;
+    min-width: 300px;
+    max-width: 90vw;
+    width: fit-content;
+    box-shadow: ${theme.shadows.intense};
+    margin: 0 auto;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+
+    &::before {
+        content: '⚠️';
+        display: block;
+        font-size: 2em;
+        margin-bottom: 10px;
+    }
 `;
 
 function CardPackStore({ onPurchase, userId, playerGold }) {
     const [packs, setPacks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const errorTimerRef = useRef(null);
 
     useEffect(() => {
         loadCardPacks();
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (errorTimerRef.current) {
+                clearTimeout(errorTimerRef.current);
+            }
+        };
     }, []);
 
     const loadCardPacks = async () => {
@@ -174,10 +204,22 @@ function CardPackStore({ onPurchase, userId, playerGold }) {
         }
     };
 
+    const showError = (message) => {
+        if (errorTimerRef.current) {
+            clearTimeout(errorTimerRef.current);
+        }
+        
+        setError(message);
+        
+        errorTimerRef.current = setTimeout(() => {
+            setError(null);
+            errorTimerRef.current = null;
+        }, 3000);
+    };
+
     const handlePurchase = async (pack) => {
         if (playerGold < pack.price) {
-            setError("Not enough gold to purchase this pack!");
-            setTimeout(() => setError(null), 3000);
+            showError(`Not enough gold! You need ${pack.price - playerGold} more gold to purchase this pack.`);
             return;
         }
 
@@ -185,8 +227,7 @@ function CardPackStore({ onPurchase, userId, playerGold }) {
             await onPurchase(pack.id);
         } catch (error) {
             console.error('Error purchasing pack:', error);
-            setError("Failed to purchase pack. Please try again.");
-            setTimeout(() => setError(null), 3000);
+            showError("Failed to purchase pack. Please try again.");
         }
     };
 
@@ -224,9 +265,9 @@ function CardPackStore({ onPurchase, userId, playerGold }) {
 
             {error && (
                 <ErrorMessage
-                    initial={{ opacity: 0, y: -50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -50 }}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
                 >
                     {error}
                 </ErrorMessage>

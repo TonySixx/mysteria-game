@@ -351,6 +351,25 @@ const LoadingSpinner = styled.div`
     }
 `;
 
+// Přidáme pomocnou funkci pro řazení výzev
+const sortChallenges = (challenges) => {
+    const priorityOrder = {
+        'unlimited': 0,
+        'daily': 1,
+        'weekly': 2
+    };
+
+    return [...challenges].sort((a, b) => {
+        const challengeA = a.challenge || a;
+        const challengeB = b.challenge || b;
+        
+        const resetPeriodA = challengeA.reset_period || 'unlimited';
+        const resetPeriodB = challengeB.reset_period || 'unlimited';
+        
+        return priorityOrder[resetPeriodA] - priorityOrder[resetPeriodB];
+    });
+};
+
 function ChallengesPanel({ userId, onGoldUpdate }) {
     const [challenges, setChallenges] = useState([]);
     const [availableChallenges, setAvailableChallenges] = useState([]);
@@ -366,7 +385,7 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
     const loadChallenges = async () => {
         try {
             const data = await supabaseService.getPlayerChallenges(userId);
-            setChallenges(data);
+            setChallenges(sortChallenges(data));
         } catch (error) {
             console.error('Error loading challenges:', error);
         }
@@ -375,7 +394,7 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
     const loadAvailableChallenges = async () => {
         try {
             const data = await supabaseService.getAvailableChallenges();
-            setAvailableChallenges(data);
+            setAvailableChallenges(sortChallenges(data));
         } catch (error) {
             console.error('Error loading available challenges:', error);
         } finally {

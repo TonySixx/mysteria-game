@@ -128,8 +128,56 @@ const NoPlayersText = styled(LoadingText)`
     color: ${theme.colors.text.secondary};
 `;
 
-function OnlinePlayers({ players }) {
+const TitleContainer = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+`;
+
+const RefreshButton = styled.button`
+    background: none;
+    border: none;
+    color: ${theme.colors.text.secondary};
+    cursor: pointer;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border-radius: 50%;
+    
+    &:hover {
+        color: ${theme.colors.text.primary};
+        background: rgba(255, 215, 0, 0.1);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    svg {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.5s ease;
+    }
+
+    &.rotating svg {
+        transform: rotate(360deg);
+    }
+`;
+
+const RefreshIcon = () => (
+    <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+    </svg>
+);
+
+function OnlinePlayers({ players, onRefresh }) {
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
         if (players && Array.isArray(players)) {
@@ -139,6 +187,20 @@ function OnlinePlayers({ players }) {
             return () => clearTimeout(timer);
         }
     }, [players]);
+
+    const handleRefresh = async () => {
+        if (isRefreshing) return;
+        
+        setIsRefreshing(true);
+        if (onRefresh) {
+            await onRefresh();
+        }
+        
+        // Přidáme minimální dobu rotace pro lepší vizuální efekt
+        setTimeout(() => {
+            setIsRefreshing(false);
+        }, 500);
+    };
 
     const getStatusText = (status) => {
         switch (status) {
@@ -150,7 +212,17 @@ function OnlinePlayers({ players }) {
 
     return (
         <OnlinePlayersContainer>
-            <Title>Online Players</Title>
+            <TitleContainer>
+                <Title>Online Players</Title>
+                <RefreshButton 
+                    onClick={handleRefresh} 
+                    disabled={isLoading || isRefreshing}
+                    className={isRefreshing ? 'rotating' : ''}
+                    title="Refresh list"
+                >
+                    <RefreshIcon />
+                </RefreshButton>
+            </TitleContainer>
             <ContentContainer $centered={isLoading || !players || players.length === 0}>
                 {isLoading ? (
                     <>
