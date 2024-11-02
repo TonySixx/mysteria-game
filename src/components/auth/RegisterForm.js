@@ -148,7 +148,7 @@ function RegisterForm({ onSuccess }) {
                 formData.password,
                 formData.username
             );
-            onSuccess(data);
+            window.location.reload();
         } catch (error) {
             setError(error.message);
         } finally {
