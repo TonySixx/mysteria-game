@@ -116,7 +116,7 @@ function LoginForm({ onSuccess }) {
         } catch (error) {
             console.error('Login error:', error);
             if (error.message.includes('websocket error') || error.message.includes('connect_error')) {
-                setError('Unable to connect to game server. Please try again later.');
+                setError('Game server is currently unavailable. Please try again later.');
             } else {
                 setError(error.message);
             }

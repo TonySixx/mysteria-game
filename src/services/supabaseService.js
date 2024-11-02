@@ -107,17 +107,30 @@ class SupabaseService {
                 profileData
             );
 
-            // Počkáme na připojení socketu
-            await new Promise((resolve) => {
+            // Upravený kód pro čekání na připojení socketu s timeoutem
+            const socketConnected = await new Promise((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('websocket error: Connection timeout'));
+                }, 5000); // 5 sekund timeout
+
                 const checkConnection = () => {
                     if (socketService.isConnected()) {
-                        resolve();
+                        clearTimeout(timeout);
+                        resolve(true);
+                    } else if (!socketService.connectionPromise) {
+                        // Pokud není connectionPromise, znamená to že připojení selhalo
+                        clearTimeout(timeout);
+                        reject(new Error('websocket error: Connection failed'));
                     } else {
                         setTimeout(checkConnection, 100);
                     }
                 };
                 checkConnection();
             });
+
+            if (!socketConnected) {
+                throw new Error('websocket error: Unable to connect');
+            }
 
             return { user: signInData.user, profile: profileData };
         } catch (error) {
