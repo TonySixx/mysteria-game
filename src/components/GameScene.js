@@ -436,7 +436,7 @@ const CardDescription = styled.div`
   margin-bottom: ${props => props.$isMobile ? '1px' : '2px'};
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   color: white;
   text-shadow: 
