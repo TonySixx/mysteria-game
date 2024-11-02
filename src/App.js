@@ -24,7 +24,12 @@ function App() {
         const initApp = async () => {
             try {
                 const userData = await supabaseService.initSession();
-                setUser(userData?.user || null);
+                if (userData?.user) {
+                    const success = await initializeUserSession(userData.user);
+                    if (success) {
+                        setUser(userData.user);
+                    }
+                }
                 setIsInitialized(true);
             } catch (error) {
                 console.error('Chyba při inicializaci aplikace:', error);
@@ -40,13 +45,14 @@ function App() {
         // Přidáme listener pro změny auth stavu
         const { data: authListener } = supabaseService.supabase.auth.onAuthStateChange(
             async (event, session) => {
-                if (event === 'SIGNED_IN') {
-                    setUser(session.user);
-                } else if (event === 'SIGNED_OUT') {
+                console.log('Auth state changed:', event, session?.user?.id);
+                if (event === 'SIGNED_OUT') {
+                    socketService.disconnect();
                     setUser(null);
                     setGameId(null);
                     setGameState(null);
                 }
+                // Odstraníme SIGNED_IN handling odsud, protože to budeme řešit přes handleLogin
             }
         );
 
@@ -55,26 +61,107 @@ function App() {
         };
     }, []);
 
+    // Nová funkce pro inicializaci uživatelské session
+    const initializeUserSession = async (user) => {
+        try {
+            console.log('Initializing user session for:', user.id);
+            
+            // Získáme JWT token
+            const { data: { session }, error: sessionError } = await supabaseService.supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+
+            if (!session) {
+                throw new Error('No session available');
+            }
+
+            // Získáme profil uživatele
+            const { data: profile, error: profileError } = await supabaseService.supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError) throw profileError;
+
+            if (!profile) {
+                throw new Error('User profile not found');
+            }
+
+            console.log('Setting auth data with profile:', profile);
+
+            // Nastavíme auth data pro socket
+            socketService.setAuthData(
+                session.access_token,
+                user.id,
+                profile
+            );
+
+            // Počkáme na připojení socketu
+            const connected = await socketService.connect();
+            
+            if (!connected) {
+                throw new Error('Failed to connect to socket server');
+            }
+
+            console.log('Socket connected successfully');
+
+            // Vyžádáme si aktuální seznam hráčů
+            socketService.socket?.emit('request_online_players');
+
+            return true;
+        } catch (error) {
+            console.error('Error initializing user session:', error);
+            return false;
+        }
+    };
+
+    // Upravíme handler pro přihlášení
+    const handleLogin = async (userData) => {
+        try {
+            console.log('Starting login process for user:', userData.user.id);
+            const success = await initializeUserSession(userData.user);
+            
+            if (success) {
+                console.log('User session initialized successfully, setting user');
+                setUser(userData.user);
+                return true;
+            } else {
+                console.error('Failed to initialize user session');
+                throw new Error('Failed to initialize user session');
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            throw error;
+        }
+    };
+
     useEffect(() => {
         if (!isInitialized) return;
 
         const handleConnect = () => {
+            console.log('Socket connected - updating connection status');
             setConnectionStatus({
                 isConnected: true,
                 show: true
             });
-            // Skryjeme zprávu o úspěšném připojení po 3 sekundách
             setTimeout(() => {
                 setConnectionStatus(prev => ({ ...prev, show: false }));
             }, 3000);
         };
 
         const handleDisconnect = () => {
+            console.log('Socket disconnected - updating connection status');
             setConnectionStatus({
                 isConnected: false,
                 show: true
             });
         };
+
+        // Nastavení počátečního stavu připojení
+        setConnectionStatus(prev => ({
+            ...prev,
+            isConnected: socketService.isConnected()
+        }));
 
         // Nastavení callbacků pro Socket.IO
         socketService.onGameState((state) => {
@@ -93,17 +180,34 @@ function App() {
         socketService.onDisconnect(handleDisconnect);
 
         return () => {
-            socketService.disconnect();
+            // Bezpečné odstranění listenerů
+            if (socketService.socket) {
+                socketService.socket.off('gameState');
+                socketService.socket.off('error');
+            }
+            socketService.onConnect(null);
+            socketService.onDisconnect(null);
         };
     }, [isInitialized]);
 
+    // Přidáme samostatný useEffect pro cleanup socketu
+    useEffect(() => {
+        return () => {
+            socketService.disconnect();
+        };
+    }, []);
+
     useEffect(() => {
         if (user && isInitialized) {
-            socketService.socket?.on('rewardEarned', (rewardData) => {
+            const handleReward = (rewardData) => {
                 setReward(rewardData);
-            });
+            };
+
+            socketService.socket?.on('rewardEarned', handleReward);
+
             return () => {
-                socketService.socket.off('rewardEarned');
+                // Bezpečné odstranění listeneru
+                socketService.socket?.off('rewardEarned', handleReward);
             };
         }
     }, [user, isInitialized]);
@@ -142,9 +246,10 @@ function App() {
                     <MainMenu
                         user={user}
                         onGameStart={handleGameStart}
-                        onLogin={(userData) => setUser(userData.user)}
+                        onLogin={handleLogin}
                         onLogout={() => {
                             supabaseService.signOut();
+                            socketService.disconnect();
                             setUser(null);
                         }}
                         isConnected={connectionStatus.isConnected}

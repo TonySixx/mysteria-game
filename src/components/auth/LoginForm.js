@@ -112,8 +112,9 @@ function LoginForm({ onSuccess }) {
 
         try {
             const data = await supabaseService.signIn(email, password);
-            onSuccess(data);
+            await onSuccess(data);
         } catch (error) {
+            console.error('Login error:', error);
             setError(error.message);
         } finally {
             setLoading(false);

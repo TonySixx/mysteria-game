@@ -212,19 +212,26 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
 
         const setupOnlinePlayers = async () => {
             if (user) {
-                // Počkáme na připojení socketu
-                if (!socketService.isConnected()) {
-                    await socketService.connect();
-                }
-                
-                if (isSubscribed) {
-                    socketService.subscribeToOnlinePlayers((players) => {
-                        console.log('Updating online players:', {
-                            currentUser: user.id,
-                            players
+                try {
+                    // Zajistíme, že socket je připojen
+                    if (!socketService.isConnected()) {
+                        await socketService.connect();
+                    }
+                    
+                    if (isSubscribed) {
+                        // Explicitně požádáme o aktuální seznam hráčů
+                        socketService.socket?.emit('request_online_players');
+                        
+                        socketService.subscribeToOnlinePlayers((players) => {
+                            console.log('Updating online players:', {
+                                currentUser: user.id,
+                                players
+                            });
+                            setOnlinePlayers(players);
                         });
-                        setOnlinePlayers(players);
-                    });
+                    }
+                } catch (error) {
+                    console.error('Error setting up online players:', error);
                 }
             }
         };
@@ -235,7 +242,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
             isSubscribed = false;
             socketService.unsubscribeFromOnlinePlayers();
         };
-    }, [user]);
+    }, [user]); // Reagujeme pouze na změnu uživatele
 
   
         // Přidáme useEffect pro změnu tabu při přihlášení
