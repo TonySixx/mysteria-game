@@ -398,8 +398,10 @@ const TauntLabel = styled.div`
 const CardName = styled.div`
   font-weight: bold;
   text-align: center;
+  line-height: 1;
+  margin-top: 1px;
   font-size: ${props => props.$isMobile ? '10px' : '14px'};
-  margin-bottom: ${props => props.$isMobile ? '2px' : '0px'};
+  margin-bottom: ${props => props.$isMobile ? '0px' : '0px'};
   color: white;
   position: relative;
   z-index: 2;
@@ -415,7 +417,7 @@ const CardStats = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: ${props => props.$isMobile ? '12px' : '16px'};
+  font-size: ${props => props.$isMobile ? '12px' : '15px'};
   font-weight: bold;
   color: white;
   text-shadow: 
