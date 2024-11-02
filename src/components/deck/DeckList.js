@@ -55,11 +55,13 @@ const ActiveIndicator = styled(FaStar)`
 `;
 
 const DeckName = styled.h3`
+    font-family: 'Cinzel', serif;
     color: ${theme.colors.text.primary};
     margin: 0;
 `;
 
 const CardCount = styled.span`
+    font-family: 'Crimson Pro', serif;
     color: ${theme.colors.text.secondary};
 `;
 
@@ -103,6 +105,7 @@ const ActionButton = styled.button`
 `;
 
 const CreateDeckButton = styled(motion.button)`
+    font-family: 'Cinzel', serif;
     width: 100%;
     padding: 15px;
     margin: 20px 0;
@@ -149,6 +152,7 @@ const CreateDeckButton = styled(motion.button)`
 `;
 
 const EmptyState = styled.div`
+    font-family: 'Crimson Pro', serif;
     text-align: center;
     color: ${theme.colors.text.secondary};
     padding: 2rem;
@@ -181,6 +185,7 @@ const DialogContent = styled(motion.div)`
 `;
 
 const DialogTitle = styled.h2`
+    font-family: 'MedievalSharp', cursive;
     color: ${theme.colors.text.primary};
     margin: 0 0 1rem 0;
     display: flex;
@@ -190,6 +195,7 @@ const DialogTitle = styled.h2`
 `;
 
 const DialogText = styled.p`
+    font-family: 'Crimson Pro', serif;
     color: ${theme.colors.text.secondary};
     margin-bottom: 2rem;
 `;
@@ -201,6 +207,7 @@ const DialogButtons = styled.div`
 `;
 
 const DialogButton = styled.button`
+    font-family: 'Cinzel', serif;
     padding: 0.8rem 1.5rem;
     background: ${props => props.$danger ? 
         `linear-gradient(45deg, ${theme.colors.accent}, ${theme.colors.secondary})` :

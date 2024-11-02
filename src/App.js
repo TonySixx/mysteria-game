@@ -6,6 +6,15 @@ import MainMenu from './components/MainMenu';
 import ConnectionStatus from './components/ConnectionStatus';
 import GlobalStyles from './styles/GlobalStyles';
 import RewardNotification from './components/rewards/RewardNotification';
+import styled from 'styled-components';
+
+const AppWrapper = styled.div`
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+`;
 
 function App() {
     const [gameId, setGameId] = useState(null);
@@ -231,7 +240,7 @@ function App() {
     return (
         <>
             <GlobalStyles />
-            <div>
+            <AppWrapper>
                 <ConnectionStatus
                     isConnected={connectionStatus.isConnected}
                     show={connectionStatus.show}
@@ -262,7 +271,7 @@ function App() {
                         onEndTurn={() => socketService.endTurn()}
                     />
                 )}
-            </div>
+            </AppWrapper>
         </>
     );
 }

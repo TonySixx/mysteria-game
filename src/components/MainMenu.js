@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import LoginForm from './auth/LoginForm';
 import RegisterForm from './auth/RegisterForm';
@@ -12,12 +12,17 @@ import { deckService } from '../services/deckService';
 import DeckBuilder from './deck/DeckBuilder';
 
 const MenuContainer = styled.div`
-    max-width: 1200px;
+    min-height: 100vh;
+    width: 100%;
     margin: 0 auto;
     padding: 40px 20px;
     color: ${theme.colors.text.primary};
-    background: ${theme.colors.background};
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
 
     &::before {
         content: '';
@@ -27,7 +32,196 @@ const MenuContainer = styled.div`
         right: 0;
         height: 3px;
         background: ${theme.colors.border.golden};
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
     }
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: ${theme.colors.border.golden};
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+    }
+`;
+
+const ContentWrapper = styled.div`
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 40px;
+    background: linear-gradient(
+        135deg,
+        rgba(20, 10, 6, 0.98) 0%,
+        rgba(28, 15, 8, 0.98) 100%
+    );
+    border-radius: 20px;
+    box-shadow: 
+        0 0 30px rgba(0, 0, 0, 0.7),
+        0 0 2px rgba(255, 215, 0, 0.3),
+        inset 0 0 50px rgba(0, 0, 0, 0.5);
+    position: relative;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    max-height: 80vh;
+    min-height: 60vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: all 0.3s ease-in-out;
+
+    & > div:first-child {
+        position: relative;
+        min-height: 100%;
+        opacity: 1;
+        transition: opacity 0.2s ease-in-out;
+    }
+
+    &.loading > div:first-child {
+        opacity: 0;
+    }
+
+    &::-webkit-scrollbar {
+        width: 8px;
+        background-color: transparent;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+        margin: 10px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: linear-gradient(
+            to bottom,
+            rgba(255, 215, 0, 0.3),
+            rgba(255, 215, 0, 0.5)
+        );
+        border-radius: 4px;
+        border: 2px solid transparent;
+        background-clip: padding-box;
+
+        &:hover {
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 215, 0, 0.5),
+                rgba(255, 215, 0, 0.7)
+            );
+        }
+    }
+
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 215, 0, 0.5) rgba(0, 0, 0, 0.2);
+
+    &::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('./background-pattern.jpg') repeat;
+        opacity: 0.02;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    &::after {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(
+            circle at center,
+            transparent 0%,
+            rgba(0, 0, 0, 0.3) 100%
+        );
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    & > * {
+        position: relative;
+        z-index: 2;
+    }
+`;
+
+const MenuHeader = styled.div`
+    text-align: center;
+    margin-bottom: 60px;
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 300px;
+        height: 2px;
+        background: ${theme.colors.border.golden};
+        box-shadow: 
+            0 0 10px rgba(255, 215, 0, 0.3),
+            0 0 20px rgba(255, 215, 0, 0.2);
+    }
+`;
+
+const MenuTitle = styled.h1`
+    font-family: 'MedievalSharp', cursive;
+    font-size: 4.5em;
+    color: ${theme.colors.text.primary};
+    text-transform: uppercase;
+    letter-spacing: 5px;
+    margin: 0;
+    position: relative;
+    text-shadow: 
+        2px 2px 2px rgba(0, 0, 0, 0.5),
+        0 0 5px rgba(255, 215, 0, 0.3),
+        0 0 15px rgba(255, 215, 0, 0.2);
+    background: linear-gradient(
+        to bottom, 
+        #ffd700 0%, 
+        #b8860b 40%,
+        #ffd700 100%
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: titleGlow 3s ease-in-out infinite alternate;
+
+    &::before {
+        content: 'MYSTERIA';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        z-index: -1;
+        color: rgba(0, 0, 0, 0.3);
+        filter: blur(4px);
+    }
+
+    @keyframes titleGlow {
+        from {
+            filter: drop-shadow(0 0 1px rgba(255, 215, 0, 0.5))
+                   drop-shadow(0 0 2px rgba(255, 215, 0, 0.3));
+        }
+        to {
+            filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.7))
+                   drop-shadow(0 0 4px rgba(255, 215, 0, 0.4));
+        }
+    }
+`;
+
+const MenuSubtitle = styled.div`
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.2em;
+    color: ${theme.colors.text.secondary};
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 2px;
+    opacity: 0.8;
 `;
 
 const TabContainer = styled.div`
@@ -38,6 +232,7 @@ const TabContainer = styled.div`
 `;
 
 const Tab = styled.button`
+    font-family: 'Cinzel', serif;
     padding: 15px 30px;
     background: ${props => props.$active ? theme.colors.backgroundLight : 'transparent'};
     border: 2px solid transparent;
@@ -72,6 +267,7 @@ const Tab = styled.button`
 `;
 
 const PlayButton = styled.button`
+    font-family: 'Cinzel', serif;
     width: 300px;
     padding: 20px;
     background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
@@ -126,6 +322,7 @@ const PlayButton = styled.button`
 `;
 
 const LoadingText = styled.div`
+    font-family: 'Crimson Pro', serif;
     font-size: 1.3em;
     color: ${theme.colors.text.primary};
     text-align: center;
@@ -167,6 +364,7 @@ const Tooltip = styled.span`
 `;
 
 const WarningMessage = styled.div`
+    font-family: 'Crimson Pro', serif;
     color: ${theme.colors.accent};
     text-align: center;
     margin-bottom: 15px;
@@ -177,6 +375,84 @@ const WarningMessage = styled.div`
     font-weight: bold;
 `;
 
+const AuthTabContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    background: linear-gradient(135deg, rgba(20, 10, 6, 0.98) 0%, rgba(28, 15, 8, 0.98) 100%);
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    width: fit-content;
+    margin: 0 auto 30px auto;
+`;
+
+const AuthTab = styled.button`
+    font-family: 'Cinzel', serif;
+    padding: 12px 40px;
+    background: ${props => props.$active ? 
+        'linear-gradient(45deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.2))' : 
+        'transparent'
+    };
+    border: none;
+    color: ${props => props.$active ? theme.colors.text.primary : theme.colors.text.secondary};
+    cursor: pointer;
+    transition: all 0.3s;
+    font-size: 1.1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+    min-width: 160px;
+
+    &:first-child {
+        border-right: 1px solid rgba(255, 215, 0, 0.1);
+    }
+
+    &:hover {
+        color: ${theme.colors.text.primary};
+        background: linear-gradient(45deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.1));
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: ${props => props.$active ? '-2px' : '0'};
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: ${props => props.$active ? theme.colors.border.golden : 'transparent'};
+        box-shadow: ${props => props.$active ? '0 0 10px rgba(255, 215, 0, 0.3)' : 'none'};
+        transition: all 0.3s;
+    }
+`;
+
+// Přidáme nový custom hook pro scrollování
+const useScrollToContent = () => {
+    const scrollToContent = useCallback((elementId, delay = 0, isMainTabChange = false) => {
+        setTimeout(() => {
+            const element = document.getElementById(elementId);
+            if (element && !isMainTabChange) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, delay);
+    }, []);
+
+    return scrollToContent;
+};
+
+// Přidáme wrapper pro obsah tabů
+const TabContent = styled.div`
+    opacity: ${props => props.$isVisible ? 1 : 0};
+    transform: translateY(${props => props.$isVisible ? '0' : '20px'});
+    transition: all 0.3s ease-in-out;
+    min-height: 200px; // Minimální výška pro předejití skákání obsahu
+`;
+
 function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
@@ -185,6 +461,9 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
     const [decks, setDecks] = useState([]);
     const [currentScreen, setCurrentScreen] = useState('menu'); // Přidáme state pro navigaci
     const [editingDeck, setEditingDeck] = useState(null); // Přidáme state pro editovaný balíček
+    const [isLoading, setIsLoading] = useState(false);
+    const [contentVisible, setContentVisible] = useState(false);
+    const scrollToContent = useScrollToContent();
 
     const handleStartGame = () => {
         if (!user) {
@@ -287,7 +566,7 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
     const handleDeckSelect = async (deck) => {
         try {
             await deckService.setActiveDeck(user.id, deck.id);
-            // Aktualizujeme seznam balíčků
+            // Aktualizujeme seznam balíků
             loadDecks();
         } catch (error) {
             console.error('Error setting active deck:', error);
@@ -323,6 +602,32 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
         setEditingDeck(deck);
     };
 
+    // Funkce pro změnu tabu s plynulým přechodem
+    const handleTabChange = async (newTab) => {
+        setIsLoading(true);
+        setContentVisible(false);
+
+        setTimeout(() => {
+            setActiveTab(newTab);
+            setIsLoading(false);
+            
+            // Po změně tabu počkáme na vykreslení obsahu
+            setTimeout(() => {
+                setContentVisible(true);
+                scrollToContent('tab-content', 100); // Scrollujeme až po zobrazení obsahu
+            }, 50);
+        }, 200);
+    };
+
+    // Přidáme efekt pro inicializaci viditelnosti obsahu
+    useEffect(() => {
+        if (!isLoading) {
+            setTimeout(() => {
+                setContentVisible(true);
+            }, 100);
+        }
+    }, [isLoading]);
+
     if (currentScreen === 'deck-builder') {
         return (
             <DeckBuilder 
@@ -335,114 +640,138 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
 
     return (
         <MenuContainer>
-            {user ? (
-                <>
-                    <TabContainer>
-                        <Tab 
-                            $active={activeTab === 'play'} 
-                            onClick={() => setActiveTab('play')}
-                        >
-                            Play
-                        </Tab>
-                        <Tab 
-                            $active={activeTab === 'decks'} 
-                            onClick={() => setActiveTab('decks')}
-                        >
-                            Decks
-                        </Tab>
-                        <Tab 
-                            $active={activeTab === 'profile'} 
-                            onClick={() => setActiveTab('profile')}
-                        >
-                            Profile
-                        </Tab>
-                        <Tab 
-                            $active={activeTab === 'leaderboard'} 
-                            onClick={() => setActiveTab('leaderboard')}
-                        >
-                            Leaderboard
-                        </Tab>
-                        <Tab onClick={onLogout}>
-                            Logout
-                        </Tab>
-                    </TabContainer>
-
-                    {activeTab === 'play' && (
-                        <div>
-                            {isSearching ? (
-                                <>
-                                    <LoadingText>Searching for opponent...</LoadingText>
-                                    <CancelButton onClick={handleCancelSearch}>
-                                        Cancel Search
-                                    </CancelButton>
-                                </>
-                            ) : (
-                                <>
-                                    {!decks.some(deck => deck.is_active) && (
-                                        <WarningMessage>
-                                            You need to select an active deck before starting a game!
-                                        </WarningMessage>
-                                    )}
-                                    <PlayButton 
-                                        onClick={handleStartGame}
-                                        disabled={!decks.some(deck => deck.is_active) || !isConnected}
-                                    >
-                                        {isConnected ? 'Find Game' : 'Connecting to server...'}
-                                        {!isConnected && (
-                                            <Tooltip>
-                                                Please wait while connecting to the server
-                                            </Tooltip>
-                                        )}
-                                    </PlayButton>
-                                </>
+            <ContentWrapper className={isLoading ? 'loading' : ''}>
+                <div>
+                    <MenuHeader>
+                        <MenuTitle>Mysteria</MenuTitle>
+                        <MenuSubtitle>The Card Masters Saga</MenuSubtitle>
+                    </MenuHeader>
+                    {!user && (
+                        <>
+                            <AuthTabContainer>
+                                <AuthTab 
+                                    $active={activeTab === 'login'}
+                                    onClick={() => handleTabChange('login')}
+                                >
+                                    Login
+                                </AuthTab>
+                                <AuthTab 
+                                    $active={activeTab === 'register'}
+                                    onClick={() => handleTabChange('register')}
+                                >
+                                    Register
+                                </AuthTab>
+                            </AuthTabContainer>
+                            {activeTab === 'login' && (
+                                <LoginForm onSuccess={onLogin} />
                             )}
-                            {console.log('MainMenu - Rendering OnlinePlayers with:', onlinePlayers)}
-                            <OnlinePlayers players={onlinePlayers} />
-                        </div>
+                            {activeTab === 'register' && (
+                                <RegisterForm onSuccess={onLogin} />
+                            )}
+                        </>
                     )}
+                    {user && (
+                        <>
+                            <TabContainer>
+                                <Tab 
+                                    $active={activeTab === 'play'} 
+                                    onClick={() => handleTabChange('play')}
+                                >
+                                    Play
+                                </Tab>
+                                <Tab 
+                                    $active={activeTab === 'decks'} 
+                                    onClick={() => handleTabChange('decks')}
+                                >
+                                    Decks
+                                </Tab>
+                                <Tab 
+                                    $active={activeTab === 'profile'} 
+                                    onClick={() => handleTabChange('profile')}
+                                >
+                                    Profile
+                                </Tab>
+                                <Tab 
+                                    $active={activeTab === 'leaderboard'} 
+                                    onClick={() => handleTabChange('leaderboard')}
+                                >
+                                    Leaderboard
+                                </Tab>
+                                <Tab onClick={onLogout}>
+                                    Logout
+                                </Tab>
+                            </TabContainer>
 
-                    {activeTab === 'decks' && (
-                        <DeckList 
-                            decks={decks}
-                            onDeckSelect={handleDeckSelect}
-                            onCreateDeck={handleCreateDeck}
-                            onEditDeck={handleEditDeck}
-                            onDeleteDeck={handleDeleteDeck}
-                        />
-                    )}
+                            <TabContent 
+                                id="tab-content"
+                                $isVisible={contentVisible}
+                            >
+                                {activeTab === 'play' && (
+                                    <div>
+                                        {isSearching ? (
+                                            <>
+                                                <LoadingText>Searching for opponent...</LoadingText>
+                                                <CancelButton onClick={handleCancelSearch}>
+                                                    Cancel Search
+                                                </CancelButton>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {!decks.some(deck => deck.is_active) && (
+                                                    <WarningMessage>
+                                                        You need to select an active deck before starting a game!
+                                                    </WarningMessage>
+                                                )}
+                                                <PlayButton 
+                                                    onClick={handleStartGame}
+                                                    disabled={!decks.some(deck => deck.is_active) || !isConnected}
+                                                >
+                                                    {isConnected ? 'Find Game' : 'Connecting to server...'}
+                                                    {!isConnected && (
+                                                        <Tooltip>
+                                                            Please wait while connecting to the server
+                                                        </Tooltip>
+                                                    )}
+                                                </PlayButton>
+                                            </>
+                                        )}
+                                        {console.log('MainMenu - Rendering OnlinePlayers with:', onlinePlayers)}
+                                        <OnlinePlayers players={onlinePlayers} />
+                                    </div>
+                                )}
 
-                    {activeTab === 'profile' && (
-                        <PlayerProfile userId={user.id} />
-                    )}
+                                {activeTab === 'decks' && (
+                                    <div>
+                                        <DeckList 
+                                            decks={decks}
+                                            onDeckSelect={handleDeckSelect}
+                                            onCreateDeck={handleCreateDeck}
+                                            onEditDeck={handleEditDeck}
+                                            onDeleteDeck={handleDeleteDeck}
+                                        />
+                                    </div>
+                                )}
 
-                    {activeTab === 'leaderboard' && (
-                        <Leaderboard />
+                                {activeTab === 'profile' && (
+                                    <div>
+                                        <PlayerProfile 
+                                            userId={user.id}
+                                            onContentLoad={() => {
+                                                setContentVisible(true);
+                                                scrollToContent('tab-content', 100, true);
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {activeTab === 'leaderboard' && (
+                                    <Leaderboard />
+                                )}
+                            </TabContent>
+                        </>
                     )}
-                </>
-            ) : (
-                <TabContainer>
-                    <Tab 
-                        $active={activeTab === 'login'} 
-                        $vertical={true}
-                        onClick={() => setActiveTab('login')}
-                    >
-                        Login
-                    </Tab>
-                    <Tab 
-                        $vertical={true}
-                        $active={activeTab === 'register'} 
-                        onClick={() => setActiveTab('register')}
-                    >
-                        Register
-                    </Tab>
-                    {activeTab === 'login' && (
-                        <LoginForm onSuccess={onLogin} />
-                    )}
-                    {activeTab === 'register' && (
-                        <RegisterForm onSuccess={onLogin} />
-                    )}
-                </TabContainer>
-            )}
+                </div>
+            </ContentWrapper>
         </MenuContainer>
     );
 }

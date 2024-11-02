@@ -113,7 +113,7 @@ const DeckBuilderContainer = styled(motion.div)`
     grid-template-columns: 300px 1fr;
     gap: 20px;
     padding: 20px;
-    height: calc(100vh - 80px);
+    height: calc(100vh - 40px);
     background: ${theme.colors.background};
     color: white;
     overflow: hidden;
@@ -170,7 +170,6 @@ const DeckPreview = styled.div`
     padding: 20px;
     display: flex;
     flex-direction: column;
-    height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
 

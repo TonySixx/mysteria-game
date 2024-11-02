@@ -7,34 +7,78 @@ import premiumPack from '../../assets/images/premium_pack.png';
 import { motion } from 'framer-motion';
 
 const StoreContainer = styled.div`
-    padding: 20px;
-    background: ${theme.colors.backgroundLight};
-    border-radius: 8px;
+    padding: 30px;
+    background: linear-gradient(135deg, 
+        rgba(28, 15, 8, 0.95) 0%,
+        rgba(38, 20, 12, 0.95) 100%
+    );
+    border-radius: 12px;
     margin-top: 20px;
+    border: 1px solid rgba(255, 215, 0, 0.1);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+
+    h2 {
+        font-family: 'MedievalSharp', cursive;
+        font-size: 2.2em;
+        text-align: center;
+        margin-bottom: 30px;
+        color: ${theme.colors.text.primary};
+        text-transform: uppercase;
+        letter-spacing: 3px;
+        text-shadow: ${theme.shadows.golden};
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 2px;
+            background: ${theme.colors.border.golden};
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('./background-pattern.jpg') repeat;
+        opacity: 0.02;
+        pointer-events: none;
+    }
 `;
 
 const PackGrid = styled.div`
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    margin-top: 40px;
+    padding: 10px;
 `;
 
 const PackCard = styled(motion.div)`
-    padding: 20px;
-    border-radius: 12px;
+    padding: 30px;
+    border-radius: 15px;
     text-align: center;
     cursor: pointer;
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 
     ${props => {
         if (props.$type === 'premium_pack') {
             return `
                 background: linear-gradient(135deg, 
                     ${theme.colors.premium.dark} 0%, 
-                    ${theme.colors.premium.main} 50%,
-                    ${theme.colors.premium.light} 100%
+                    rgba(20, 10, 6, 0.98) 100%
                 );
                 border: 3px solid ${theme.colors.premium.border};
             `;
@@ -42,8 +86,7 @@ const PackCard = styled(motion.div)`
             return `
                 background: linear-gradient(135deg, 
                     ${theme.colors.basic.dark} 0%, 
-                    ${theme.colors.basic.main} 50%,
-                    ${theme.colors.basic.light} 100%
+                    rgba(20, 10, 6, 0.98) 100%
                 );
                 border: 2px solid ${theme.colors.basic.border};
             `;
@@ -58,47 +101,47 @@ const PackCard = styled(motion.div)`
         }
     `}
 
-    @keyframes shine {
-        0% {
-            left: -100%;
-        }
-        100% {
-            left: 100%;
-        }
-    }
-
     &::before {
         content: '';
         position: absolute;
         top: 0;
+        left: -100%;
         width: 100%;
         height: 100%;
         background: linear-gradient(
             90deg,
             transparent 0%,
             ${props => props.$type === 'premium_pack' 
-                ? 'rgba(100, 149, 237, 0.15)' 
-                : 'rgba(192, 192, 192, 0.15)'
+                ? 'rgba(100, 149, 237, 0.1)' 
+                : 'rgba(192, 192, 192, 0.1)'
             } 50%,
             transparent 100%
         );
-        animation: shine 1.5s infinite linear;
-        transform: skewX(-20deg);
+        transition: all 0.5s ease;
+    }
+
+    &:hover::before {
+        left: 100%;
     }
 
     img {
         width: 160px;
         height: 224px;
         object-fit: cover;
-        border-radius: 8px;
-        margin-bottom: 15px;
+        border-radius: 12px;
+        margin-bottom: 20px;
         transition: transform 0.3s ease;
+    }
+
+    &:hover img {
+        transform: scale(1.05) rotate(2deg);
     }
 `;
 
 const PackTitle = styled.h3`
-    font-size: 1.5em;
-    margin-bottom: 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 1.8em;
+    margin-bottom: 12px;
     text-transform: uppercase;
     letter-spacing: 2px;
     color: ${props => props.$type === 'premium_pack' 
@@ -112,34 +155,39 @@ const PackTitle = styled.h3`
 `;
 
 const PackDescription = styled.p`
+    font-family: 'Crimson Pro', serif;
     color: ${props => props.$type === 'premium_pack'
         ? theme.colors.premium.description
         : theme.colors.basic.description
     };
-    margin-bottom: 15px;
-    font-size: 1em;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    line-height: 1.4;
+    min-height: 50px;
 `;
 
 const PriceTag = styled.div`
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
+    gap: 10px;
+    padding: 10px 25px;
     background: ${props => props.$type === 'premium_pack'
         ? `linear-gradient(45deg, ${theme.colors.premium.price}, ${theme.colors.premium.priceHover})`
         : `linear-gradient(45deg, ${theme.colors.basic.price}, ${theme.colors.basic.priceHover})`
     };
-    border-radius: 20px;
+    border-radius: 25px;
     font-weight: bold;
-    font-size: 1.1em;
+    font-size: 1.2em;
     color: ${props => props.$type === 'premium_pack'
         ? theme.colors.premium.priceText
         : theme.colors.basic.priceText
     };
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     
     &::before {
         content: '🪙';
-        font-size: 1.2em;
+        font-size: 1.3em;
+        filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
     }
 `;
 
@@ -175,15 +223,24 @@ const ErrorMessage = styled(motion.div)`
     }
 `;
 
-function CardPackStore({ onPurchase, userId, playerGold }) {
+function CardPackStore({ onPurchase, userId, playerGold, onContentLoad }) {
     const [packs, setPacks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const errorTimerRef = useRef(null);
 
     useEffect(() => {
-        loadCardPacks();
-    }, []);
+        const loadData = async () => {
+            try {
+                await loadCardPacks();
+                onContentLoad?.();
+            } catch (error) {
+                console.error('Error loading card packs:', error);
+            }
+        };
+
+        loadData();
+    }, [onContentLoad]);
 
     useEffect(() => {
         return () => {

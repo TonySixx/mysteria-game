@@ -172,24 +172,54 @@ const DeckAndManaContainer = styled.div`
 `;
 
 const DeckContainer = styled.div`
-  position: relative;
-  width: 40px;
-  height: 60px;
-  background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
-  border: 2px solid #ffd700;
-  border-radius: 5px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #ffd700;
-  font-size: 14px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  cursor: help;
+    position: relative;
+    width: 40px;
+    height: 60px;
+    background: linear-gradient(135deg, 
+        rgba(20, 10, 6, 0.98) 0%,
+        rgba(28, 15, 8, 0.98) 100%
+    );
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: ${theme.colors.text.primary};
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: help;
+    box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
 
-  &:hover ${Tooltip} {
-    opacity: 1;
-  }
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('./background-pattern.png') repeat;
+        opacity: 0.02;
+        pointer-events: none;
+        border-radius: 4px;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.4),
+            inset 0 0 10px rgba(0, 0, 0, 0.5),
+            0 0 10px rgba(255, 215, 0, 0.2);
+
+        ${Tooltip} {
+            opacity: 1;
+        }
+    }
 `;
 
 const ManaInfo = styled.div`
@@ -205,23 +235,84 @@ const ManaInfo = styled.div`
 `;
 
 const EndTurnButton = styled.button`
-  font-size: 16px;
-  padding: 8px 16px;
-  background: linear-gradient(45deg, #ffd700, #ff9900);
-  border: none;
-  border-radius: 5px;
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-right: 36px;
-  opacity: ${props => props.disabled ? 0.5 : 1};
-  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
-  
-  &:hover {
-    transform: ${props => props.disabled ? 'none' : 'scale(1.05)'};
-    box-shadow: ${props => props.disabled ? 'none' : '0 0 10px #ffd700'};
-  }
+    font-family: 'Cinzel', serif;
+    padding: 8px 24px;
+    background: linear-gradient(45deg, 
+        rgba(44, 24, 16, 0.95) 0%,
+        rgba(56, 34, 25, 0.95) 100%
+    );
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    color: ${theme.colors.text.primary};
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 36px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 1.1em;
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    
+    opacity: ${props => props.disabled ? 0.5 : 1};
+    cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+    
+    &:hover {
+        transform: ${props => props.disabled ? 'none' : 'translateY(-2px)'};
+        box-shadow: ${props => props.disabled ? 
+            'none' : 
+            `0 0 15px rgba(255, 215, 0, 0.3),
+             0 0 30px rgba(255, 215, 0, 0.2)`
+        };
+    }
+
+    &:active {
+        transform: ${props => props.disabled ? 'none' : 'translateY(1px)'};
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 215, 0, 0.1) 50%,
+            transparent 100%
+        );
+        transition: 0.5s;
+    }
+
+    &:hover::before {
+        left: 100%;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        border-radius: 6px;
+        background: linear-gradient(45deg, 
+            rgba(255, 215, 0, 0.1),
+            rgba(255, 215, 0, 0.05)
+        );
+        z-index: -1;
+        opacity: 0;
+        transition: 0.3s;
+    }
+
+    &:hover::after {
+        opacity: 1;
+    }
 `;
 
 const DraggableCardWrapper = styled.div`
@@ -1044,7 +1135,7 @@ const DropZoneOverlay = styled.div`
   `}
 `;
 
-// Přidáme nov�� styled komponenty pro indikátor tahu
+// Přidáme nov styled komponenty pro indikátor tahu
 const TurnIndicator = styled.div`
   position: absolute;
   top: 20px;
@@ -1253,15 +1344,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     }
   }, [gameState?.animation, gameState?.playerIndex]);
 
-  // Funkce pro získání pozice elementu
-  const getElementPosition = (element) => {
-    if (!element) return { x: 0, y: 0 };
-    const rect = element.getBoundingClientRect();
-    return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2
-    };
-  };
 
   // Upravíme handleSkipAnimation pro plynulé ukončení
   const handleSkipAnimation = useCallback(() => {

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
 import { theme } from '../../styles/theme';
 import cardTexture from '../../assets/images/card-texture.png';
@@ -28,7 +29,9 @@ const OpeningContainer = styled.div`
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1000;
+    z-index: 9999;
+    position: fixed;
+    inset: 0;
 `;
 
 const CardsContainer = styled.div`
@@ -183,7 +186,7 @@ const getRarityColors = (rarity) => {
 };
 
 const CloseButton = styled.button`
-    position: absolute;
+    position: fixed;
     bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
@@ -221,7 +224,7 @@ function CardPackOpening({ cards, onClose }) {
 
     const areAllCardsFlipped = flippedCards.size === cards.length;
 
-    return (
+    return ReactDOM.createPortal(
         <OpeningContainer>
             <CardsContainer>
                 {cards.map((card, index) => {
@@ -268,7 +271,8 @@ function CardPackOpening({ cards, onClose }) {
             >
                 Continue
             </CloseButton>
-        </OpeningContainer>
+        </OpeningContainer>,
+        document.body
     );
 }
 

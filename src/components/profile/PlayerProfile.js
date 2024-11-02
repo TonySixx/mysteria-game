@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
@@ -203,6 +203,7 @@ const ProfileTabs = styled.div`
 `;
 
 const ProfileTab = styled.button`
+    font-family: 'Cinzel', serif;
     padding: 15px 30px;
     background: ${props => props.$active ? theme.colors.backgroundLight : 'transparent'};
     border: 2px solid transparent;
@@ -230,7 +231,53 @@ const ProfileTab = styled.button`
     }
 `;
 
-function PlayerProfile({ userId }) {
+const ProfileText = styled.p`
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.1em;
+    line-height: 1.6;
+    color: ${theme.colors.text.primary};
+`;
+
+const ProfileHeading = styled.h2`
+    font-family: 'MedievalSharp', cursive;
+    font-size: 2em;
+    color: ${theme.colors.text.primary};
+    margin-bottom: 1em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+`;
+
+const ProfileSubheading = styled.h3`
+    font-family: 'Cinzel', serif;
+    font-size: 1.5em;
+    color: ${theme.colors.text.secondary};
+    margin-bottom: 0.8em;
+`;
+
+const TabContent = styled.div`
+    opacity: ${props => props.$isVisible ? 1 : 0};
+    transform: translateY(${props => props.$isVisible ? '0' : '20px'});
+    transition: all 0.3s ease-in-out;
+    min-height: 200px;
+`;
+
+const useScrollToContent = () => {
+    const scrollToContent = useCallback((elementId, delay = 0, isMainTabChange = false) => {
+        setTimeout(() => {
+            const element = document.getElementById(elementId);
+            if (element && !isMainTabChange) {
+                element.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        }, delay);
+    }, []);
+
+    return scrollToContent;
+};
+
+function PlayerProfile({ userId, onContentLoad }) {
     const [profile, setProfile] = useState(null);
     const [gameHistory, setGameHistory] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -242,6 +289,9 @@ function PlayerProfile({ userId }) {
     const [openedCards, setOpenedCards] = useState([]);
     const [playerGold, setPlayerGold] = useState(0);
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [contentVisible, setContentVisible] = useState(false);
+    const [isInitialLoad, setIsInitialLoad] = useState(true);
+    const scrollToContent = useScrollToContent();
 
     useEffect(() => {
         const loadProfileData = async () => {
@@ -252,6 +302,10 @@ function PlayerProfile({ userId }) {
                 setProfile(profileData);
                 setGameHistory(historyData.data);
                 setHasMore(historyData.hasMore);
+                
+                setContentVisible(true);
+                onContentLoad?.();
+                setIsInitialLoad(false);
             } catch (error) {
                 setError('Failed to load profile data');
                 console.error(error);
@@ -262,7 +316,7 @@ function PlayerProfile({ userId }) {
 
         loadProfileData();
         loadPlayerCurrency();
-    }, [userId]);
+    }, [userId, onContentLoad]);
 
     const loadPlayerCurrency = async () => {
         try {
@@ -309,6 +363,21 @@ function PlayerProfile({ userId }) {
         }
     };
 
+    const handleTabChange = (newTab) => {
+        setContentVisible(false);
+        
+        setTimeout(() => {
+            setActiveTab(newTab);
+            
+            setTimeout(() => {
+                setContentVisible(true);
+                if (!isInitialLoad) {
+                    scrollToContent('profile-tab-content', 100);
+                }
+            }, 50);
+        }, 200);
+    };
+
     if (loading) {
         return <LoadingSpinner>Loading...</LoadingSpinner>;
     }
@@ -328,110 +397,123 @@ function PlayerProfile({ userId }) {
             <ProfileTabs>
                 <ProfileTab
                     $active={activeTab === 'dashboard'}
-                    onClick={() => setActiveTab('dashboard')}
+                    onClick={() => handleTabChange('dashboard')}
                 >
                     <FaUser /> Dashboard
                 </ProfileTab>
                 <ProfileTab
                     $active={activeTab === 'challenges'}
-                    onClick={() => setActiveTab('challenges')}
+                    onClick={() => handleTabChange('challenges')}
                 >
                     <FaTrophy /> Challenges
                 </ProfileTab>
                 <ProfileTab
                     $active={activeTab === 'store'}
-                    onClick={() => setActiveTab('store')}
+                    onClick={() => handleTabChange('store')}
                 >
                     <FaStore /> Store
                 </ProfileTab>
             </ProfileTabs>
 
-            {activeTab === 'dashboard' && (
-                <>
-                    <GoldDisplay>
-                        🪙 <span>{playerGold}</span> Gold
-                    </GoldDisplay>
-                    <StatsGrid>
-                        <StatCard>
-                            <h3>Rank</h3>
-                            <div>{profile.rank}</div>
-                        </StatCard>
-                        <StatCard>
-                            <h3>Total Games</h3>
-                            <div>{profile.total_games}</div>
-                        </StatCard>
-                        <StatCard>
-                            <h3>Wins</h3>
-                            <div>{profile.wins}</div>
-                        </StatCard>
-                        <StatCard>
-                            <h3>Losses</h3>
-                            <div>{profile.losses}</div>
-                        </StatCard>
-                        <StatCard>
-                            <h3>Win Rate</h3>
-                            <div>{winRate}%</div>
-                        </StatCard>
-                    </StatsGrid>
-                    <h2>Game History</h2>
-                    <GameHistoryTable>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Opponent</th>
-                                <th>Result</th>
-                                <th>Duration</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {gameHistory.map((game) => {
-                                const isPlayer1 = game.player_id === userId;
-                                const opponentUsername = isPlayer1 ? game.opponent.username : game.player.username;
+            <TabContent 
+                id="profile-tab-content"
+                $isVisible={contentVisible}
+            >
+                {activeTab === 'dashboard' && (
+                    <>
+                        <GoldDisplay>
+                            🪙 <span>{playerGold}</span> Gold
+                        </GoldDisplay>
+                        <StatsGrid>
+                            <StatCard>
+                                <h3>Rank</h3>
+                                <div>{profile.rank}</div>
+                            </StatCard>
+                            <StatCard>
+                                <h3>Total Games</h3>
+                                <div>{profile.total_games}</div>
+                            </StatCard>
+                            <StatCard>
+                                <h3>Wins</h3>
+                                <div>{profile.wins}</div>
+                            </StatCard>
+                            <StatCard>
+                                <h3>Losses</h3>
+                                <div>{profile.losses}</div>
+                            </StatCard>
+                            <StatCard>
+                                <h3>Win Rate</h3>
+                                <div>{winRate}%</div>
+                            </StatCard>
+                        </StatsGrid>
+                        <h2>Game History</h2>
+                        <GameHistoryTable>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Opponent</th>
+                                    <th>Result</th>
+                                    <th>Duration</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {gameHistory.map((game) => {
+                                    const isPlayer1 = game.player_id === userId;
+                                    const opponentUsername = isPlayer1 ? game.opponent.username : game.player.username;
 
-                                const isWinner = game.winner_id === userId;
+                                    const isWinner = game.winner_id === userId;
 
-                                return (
-                                    <tr key={game.id}>
-                                        <td>{new Date(game.created_at).toLocaleDateString()}</td>
-                                        <td>{opponentUsername}</td>
-                                        <td>{isWinner ? 'Victory' : 'Defeat'}</td>
-                                        <td>{game.game_duration}</td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </GameHistoryTable>
-                    {loadingMore && (
-                        <LoadingIndicator>Loading more games...</LoadingIndicator>
-                    )}
+                                    return (
+                                        <tr key={game.id}>
+                                            <td>{new Date(game.created_at).toLocaleDateString()}</td>
+                                            <td>{opponentUsername}</td>
+                                            <td>{isWinner ? 'Victory' : 'Defeat'}</td>
+                                            <td>{game.game_duration}</td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </GameHistoryTable>
+                        {loadingMore && (
+                            <LoadingIndicator>Loading more games...</LoadingIndicator>
+                        )}
 
-                    {hasMore && !loadingMore && (
-                        <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
-                            Load More Games <FaChevronDown />
-                        </LoadMoreButton>
-                    )}
-                </>
-            )}
+                        {hasMore && !loadingMore && (
+                            <LoadMoreButton onClick={handleLoadMore} disabled={loadingMore}>
+                                Load More Games <FaChevronDown />
+                            </LoadMoreButton>
+                        )}
+                    </>
+                )}
 
-            {activeTab === 'challenges' && (
-                <ChallengesPanel
-                    userId={userId}
-                    onGoldUpdate={loadPlayerCurrency}
-                />
-            )}
-
-            {activeTab === 'store' && (
-                <>
-                    <GoldDisplay>
-                        🪙 <span>{playerGold}</span> Gold
-                    </GoldDisplay>
-                    <CardPackStore
-                        onPurchase={handlePackPurchase}
+                {activeTab === 'challenges' && (
+                    <ChallengesPanel
                         userId={userId}
-                        playerGold={playerGold}
+                        onGoldUpdate={loadPlayerCurrency}
+                        onContentLoad={() => {
+                            setContentVisible(true);
+                            scrollToContent('profile-tab-content', 100);
+                        }}
                     />
-                </>
-            )}
+                )}
+
+                {activeTab === 'store' && (
+                    <>
+                        <GoldDisplay>
+                            🪙 <span>{playerGold}</span> Gold
+                        </GoldDisplay>
+                        <CardPackStore
+                            onPurchase={handlePackPurchase}
+                            userId={userId}
+                            playerGold={playerGold}
+                            onContentLoad={() => {
+                                setContentVisible(true);
+                                scrollToContent('profile-tab-content', 100);
+                            }}
+                        />
+                    </>
+                )}
+            </TabContent>
 
             {showPackOpening && (
                 <CardPackOpening

@@ -370,7 +370,7 @@ const sortChallenges = (challenges) => {
     });
 };
 
-function ChallengesPanel({ userId, onGoldUpdate }) {
+function ChallengesPanel({ userId, onGoldUpdate, onContentLoad }) {
     const [challenges, setChallenges] = useState([]);
     const [availableChallenges, setAvailableChallenges] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -378,9 +378,18 @@ function ChallengesPanel({ userId, onGoldUpdate }) {
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        loadChallenges();
-        loadAvailableChallenges();
-    }, [userId]);
+        const loadData = async () => {
+            try {
+                await loadChallenges();
+                await loadAvailableChallenges();
+                onContentLoad?.();
+            } catch (error) {
+                console.error('Error loading challenges:', error);
+            }
+        };
+
+        loadData();
+    }, [userId, onContentLoad]);
 
     const loadChallenges = async () => {
         try {

@@ -28,6 +28,7 @@ const FormContainer = styled.div`
     }
 
     h2 {
+        font-family: 'MedievalSharp', cursive;
         text-align: center;
         font-size: 2em;
         margin-bottom: 30px;
@@ -39,6 +40,7 @@ const FormContainer = styled.div`
 `;
 
 const Input = styled.input`
+    font-family: 'Crimson Pro', serif;
     width: 465px;
     padding: 15px;
     margin: 15px 0;
@@ -56,11 +58,13 @@ const Input = styled.input`
     }
 
     &::placeholder {
+        font-family: 'Crimson Pro', serif;
         color: rgba(255, 215, 0, 0.3);
     }
 `;
 
 const Button = styled.button`
+    font-family: 'Cinzel', serif;
     width: 100%;
     padding: 15px;
     margin: 20px 0;
@@ -89,6 +93,7 @@ const Button = styled.button`
 `;
 
 const ErrorMessage = styled.div`
+    font-family: 'Crimson Pro', serif;
     color: ${theme.colors.accent};
     margin: 15px 0;
     padding: 10px;
