@@ -5,28 +5,8 @@ import playerHeroImage from '../assets/images/player-hero.png';
 import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
 import { Notification } from './Notification';
-import earthGolem from '../assets/images/earth-golem.png';
-import fireball from '../assets/images/fireball.png';
-import healingTouch from '../assets/images/healing-touch.png';
-import lightningBolt from '../assets/images/lightning-bolt.png';
-import arcaneIntellect from '../assets/images/arcane-intellect.png';
-import fireElemental from '../assets/images/fire-elemental.png';
-import shieldBearer from '../assets/images/shield-bearer.png';
-import waterElemental from '../assets/images/water-elemental.png';
-import coinImage from '../assets/images/mana-coin.png';
 import cardTexture from '../assets/images/card-texture.png';
-import nimbleSprite from '../assets/images/nimble-sprite.png';
-import arcaneFamiliar from '../assets/images/arcane-familiar.png';
-import glacialBurst from '../assets/images/glacial-burst.png';
-import radiantProtector from '../assets/images/radiant-protector.png';
-import infernoWave from '../assets/images/inferno-wave.png';
 import cardBackImage from '../assets/images/card-back.png';
-import shadowAssassin from '../assets/images/shadow-assassin.png';
-import manaWyrm from '../assets/images/mana-wyrm.png';
-import soulCollector from '../assets/images/soul-collector.png';
-import mindControl from '../assets/images/mind-control.png';
-import arcaneExplosion from '../assets/images/arcane-explosion.png';
-import holyNova from '../assets/images/holy-nova.png';
 import { CombatLog } from './CombatLog';
 import { theme } from '../styles/theme';
 import { cardImages } from './deck/DeckBuilder';
@@ -822,65 +802,177 @@ const PlayAgainButton = styled.button`
 
 // Upravíme styled komponenty pro animace
 const AnimationOverlay = styled.div`
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   z-index: 1000;
+  cursor: pointer;
+  animation: ${props => props.$isClosing ? 'fadeOut 0.5s ease-in-out forwards' : 'fadeIn 0.5s ease-in-out'};
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
 `;
 
-const AnimationEmoji = styled.div`
-  position: absolute;
-  font-size: ${props => props.$isMobile ? '32px' : '48px'};
+const AnimationContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: ${props => props.$isClosing ? 'slideOut 0.5s ease-in-out forwards' : 'slideIn 0.5s ease-in-out'};
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(50px);
+      opacity: 0;
+    }
+  }
+`;
+
+const AnimatedCard = styled.div`
   transform-origin: center;
-  animation: ${props => props.$animation} 1s ease-out forwards;
-  opacity: 0;
-  
+  animation: ${props => props.$animation} 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @keyframes flyInLeft {
+    from {
+      transform: translate(-100vw, 0) rotate(-20deg);
+      opacity: 0;
+    }
+    to {
+      transform: translate(0, 0) rotate(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes flyInRight {
+    from {
+      transform: translate(100vw, 0) rotate(20deg);
+      opacity: 0;
+    }
+    to {
+      transform: translate(0, 0) rotate(0);
+      opacity: 1;
+    }
+  }
+
   @keyframes attackAnimation {
-    0% { 
-      opacity: 0; 
-      transform: translate(${props => props.$startX}px, ${props => props.$startY}px) scale(0.5);
+    0% {
+      transform: translate(0, 0) rotate(0);
     }
-    50% { 
-      opacity: 1; 
-      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1.2);
+    25% {
+      transform: translate(-20px, -10px) rotate(-5deg);
     }
-    100% { 
-      opacity: 0; 
-      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1);
+    50% {
+      transform: translate(10px, 0) rotate(5deg) scale(1.1);
     }
-  }
-
-  @keyframes spellAnimation {
-    0% { 
-      opacity: 0; 
-      transform: translate(${props => props.$startX}px, ${props => props.$startY}px) rotate(0deg);
+    75% {
+      transform: translate(-5px, 5px) rotate(-2deg);
     }
-    50% { 
-      opacity: 1; 
-      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) rotate(180deg);
-    }
-    100% { 
-      opacity: 0; 
-      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) rotate(360deg);
+    100% {
+      transform: translate(0, 0) rotate(0);
     }
   }
 
-  @keyframes playCardAnimation {
-    0% { 
-      opacity: 0; 
-      transform: translate(${props => props.$startX}px, ${props => props.$startY}px) scale(0.5);
+  @keyframes defendAnimation {
+    0% {
+      transform: translate(0, 0) rotate(0);
     }
-    50% { 
-      opacity: 1; 
-      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1.5);
+    25% {
+      transform: translate(10px, 5px) rotate(5deg);
     }
-    100% { 
-      opacity: 0; 
-      transform: translate(${props => props.$endX}px, ${props => props.$endY}px) scale(1);
+    50% {
+      transform: translate(-5px, 0) rotate(-3deg) scale(0.95);
     }
+    75% {
+      transform: translate(2px, -2px) rotate(2deg);
+    }
+    100% {
+      transform: translate(0, 0) rotate(0);
+    }
+  }
+`;
+
+const AnimationText = styled.div`
+  color: #ffd700;
+  font-size: ${props => props.$isMobile ? '18px' : '24px'};
+  text-align: center;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+`;
+
+const AnimationCards = styled.div`
+  display: flex;
+  gap: 40px;
+  align-items: center;
+  justify-content: center;
+`;
+
+const AnimationVS = styled.div`
+  color: #ff0000;
+  font-size: ${props => props.$isMobile ? '24px' : '32px'};
+  margin: 0 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+`;
+
+const HeroFrame = styled.div`
+  width: ${props => props.$isMobile ? '100px' : '140px'};
+  height: ${props => props.$isMobile ? '150px' : '200px'};
+  border: 3px solid #ffd700;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(50, 50, 50, 0.9));
+  color: #ffd700;
+  font-size: ${props => props.$isMobile ? '16px' : '20px'};
+  text-align: center;
+  padding: 10px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+
+  // Přidáme ikonu koruny nad jménem
+  &::before {
+    content: '👑';
+    font-size: ${props => props.$isMobile ? '24px' : '32px'};
+    margin-bottom: 10px;
+  }
+
+  // Přidáme dekorativní prvek pod jménem
+  &::after {
+    content: 'HERO';
+    font-size: ${props => props.$isMobile ? '12px' : '14px'};
+    margin-top: 10px;
+    opacity: 0.7;
+    letter-spacing: 2px;
   }
 `;
 
@@ -952,7 +1044,7 @@ const DropZoneOverlay = styled.div`
   `}
 `;
 
-// Přidáme nové styled komponenty pro indikátor tahu
+// Přidáme nov�� styled komponenty pro indikátor tahu
 const TurnIndicator = styled.div`
   position: absolute;
   top: 20px;
@@ -987,12 +1079,93 @@ const TurnIndicator = styled.div`
   }
 `;
 
+const SkipText = styled.div`
+  position: absolute;
+  bottom: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  text-align: center;
+`;
+
+// Přidáme nové styled komponenty pro kompaktní animace
+const CompactAnimationContainer = styled.div`
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 320px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  padding: 15px;
+  z-index: 1000;
+  pointer-events: none;
+  animation: ${props => props.$isClosing ? 'slideOutRight 0.5s ease-in-out forwards' : 'slideInRight 0.5s ease-in-out'};
+
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+`;
+
+const CompactAnimationContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+`;
+
+const CompactCardContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  min-height: 150px;
+  
+  > div {
+    transform: scale(0.6);
+    transform-origin: center;
+    margin: -30px;
+    
+    > * {
+      width: 140px;
+      height: 200px;
+    }
+  }
+`;
+
+const CompactAnimationText = styled.div`
+  color: #ffd700;
+  font-size: 14px;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+  margin-bottom: 5px;
+  padding: 0 10px;
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
   const [scale, setScale] = useState(1);
   const isMobile = useIsMobile();
   const [animation, setAnimation] = useState(null);
+  const [isClosingAnimation, setIsClosingAnimation] = useState(false);
 
   // Přidáme refs pro sledování pozic karet
   const opponentFieldRefs = useRef([]);
@@ -1059,14 +1232,24 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   // Přidáme useEffect pro zpracování animací
   useEffect(() => {
     if (gameState?.animation && gameState.playerIndex !== gameState.animation.playerIndex) {
+      setIsClosingAnimation(false);
       setAnimation(gameState.animation);
 
-      // Vyčistíme animaci po 1 sekundě
-      const timer = setTimeout(() => {
-        setAnimation(null);
-      }, 1000);
+      // Spustíme fadeout 0.5s před koncem animace
+      const fadeOutTimer = setTimeout(() => {
+        setIsClosingAnimation(true);
+      }, 2500);
 
-      return () => clearTimeout(timer);
+      // Odstraníme animaci až po dokončení fadeout
+      const removeTimer = setTimeout(() => {
+        setAnimation(null);
+        setIsClosingAnimation(false);
+      }, 3000);
+
+      return () => {
+        clearTimeout(fadeOutTimer);
+        clearTimeout(removeTimer);
+      };
     }
   }, [gameState?.animation, gameState?.playerIndex]);
 
@@ -1080,58 +1263,116 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     };
   };
 
-  // Komponenta pro zobrazení animace
+  // Upravíme handleSkipAnimation pro plynulé ukončení
+  const handleSkipAnimation = useCallback(() => {
+    setIsClosingAnimation(true);
+    setTimeout(() => {
+      setAnimation(null);
+      setIsClosingAnimation(false);
+    }, 500);
+  }, []);
+
+  // Upravíme AnimationEffect
   const AnimationEffect = useCallback(() => {
     if (!animation) return null;
 
-    let emoji = '⚔️';
-    let animationType = 'attackAnimation';
-    let startPos = { x: 0, y: 0 };
-    let endPos = { x: 0, y: 0 };
+    // Pokud je hráč na tahu, zobrazíme kompaktní verzi
+    const isActivePlayer = gameState.currentPlayer === gameState.playerIndex;
 
-    if (animation.type === 'playCard') {
-      emoji = animation.cardType === 'spell' ? '✨' : '🎴';
-      animationType = animation.cardType === 'spell' ? 'spellAnimation' : 'playCardAnimation';
-
-      // Startovní pozice z ruky protivníka
-      startPos = getElementPosition(opponentHandRef.current);
-
-      // Cílová pozice na herním poli
-      if (animation.targetIndex !== undefined && opponentFieldRefs.current[animation.targetIndex]) {
-        endPos = getElementPosition(opponentFieldRefs.current[animation.targetIndex]);
-      } else {
-        // Fallback pozice uprostřed pole
-        endPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-      }
-    } else if (animation.type === 'attack') {
-      // Startovní pozice útočící karty
-      if (opponentFieldRefs.current[animation.sourceIndex]) {
-        startPos = getElementPosition(opponentFieldRefs.current[animation.sourceIndex]);
-      }
-
-      // Cílová pozice
-      if (animation.isHeroTarget) {
-        endPos = getElementPosition(opponentHeroRef.current);
-      } else if (opponentFieldRefs.current[animation.targetIndex]) {
-        endPos = getElementPosition(opponentFieldRefs.current[animation.targetIndex]);
-      }
+    if (isActivePlayer) {
+        return (
+            <CompactAnimationContainer $isClosing={isClosingAnimation}>
+                <CompactAnimationContent>
+                    <CompactAnimationText>
+                        {animation.type === 'playCard' 
+                            ? `Played ${animation.card.name}`
+                            : `Attacked ${animation.isHeroTarget 
+                                ? animation.target.name 
+                                : animation.target.name}`}
+                    </CompactAnimationText>
+                    <CompactCardContainer>
+                        <div>
+                            <CardDisplay
+                                card={animation.card}
+                                isInHand={false}
+                                isDragging={false}
+                                gameState={gameState}
+                            />
+                        </div>
+                        {animation.type === 'attack' && (
+                            <>
+                                <AnimationVS $isMobile={true}>⚔️</AnimationVS>
+                                <div>
+                                    {animation.isHeroTarget ? (
+                                        <HeroFrame $isMobile={true}>
+                                            {animation.target.name}
+                                        </HeroFrame>
+                                    ) : (
+                                        <CardDisplay
+                                            card={animation.target}
+                                            isInHand={false}
+                                            isDragging={false}
+                                            gameState={gameState}
+                                        />
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </CompactCardContainer>
+                </CompactAnimationContent>
+            </CompactAnimationContainer>
+        );
     }
 
+    // Pro protihráče ponecháme původní velkou animaci
     return (
-      <AnimationOverlay>
-        <AnimationEmoji
-          $animation={animationType}
-          $startX={startPos.x}
-          $startY={startPos.y}
-          $endX={endPos.x}
-          $endY={endPos.y}
-          $isMobile={isMobile}
+        <AnimationOverlay 
+            onClick={handleSkipAnimation}
+            $isClosing={isClosingAnimation}
         >
-          {emoji}
-        </AnimationEmoji>
-      </AnimationOverlay>
+            <AnimationContent $isClosing={isClosingAnimation}>
+                <AnimationText $isMobile={isMobile}>
+                    {animation.type === 'playCard'
+                        ? `${animation.player} played ${animation.card.name}`
+                        : `${animation.player} attacked with ${animation.card.name} 
+                           ${animation.isHeroTarget 
+                               ? animation.target.name 
+                               : animation.target.name}`}
+                </AnimationText>
+                <AnimationCards>
+                    <AnimatedCard $animation={animation.type === 'playCard' ? 'flyInLeft' : 'attackAnimation'}>
+                        <CardDisplay
+                            card={animation.card}
+                            isInHand={false}
+                            isDragging={false}
+                            gameState={gameState}
+                        />
+                    </AnimatedCard>
+                    {animation.type === 'attack' && (
+                        <>
+                            <AnimationVS $isMobile={isMobile}>VS</AnimationVS>
+                            <AnimatedCard $animation="defendAnimation">
+                                {animation.isHeroTarget ? (
+                                    <HeroFrame $isMobile={isMobile}>
+                                        {animation.target.name}
+                                    </HeroFrame>
+                                ) : (
+                                    <CardDisplay
+                                        card={animation.target}
+                                        isInHand={false}
+                                        isDragging={false}
+                                        gameState={gameState}
+                                    />
+                                )}
+                            </AnimatedCard>
+                        </>
+                    )}
+                </AnimationCards>
+            </AnimationContent>
+            <SkipText>Click anywhere to skip</SkipText>
+        </AnimationOverlay>
     );
-  },[animation, isMobile]);
+}, [animation, isMobile, gameState, isClosingAnimation, handleSkipAnimation]);
 
   // Upravíme renderování karet protivníka pro přidání refs
   const renderOpponentField = useCallback(() => (
@@ -1252,6 +1493,20 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
     );
   }, [gameState]);
 
+  
+  // Přidáme wrapper pro onEndTurn
+  const handleEndTurn = useCallback(() => {
+    // Pokud probíhá animace, zrušíme ji
+    if (animation) {
+      setIsClosingAnimation(true);
+      setTimeout(() => {
+        setAnimation(null);
+        setIsClosingAnimation(false);
+      }, 500);
+    }
+    onEndTurn();
+  }, [animation, onEndTurn]);
+
   const OpponentHandArea = styled(HandArea)`
     top: 10px;
     bottom: auto;
@@ -1290,6 +1545,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
   }
 
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
+
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
@@ -1422,7 +1678,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
               </ManaInfo>
             </DeckAndManaContainer>
             <EndTurnButton
-              onClick={onEndTurn}
+              onClick={handleEndTurn}  // Použijeme nový wrapper místo přímého onEndTurn
               disabled={gameState.currentPlayer !== gameState.playerIndex}
             >
               End turn
