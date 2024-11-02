@@ -81,6 +81,28 @@ const ChallengeItem = styled(RewardItem)`
     }
 `;
 
+const ProgressItem = styled(RewardItem)`
+    &::before {
+        content: '📈';
+    }
+`;
+
+const ProgressBar = styled.div`
+    width: 100%;
+    height: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    margin-top: 5px;
+    overflow: hidden;
+`;
+
+const Progress = styled.div`
+    width: ${props => (props.$progress / props.$target) * 100}%;
+    height: 100%;
+    background: ${theme.colors.gold};
+    transition: width 0.3s ease;
+`;
+
 function RewardNotification({ reward, onClose }) {
     const [isClosing, setIsClosing] = useState(false);
 
@@ -116,6 +138,17 @@ function RewardNotification({ reward, onClose }) {
                         {!reward.message && `(+${challenge.reward} gold)`}
                         {reward.message && ' (Claim reward in Challenges)'}
                     </ChallengeItem>
+                ))}
+                {reward.challengeProgress?.map((progress, index) => (
+                    <ProgressItem key={`progress-${index}`}>
+                        {progress.challengeName}: {progress.currentProgress}/{progress.targetProgress}
+                        <ProgressBar>
+                            <Progress 
+                                $progress={progress.currentProgress} 
+                                $target={progress.targetProgress} 
+                            />
+                        </ProgressBar>
+                    </ProgressItem>
                 ))}
             </NotificationCard>
         </Container>
