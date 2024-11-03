@@ -56,6 +56,14 @@ import lavaGolem from '../../assets/images/lava-golem.png';
 import wolfWarrior from '../../assets/images/wolf-warrior.png';
 import blindAssassin from '../../assets/images/blind-assassin.png';
 import sleepingGiant from '../../assets/images/sleeping-giant.png';
+import manaVampire from '../../assets/images/mana-vampire.png';
+import crystalGuardian from '../../assets/images/crystal-guardian.png';
+import frostGiant from '../../assets/images/frost-giant.png';
+import shadowPriest from '../../assets/images/shadow-priest.png';
+import manaGolemElite from '../../assets/images/mana-golem-elite.png';
+import cursedWarrior from '../../assets/images/cursed-warrior.png';
+import battleMage from '../../assets/images/battle-mage.png';
+import ancientProtector from '../../assets/images/ancient-protector.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -105,7 +113,15 @@ export const cardImages = {
   'lavaGolem': lavaGolem,
   'wolfWarrior': wolfWarrior,
   'blindAssassin': blindAssassin,
-  'sleepingGiant': sleepingGiant
+  'sleepingGiant': sleepingGiant,
+  'manaVampire': manaVampire,
+  'crystalGuardian': crystalGuardian,
+  'frostGiant': frostGiant,
+  'shadowPriest': shadowPriest,
+  'manaGolemElite': manaGolemElite,
+  'cursedWarrior': cursedWarrior,
+  'ancientProtector': ancientProtector,
+  'battleMage': battleMage
 };
 
 const DeckBuilderContainer = styled(motion.div)`
