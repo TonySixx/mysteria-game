@@ -203,7 +203,7 @@ const DeckContainer = styled.div`
         left: 0;
         right: 0;
         bottom: 0;
-        background: url('./background-pattern.png') repeat;
+        background: url('./background-pattern.jpg') repeat;
         opacity: 0.02;
         pointer-events: none;
         border-radius: 4px;
