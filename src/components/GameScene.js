@@ -171,7 +171,7 @@ const DeckAndManaContainer = styled.div`
   gap: 10px;
 `;
 
-const DeckContainer = styled.div`
+const DeckContainer = memo(styled.div`
     position: relative;
     width: 40px;
     height: 60px;
@@ -220,7 +220,7 @@ const DeckContainer = styled.div`
             opacity: 1;
         }
     }
-`;
+`);
 
 const ManaInfo = styled.div`
   position: relative;
@@ -234,7 +234,7 @@ const ManaInfo = styled.div`
   }
 `;
 
-const EndTurnButton = styled.button`
+const EndTurnButton = memo(styled.button`
     font-family: 'Cinzel', serif;
     padding: 8px 24px;
     background: linear-gradient(45deg, 
@@ -313,7 +313,7 @@ const EndTurnButton = styled.button`
     &:hover::after {
         opacity: 1;
     }
-`;
+`);
 
 const DraggableCardWrapper = styled.div`
   z-index: 1000;
