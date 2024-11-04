@@ -64,6 +64,14 @@ import manaGolemElite from '../../assets/images/mana-golem-elite.png';
 import cursedWarrior from '../../assets/images/cursed-warrior.png';
 import battleMage from '../../assets/images/battle-mage.png';
 import ancientProtector from '../../assets/images/ancient-protector.png';
+import stoneGuardian from '../../assets/images/stone-guardian.png';
+import holyDefender from '../../assets/images/holy-defender.png';
+import spellWeaver from '../../assets/images/spell-weaver.png';
+import iceRevenant from '../../assets/images/ice-revenant.png';
+import lightChampion from '../../assets/images/light-champion.png';
+import lifeDrainer from '../../assets/images/life-drainer.png';
+import twilightGuardian from '../../assets/images/twilight-guardian.png';
+import unityWarrior from '../../assets/images/unity-warrior.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -121,7 +129,15 @@ export const cardImages = {
   'manaGolemElite': manaGolemElite,
   'cursedWarrior': cursedWarrior,
   'ancientProtector': ancientProtector,
-  'battleMage': battleMage
+  'battleMage': battleMage,
+  'stoneGuardian': stoneGuardian,
+  'holyDefender': holyDefender,
+  'spellWeaver': spellWeaver,
+  'iceRevenant': iceRevenant,
+  'lightChampion': lightChampion,
+  'lifeDrainer': lifeDrainer,
+  'twilightGuardian': twilightGuardian,
+  'unityWarrior': unityWarrior
 };
 
 const DeckBuilderContainer = styled(motion.div)`
