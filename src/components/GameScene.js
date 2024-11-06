@@ -577,7 +577,7 @@ const RarityGem = styled.div`
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: calc(50% - 12px); // Posuneme gem na spodní hranu obrázku (obrázek má height: 50%)
+  top: calc(50% - 12px); // Posuneme gem na spodn�� hranu obrázku (obrázek má height: 50%)
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -789,7 +789,7 @@ const AbilityTooltip = styled.div`
   }
 `;
 
-function HeroDisplay({ hero, onClick, isTargetable, heroName, isCurrentPlayer, onUseAbility, currentMana }) {
+const HeroDisplay = memo(({ hero, onClick, isTargetable, heroName, isCurrentPlayer, onUseAbility, currentMana }) => {
   const canUseAbility = isCurrentPlayer && 
     !hero.hasUsedAbility && 
     hero.abilityCost <= currentMana;
@@ -828,7 +828,7 @@ function HeroDisplay({ hero, onClick, isTargetable, heroName, isCurrentPlayer, o
       )}
     </HeroComponent>
   );
-}
+});   
 
 const CardBack = styled.div`
   width: 100%;
@@ -1351,6 +1351,32 @@ const CompactAnimationText = styled.div`
   padding: 0 10px;
 `;
 
+// Přidáme nové styled komponenty pro animaci schopnosti
+const AbilityAnimation = styled.div`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100px;
+    height: 100px;
+    animation: pulseGlow 2s infinite;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+
+    @keyframes pulseGlow {
+        0% { transform: scale(1); filter: brightness(1); }
+        50% { transform: scale(1.1); filter: brightness(1.3); }
+        100% { transform: scale(1); filter: brightness(1); }
+    }
+`;
+
+const HeroAbilityIcon = styled.img`
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px ${props => props.$isHealing ? '#00ff00' : '#ff0000'});
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -1469,21 +1495,44 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                     <CompactAnimationText>
                         {animation.type === 'playCard' 
                             ? `Played ${animation.card.name}`
+                            : animation.type === 'heroAbility'
+                            ? `Used ${animation.hero.abilityName}`
                             : `Attacked ${animation.isHeroTarget 
                                 ? animation.target.name 
                                 : animation.target.name}`}
                     </CompactAnimationText>
                     <CompactCardContainer>
-                        <div>
-                            <CardDisplay
-                                card={animation.card}
-                                isInHand={false}
-                                isDragging={false}
-                                gameState={gameState}
-                            />
-                        </div>
+                        {animation.type === 'playCard' && (
+                            <div>
+                                <CardDisplay
+                                    card={animation.card}
+                                    isInHand={false}
+                                    isDragging={false}
+                                    gameState={gameState}
+                                />
+                            </div>
+                        )}
+                        {animation.type === 'heroAbility' && (
+                            <div>
+                                <AbilityAnimation>
+                                    <HeroAbilityIcon 
+                                        src={heroAbilities[animation.hero.image]} 
+                                        alt={animation.hero.abilityName}
+                                        $isHealing={animation.isHealing}
+                                    />
+                                </AbilityAnimation>
+                            </div>
+                        )}
                         {animation.type === 'attack' && (
                             <>
+                                <div>
+                                    <CardDisplay
+                                        card={animation.card}
+                                        isInHand={false}
+                                        isDragging={false}
+                                        gameState={gameState}
+                                    />
+                                </div>
                                 <AnimationVS $isMobile={true}>⚔️</AnimationVS>
                                 <div>
                                     {animation.isHeroTarget ? (
@@ -1515,7 +1564,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
         >
             <AnimationContent $isClosing={isClosingAnimation}>
                 <AnimationText $isMobile={isMobile}>
-                    {animation.type === 'playCard'
+                    {animation.type === 'heroAbility'
+                        ? `${animation.player} used ${animation.hero.abilityName}`
+                        : animation.type === 'playCard'
                         ? `${animation.player} played ${animation.card.name}`
                         : `${animation.player} attacked with ${animation.card.name} 
                            ${animation.isHeroTarget 
@@ -1523,14 +1574,24 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                                : animation.target.name}`}
                 </AnimationText>
                 <AnimationCards>
-                    <AnimatedCard $animation={animation.type === 'playCard' ? 'flyInLeft' : 'attackAnimation'}>
-                        <CardDisplay
-                            card={animation.card}
-                            isInHand={false}
-                            isDragging={false}
-                            gameState={gameState}
-                        />
-                    </AnimatedCard>
+                    {animation.type === 'heroAbility' ? (
+                        <AbilityAnimation>
+                            <HeroAbilityIcon 
+                                src={heroAbilities[animation.hero.image]} 
+                                alt={animation.hero.abilityName}
+                                $isHealing={animation.isHealing}
+                            />
+                        </AbilityAnimation>
+                    ) : (
+                        <AnimatedCard $animation={animation.type === 'playCard' ? 'flyInLeft' : 'attackAnimation'}>
+                            <CardDisplay
+                                card={animation.card}
+                                isInHand={false}
+                                isDragging={false}
+                                gameState={gameState}
+                            />
+                        </AnimatedCard>
+                    )}
                     {animation.type === 'attack' && (
                         <>
                             <AnimationVS $isMobile={isMobile}>VS</AnimationVS>
