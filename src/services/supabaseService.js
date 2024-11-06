@@ -463,6 +463,21 @@ class SupabaseService {
             throw error;
         }
     }
+
+    // Přidáme novou metodu pro načítání hrdinů
+    async getHeroes() {
+        try {
+            const { data, error } = await this.supabase
+                .from('heroes')
+                .select('*');
+
+            if (error) throw error;
+            return data;
+        } catch (error) {
+            console.error('Error loading heroes:', error);
+            throw error;
+        }
+    }
 }
 
 const supabaseService = new SupabaseService();

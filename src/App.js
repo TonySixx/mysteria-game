@@ -268,6 +268,7 @@ function App() {
                         gameState={gameState}
                         onPlayCard={(cardData) => socketService.playCard(cardData)}
                         onAttack={(attackData) => socketService.attack(attackData)}
+                        onUseHeroAbility={() => socketService.useHeroAbility()}
                         onEndTurn={() => socketService.endTurn()}
                     />
                 )}

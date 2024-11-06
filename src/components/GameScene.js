@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
 import styled from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import playerHeroImage from '../assets/images/player-hero.png';
-import aiHeroImage from '../assets/images/ai-hero.png';
 import { css } from 'styled-components';
 import { Notification } from './Notification';
 import cardTexture from '../assets/images/card-texture.png';
@@ -11,6 +9,7 @@ import { CombatLog } from './CombatLog';
 import { theme } from '../styles/theme';
 import { cardImages } from './deck/DeckBuilder';
 import socketService from '../services/socketService';
+import { heroAbilities, heroImages } from './profile/HeroSelector';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`
@@ -127,6 +126,7 @@ const HeroArea = styled.div`
   width: 100%;
   margin-top: ${props => props.$isMobile ? '-30px' : '0px'};
   height: ${props => props.$isMobile ? '130px' : '150px'};
+  position: relative;
 `;
 
 const FieldArea = styled.div`
@@ -656,78 +656,179 @@ const RarityGem = styled.div`
   }
 `;
 
-function HeroDisplay({ hero, onClick, isTargetable, heroName }) {
-  return (
-    <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
-      <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
-      <HeroHealth>
-        <HeartIcon>❤️</HeartIcon>
-        {hero.health}
-      </HeroHealth>
-      <HeroName>{heroName}</HeroName>
-    </HeroComponent>
-  );
-}
-
-const HeroName = styled.div`
-  position: absolute;
-  top: 0;
-  left: 72px;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: ${theme.colors.text.primary};
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 14px;
+const HeroComponent = styled.div`
   display: flex;
-  align-items: flex-end;
-  text-shadow: ${theme.shadows.golden};
-`;
-
-const HeroComponent = styled.div.withConfig({
-  shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
-})`
-  width: 120px;
-  height: 120px;
-  position: relative;
-  cursor: ${(props) => (props.isTargetable ? 'pointer' : 'default')};
-`;
-
-const HeroImage = styled.img.withConfig({
-  shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
-})`
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid #ffd700;
-  box-shadow: ${(props) => props.isTargetable ? '0 0 10px 3px #ff0000' : '0 0 10px rgba(255, 215, 0, 0.5)'};
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  border-radius: 15px;
+  background: ${props => props.$isTargetable ? 
+    'linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(255, 215, 0, 0.1))' : 
+    'linear-gradient(to bottom, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6))'};
+  cursor: ${props => props.$isTargetable ? 'pointer' : 'default'};
   transition: all 0.3s ease;
+  border: 2px solid ${props => props.$isTargetable ? 
+    theme.colors.primary : 
+    'rgba(255, 255, 255, 0.1)'};
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 
-  ${(props) => props.isTargetable && `
-    &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 15px 5px #ff0000;
-    }
-  `}
+  &:hover {
+    transform: ${props => props.$isTargetable ? 'translateY(-5px)' : 'none'};
+    box-shadow: ${props => props.$isTargetable ? 
+      `${theme.shadows.golden}, 0 6px 12px rgba(0, 0, 0, 0.4)` : 
+      '0 4px 8px rgba(0, 0, 0, 0.3)'};
+  }
+`;
+
+const HeroImage = styled.img`
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 3px solid ${theme.colors.primary};
+  object-fit: cover;
+`;
+
+const HeroInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 8px;
+  min-width: 100px;
 `;
 
 const HeroHealth = styled.div`
-  position: absolute;
-  top: 0;
-  left: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 14px;
   display: flex;
   align-items: center;
+  gap: 5px;
+  font-size: 1.2em;
+  color: ${theme.colors.text.primary};
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-weight: bold;
 `;
 
 const HeartIcon = styled.span`
-  margin-right: 2px;
-  font-size: 12px;
+  font-size: 1.2em;
+  filter: drop-shadow(2px 2px 2px rgba(0, 0, 0, 0.5));
 `;
+
+const HeroName = styled.div`
+  color: ${theme.colors.text.primary};
+  font-size: 1em;
+  font-family: 'Cinzel', serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  font-weight: bold;
+  letter-spacing: 1px;
+`;
+
+const HeroAbility = styled.div`
+  position: relative;
+  margin-left: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background: ${props => props.$canUse ? 
+    'rgba(255, 215, 0, 0.1)' : 
+    'rgba(0, 0, 0, 0.3)'};
+  cursor: ${props => props.$canUse ? 'pointer' : 'not-allowed'};
+  transition: all 0.3s ease;
+  border: 2px solid ${props => props.$canUse ? 
+    theme.colors.primary : 
+    'rgba(255, 255, 255, 0.1)'};
+  opacity: ${props => props.$canUse ? 1 : 0.6};
+
+  &:hover {
+    transform: ${props => props.$canUse ? 'translateY(-2px)' : 'none'};
+    box-shadow: ${props => props.$canUse ? theme.shadows.golden : 'none'};
+  }
+`;
+
+const AbilityIcon = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+`;
+
+const AbilityCost = styled.div`
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 25px;
+  height: 25px;
+  background: ${theme.colors.primary};
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  color: ${theme.colors.background};
+  border: 2px solid ${theme.colors.background};
+`;
+
+const AbilityTooltip = styled.div`
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 0.9em;
+  white-space: nowrap;
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  border: 1px solid ${theme.colors.primary};
+
+  ${HeroAbility}:hover & {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(-5px);
+  }
+`;
+
+function HeroDisplay({ hero, onClick, isTargetable, heroName, isCurrentPlayer, onUseAbility, currentMana }) {
+  const canUseAbility = isCurrentPlayer && 
+    !hero.hasUsedAbility && 
+    hero.abilityCost <= currentMana;
+
+
+
+  return (
+    <HeroComponent onClick={isTargetable ? onClick : null} $isTargetable={isTargetable}>
+      <HeroImage 
+        src={heroImages[hero.image]} 
+        alt={hero.name} 
+      />
+      <HeroInfo>
+        <HeroHealth>
+          <HeartIcon>❤️</HeartIcon>
+          {hero.health}
+        </HeroHealth>
+        <HeroName>{heroName}</HeroName>
+      </HeroInfo>
+      {hero.abilityName && (
+        <HeroAbility 
+          onClick={canUseAbility ? onUseAbility : undefined}
+          $canUse={canUseAbility}
+        >
+          <AbilityIcon 
+            src={heroAbilities[hero.image]} 
+            alt={hero.abilityName} 
+          />
+          <AbilityCost>{hero.abilityCost}</AbilityCost>
+          <AbilityTooltip>
+            <strong>{hero.abilityName}</strong>
+            <br />
+            {hero.abilityDescription}
+          </AbilityTooltip>
+        </HeroAbility>
+      )}
+    </HeroComponent>
+  );
+}
 
 const CardBack = styled.div`
   width: 100%;
@@ -1250,7 +1351,7 @@ const CompactAnimationText = styled.div`
   padding: 0 10px;
 `;
 
-function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
+function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
   const [scale, setScale] = useState(1);
@@ -1484,6 +1585,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
       ))}
     </FieldArea>
   ), [gameState.opponent.field, gameState.player.field, isMobile]);
+
 
   // Vylepšený onDragEnd s logováním
   const onDragEnd = useCallback((result) => {
@@ -1738,10 +1840,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn }) {
               )}
             </Droppable>
 
+        <div style={{position:"relative",top:"-50px"}}>
             <HeroArea $isMobile={isMobile}>
-            <div style={{position:"absolute"}} ref={opponentHeroRef}></div>
-              <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} />
+            <div style={{position:"absolute"}}></div>
+              <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} isCurrentPlayer={true} onUseAbility={onUseHeroAbility} currentMana={gameState.player.mana} />
             </HeroArea>
+            </div>
           </BattleArea>
 
           <PlayerInfo $isPlayer={true} $isMobile={isMobile} $isBottom={true}>

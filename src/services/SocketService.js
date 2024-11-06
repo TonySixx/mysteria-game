@@ -206,6 +206,12 @@ class SocketService {
         this.socket.emit('playCard', cardData);
     }
 
+    useHeroAbility() {
+        if (!this.socket?.connected) return;
+        console.log('Používám schopnost hrdiny');
+        this.socket.emit('useHeroAbility');
+    }
+
     attack(attackData) {
         if (!this.socket?.connected) return;
         console.log('Útočím:', attackData);

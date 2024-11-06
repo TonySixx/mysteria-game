@@ -6,6 +6,7 @@ import { FaChevronDown, FaUser, FaTrophy, FaStore } from 'react-icons/fa';
 import CardPackStore from './CardPackStore';
 import CardPackOpening from './CardPackOpening';
 import ChallengesPanel from './ChallengesPanel';
+import HeroSelector from './HeroSelector';
 
 const ProfileContainer = styled.div`
     max-width: 800px;
@@ -392,7 +393,16 @@ function PlayerProfile({ userId, onContentLoad }) {
 
     return (
         <ProfileContainer>
-            <h1>{profile.username}</h1>
+            <h1>
+                {profile.username}
+                <HeroSelector 
+                    userId={userId} 
+                    currentHeroId={profile.hero_id}
+                    onHeroChange={(newHero) => {
+                        setProfile(prev => ({...prev, hero_id: newHero.id}));
+                    }}
+                />
+            </h1>
 
             <ProfileTabs>
                 <ProfileTab
