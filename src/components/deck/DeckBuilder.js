@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaArrowLeft, FaSave } from 'react-icons/fa';
@@ -627,8 +627,38 @@ const FilterCheckbox = styled.div`
     }
 `;
 
+// Přidáme novou styled komponentu po existující FilterContainer
+const CardStatsBox = styled.div`
+    background: rgba(30, 30, 30, 0.9);
+    border-radius: 10px;
+    padding: 8px 15px;
+    color: ${theme.colors.text.primary};
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: auto;
+`;
 
+const StatsLabel = styled.span`
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: ${theme.colors.text.secondary};
+`;
 
+const StatsValue = styled.span`
+    font-family: 'Crimson Pro', serif;
+    font-size: 1.1em;
+    color: ${theme.colors.text.primary};
+    
+    strong {
+        color: ${theme.colors.primary};
+        font-weight: bold;
+    }
+`;
+
+// V komponentě DeckBuilder přidáme výpočet unikátních karet
 const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [availableCards, setAvailableCards] = useState([]);
     const [selectedCards, setSelectedCards] = useState({});
@@ -768,6 +798,10 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
             .sort(([, a], [, b]) => a.card.mana_cost - b.card.mana_cost);
     };
 
+    // Přidáme výpočet počtu unikátních vlastněných karet
+    const uniqueOwnedCards = useMemo(() => Object.keys(ownedCards).length, [ownedCards]);
+    const totalUniqueCards = availableCards.length;
+
     if (loading) {
         return (
             <LoadingContainer>
@@ -853,6 +887,12 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
 
             <RightSection>
                 <FilterContainer>
+                    <CardStatsBox>
+                        <StatsLabel>Collection:</StatsLabel>
+                        <StatsValue>
+                            <strong>{uniqueOwnedCards}</strong>/{totalUniqueCards}
+                        </StatsValue>
+                    </CardStatsBox>
                     <FilterGroup>
                         <FilterLabel>Mana Cost</FilterLabel>
                         <FilterSelect value={manaFilter} onChange={(e) => setManaFilter(e.target.value)}>
