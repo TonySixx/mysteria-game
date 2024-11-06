@@ -72,6 +72,12 @@ import lightChampion from '../../assets/images/light-champion.png';
 import lifeDrainer from '../../assets/images/life-drainer.png';
 import twilightGuardian from '../../assets/images/twilight-guardian.png';
 import unityWarrior from '../../assets/images/unity-warrior.png';
+import bloodCultist from '../../assets/images/blood-cultist.png';
+import guardianTotem from '../../assets/images/guardian-totem.png';
+import soulHarvester from '../../assets/images/soul-harvester.png';
+import sacrificePact from '../../assets/images/sacrifice-pact.png';
+import massFortification from '../../assets/images/mass-fortification.png';
+import deathProphet from '../../assets/images/death-prophet.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -137,7 +143,14 @@ export const cardImages = {
   'lightChampion': lightChampion,
   'lifeDrainer': lifeDrainer,
   'twilightGuardian': twilightGuardian,
-  'unityWarrior': unityWarrior
+  'unityWarrior': unityWarrior,
+  'bloodCultist': bloodCultist,
+  'guardianTotem': guardianTotem,
+  'soulHarvester': soulHarvester,
+  'sacrificePact': sacrificePact,
+  'massFortification': massFortification,
+  'deathProphet': deathProphet
+
 };
 
 const DeckBuilderContainer = styled(motion.div)`
