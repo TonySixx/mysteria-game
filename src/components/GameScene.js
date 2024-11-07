@@ -577,7 +577,7 @@ const RarityGem = styled.div`
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: calc(50% - 12px); // Posuneme gem na spodn�� hranu obrázku (obrázek má height: 50%)
+  top: calc(50% - 12px); // Posuneme gem na spodn hranu obrázku (obrázek má height: 50%)
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -1377,6 +1377,48 @@ const HeroAbilityIcon = styled.img`
     filter: drop-shadow(0 0 10px ${props => props.$isHealing ? '#00ff00' : '#ff0000'});
 `;
 
+// Přidáme nové styled komponenty
+const TestControls = styled.div`
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+`;
+
+const TestButton = styled.button`
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid #ffd700;
+    cursor: pointer;
+    
+    &:hover {
+        background: rgba(0, 0, 0, 0.9);
+    }
+`;
+
+const ReconnectOverlay = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+`;
+
+const ReconnectMessage = styled.div`
+    color: white;
+    font-size: 24px;
+    text-align: center;
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -1384,6 +1426,10 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isMobile = useIsMobile();
   const [animation, setAnimation] = useState(null);
   const [isClosingAnimation, setIsClosingAnimation] = useState(false);
+      // V komponentě GameScene přidáme nové stavy
+      const [isDisconnected, setIsDisconnected] = useState(false);
+      const [reconnectTimer, setReconnectTimer] = useState(null);
+      const [showTestControls] = useState(process.env.NODE_ENV === 'development');
 
   // Přidáme refs pro sledování pozic karet
   const opponentFieldRefs = useRef([]);
@@ -1752,6 +1798,57 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     onEndTurn();
   }, [animation, onEndTurn]);
 
+
+  
+    // Přidáme useEffect pro sledování stavu připojení
+    useEffect(() => {
+      const socket = socketService.socket;
+  
+      const handleDisconnect = () => {
+          setIsDisconnected(true);
+          // Pokusíme se o reconnect
+          setTimeout(() => {
+              socket.connect();
+              socket.emit('attemptReconnect');
+          }, 1000);
+      };
+  
+      const handleReconnect = () => {
+          setIsDisconnected(false);
+          setReconnectTimer(null);
+      };
+  
+      const handleOpponentDisconnect = (data) => {
+          setReconnectTimer(data.remainingTime);
+      };
+  
+      const handleOpponentReconnect = () => {
+          setReconnectTimer(null);
+      };
+  
+      socket.on('disconnect', handleDisconnect);
+      socket.on('reconnectedToGame', handleReconnect);
+      socket.on('opponentDisconnected', handleOpponentDisconnect);
+      socket.on('opponentReconnected', handleOpponentReconnect);
+  
+      return () => {
+          socket.off('disconnect', handleDisconnect);
+          socket.off('reconnectedToGame', handleReconnect);
+          socket.off('opponentDisconnected', handleOpponentDisconnect);
+          socket.off('opponentReconnected', handleOpponentReconnect);
+      };
+  }, []);
+  
+    // Přidáme testovací funkce
+    const simulateDisconnect = () => {
+      socketService.socket.disconnect();
+    };
+  
+    const simulateReconnect = () => {
+      socketService.socket.connect();
+      socketService.socket.emit('attemptReconnect');
+    };
+
   const OpponentHandArea = styled(HandArea)`
     top: 10px;
     bottom: auto;
@@ -1792,198 +1889,230 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
 
 
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
-        <GameBoard>
-          <TurnIndicator $isPlayerTurn={isPlayerTurn}>
-            {isPlayerTurn ? 'Your Turn' : 'Opponent\'s Turn'}
-          </TurnIndicator>
+    <>
+        {showTestControls && (
+            <TestControls>
+                <TestButton onClick={simulateDisconnect}>
+                    Simulate Disconnect
+                </TestButton>
+                <TestButton onClick={simulateReconnect}>
+                    Simulate Reconnect
+                </TestButton>
+            </TestControls>
+        )}
 
-          <PlayerInfo $isMobile={isMobile}>
-            <DeckAndManaContainer>
-              <DeckContainer>
-                {gameState.opponent.deckSize}
-                <Tooltip $position="bottom">
-                  Cards in deck
-                </Tooltip>
-              </DeckContainer>
-              <ManaInfo>
-                💎 {gameState.opponent.mana}/{gameState.opponent.maxMana}
-                <Tooltip $position="bottom">
-                  Mana crystals
-                </Tooltip>
-              </ManaInfo>
-            </DeckAndManaContainer>
-          </PlayerInfo>
+        {isDisconnected && (
+            <ReconnectOverlay>
+                <ReconnectMessage>
+                    Connection lost. Attempting to reconnect...
+                </ReconnectMessage>
+            </ReconnectOverlay>
+        )}
 
-          <OpponentHandArea
-            $isMobile={isMobile}
-            ref={opponentHandRef}
-          >
-            {gameState.opponent.hand.map((card, index) => (
-              <CardDisplay
-                key={card.id}
-                card={card}
-                isInHand={true}
-                isOpponentCard={true}
-              />
-            ))}
-          </OpponentHandArea>
+        {reconnectTimer && (
+            <ReconnectOverlay>
+                <ReconnectMessage>
+                    Opponent disconnected. Waiting for reconnect...
+                    <br />
+                    Time remaining: {Math.ceil(reconnectTimer)} seconds
+                </ReconnectMessage>
+            </ReconnectOverlay>
+        )}
 
-          <BattleArea>
-            <Droppable droppableId="opponentHero" direction="horizontal">
-              {(provided, snapshot) => (
-                <HeroArea
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  style={{ position: 'relative' }}
-                >
-                  <HeroDisplay
-                    hero={gameState.opponent.hero}
-                    heroName={gameState.opponent.username}
-                    isTargetable={
-                      gameState.currentPlayer === gameState.playerIndex &&
-                      gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
-                      gameState.opponent.field.every(card => !card.hasTaunt)
-                    }
-                  />
-                  {snapshot.isDraggingOver && (
-                    <DropZoneOverlay $type="hero" />
-                  )}
-                  {provided.placeholder}
-                </HeroArea>
-              )}
-            </Droppable>
+        <DragDropContext onDragEnd={onDragEnd}>
+          <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
+            <GameBoard>
+              <TurnIndicator $isPlayerTurn={isPlayerTurn}>
+                {isPlayerTurn ? 'Your Turn' : 'Opponent\'s Turn'}
+              </TurnIndicator>
 
-            {renderOpponentField()}
+              <PlayerInfo $isMobile={isMobile}>
+                <DeckAndManaContainer>
+                  <DeckContainer>
+                    {gameState.opponent.deckSize}
+                    <Tooltip $position="bottom">
+                      Cards in deck
+                    </Tooltip>
+                  </DeckContainer>
+                  <ManaInfo>
+                    💎 {gameState.opponent.mana}/{gameState.opponent.maxMana}
+                    <Tooltip $position="bottom">
+                      Mana crystals
+                    </Tooltip>
+                  </ManaInfo>
+                </DeckAndManaContainer>
+              </PlayerInfo>
 
-            <Droppable droppableId="playerField" direction="horizontal">
-              {(provided, snapshot) => (
-                <FieldArea
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  style={{ 
-                    position: 'relative',
-                    display: 'flex',
-                    gap: '10px',
-                    minHeight: '200px'
-                  }}
-                >
-                  {gameState.player.field.map((card, index) => (
-                    <Draggable 
-                      key={card.id} 
-                      draggableId={card.id} 
-                      index={index} 
-                      isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
-                    >
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <CardDisplay
-                            card={card}
-                            canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
-                            isDragging={snapshot.isDragging}
-                            isPlayerTurn={isPlayerTurn}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {provided.placeholder}
-                  {snapshot.isDraggingOver && (
-                    <DropZoneOverlay $type="play" />
-                  )}
-                </FieldArea>
-              )}
-            </Droppable>
-
-        <div style={{position:"relative",top:"-50px"}}>
-            <HeroArea $isMobile={isMobile}>
-            <div style={{position:"absolute"}}></div>
-              <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} isCurrentPlayer={true} onUseAbility={onUseHeroAbility} currentMana={gameState.player.mana} />
-            </HeroArea>
-            </div>
-          </BattleArea>
-
-          <PlayerInfo $isPlayer={true} $isMobile={isMobile} $isBottom={true}>
-            <DeckAndManaContainer>
-              <DeckContainer>
-                {gameState.player.deck}
-                <Tooltip $position="top">
-                  Cards in deck
-                </Tooltip>
-              </DeckContainer>
-              <ManaInfo>
-                💎 {gameState.player.mana}/{gameState.player.maxMana}
-                <Tooltip $position="top">
-                  Mana crystals
-                </Tooltip>
-              </ManaInfo>
-            </DeckAndManaContainer>
-            <EndTurnButton
-              onClick={handleEndTurn}  // Použijeme nový wrapper místo přímého onEndTurn
-              disabled={gameState.currentPlayer !== gameState.playerIndex}
-            >
-              End turn
-            </EndTurnButton>
-          </PlayerInfo>
-
-          <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
-            {(provided) => (
-              <HandArea
+              <OpponentHandArea
                 $isMobile={isMobile}
-                ref={provided.innerRef}
-                {...provided.droppableProps}
+                ref={opponentHandRef}
               >
-                {gameState.player.hand.map((card, index) => (
-                  <Draggable 
-                    key={card.id} 
-                    draggableId={card.id} 
-                    index={index}
-                    isDragDisabled={!isPlayerTurn} // Zakážeme drag když není hráč na tahu
-                  >
-                    {(provided, snapshot) => (
-                      <DraggableCardWrapper
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                        style={{
-                          ...provided.draggableProps.style,
-                          opacity: snapshot.isDragging ? 0 : 1,
-                        }}
-                      >
-                        <CardDisplay
-                          spellsPlayedThisGame={gameState?.spellsPlayedThisGame}
-                          card={card}
-                          isInHand={true}
-                          isDragging={snapshot.isDragging}
-                          isPlayerTurn={isPlayerTurn}
-                          gameState={gameState}
-                        />
-                      </DraggableCardWrapper>
-                    )}
-                  </Draggable>
+                {gameState.opponent.hand.map((card, index) => (
+                  <CardDisplay
+                    key={card.id}
+                    card={card}
+                    isInHand={true}
+                    isOpponentCard={true}
+                  />
                 ))}
-                {provided.placeholder}
-              </HandArea>
-            )}
-          </Droppable>
-          <Notification message={notification} />
-          <CombatLog 
-            logEntries={logEntries} 
-            socket={socketService.socket}
-            playerUsername={gameState.player.username}
-            opponentUsername={gameState.opponent.username}
-          />
-          {/* Přidáme komponentu pro animace */}
-          <AnimationEffect />
-        </GameBoard>
-      </ScalableGameWrapper>
-    </DragDropContext>
+              </OpponentHandArea>
+
+              <BattleArea>
+                <Droppable droppableId="opponentHero" direction="horizontal">
+                  {(provided, snapshot) => (
+                    <HeroArea
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      style={{ position: 'relative' }}
+                    >
+                      <HeroDisplay
+                        hero={gameState.opponent.hero}
+                        heroName={gameState.opponent.username}
+                        isTargetable={
+                          gameState.currentPlayer === gameState.playerIndex &&
+                          gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
+                          gameState.opponent.field.every(card => !card.hasTaunt)
+                        }
+                      />
+                      {snapshot.isDraggingOver && (
+                        <DropZoneOverlay $type="hero" />
+                      )}
+                      {provided.placeholder}
+                    </HeroArea>
+                  )}
+                </Droppable>
+
+                {renderOpponentField()}
+
+                <Droppable droppableId="playerField" direction="horizontal">
+                  {(provided, snapshot) => (
+                    <FieldArea
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      style={{ 
+                        position: 'relative',
+                        display: 'flex',
+                        gap: '10px',
+                        minHeight: '200px'
+                      }}
+                    >
+                      {gameState.player.field.map((card, index) => (
+                        <Draggable 
+                          key={card.id} 
+                          draggableId={card.id} 
+                          index={index} 
+                          isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
+                        >
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                            >
+                              <CardDisplay
+                                card={card}
+                                canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
+                                isDragging={snapshot.isDragging}
+                                isPlayerTurn={isPlayerTurn}
+                              />
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      {snapshot.isDraggingOver && (
+                        <DropZoneOverlay $type="play" />
+                      )}
+                    </FieldArea>
+                  )}
+                </Droppable>
+
+            <div style={{position:"relative",top:"-50px"}}>
+                <HeroArea $isMobile={isMobile}>
+                <div style={{position:"absolute"}}></div>
+                  <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} isCurrentPlayer={true} onUseAbility={onUseHeroAbility} currentMana={gameState.player.mana} />
+                </HeroArea>
+                </div>
+              </BattleArea>
+
+              <PlayerInfo $isPlayer={true} $isMobile={isMobile} $isBottom={true}>
+                <DeckAndManaContainer>
+                  <DeckContainer>
+                    {gameState.player.deck}
+                    <Tooltip $position="top">
+                      Cards in deck
+                    </Tooltip>
+                  </DeckContainer>
+                  <ManaInfo>
+                    💎 {gameState.player.mana}/{gameState.player.maxMana}
+                    <Tooltip $position="top">
+                      Mana crystals
+                    </Tooltip>
+                  </ManaInfo>
+                </DeckAndManaContainer>
+                <EndTurnButton
+                  onClick={handleEndTurn}  // Použijeme nový wrapper místo přímého onEndTurn
+                  disabled={gameState.currentPlayer !== gameState.playerIndex}
+                >
+                  End turn
+                </EndTurnButton>
+              </PlayerInfo>
+
+              <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
+                {(provided) => (
+                  <HandArea
+                    $isMobile={isMobile}
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                  >
+                    {gameState.player.hand.map((card, index) => (
+                      <Draggable 
+                        key={card.id} 
+                        draggableId={card.id} 
+                        index={index}
+                        isDragDisabled={!isPlayerTurn} // Zakážeme drag když není hráč na tahu
+                      >
+                        {(provided, snapshot) => (
+                          <DraggableCardWrapper
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={{
+                              ...provided.draggableProps.style,
+                              opacity: snapshot.isDragging ? 0 : 1,
+                            }}
+                          >
+                            <CardDisplay
+                              spellsPlayedThisGame={gameState?.spellsPlayedThisGame}
+                              card={card}
+                              isInHand={true}
+                              isDragging={snapshot.isDragging}
+                              isPlayerTurn={isPlayerTurn}
+                              gameState={gameState}
+                            />
+                          </DraggableCardWrapper>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </HandArea>
+                )}
+              </Droppable>
+              <Notification message={notification} />
+              <CombatLog 
+                logEntries={logEntries} 
+                socket={socketService.socket}
+                playerUsername={gameState.player.username}
+                opponentUsername={gameState.opponent.username}
+              />
+              {/* Přidáme komponentu pro animace */}
+              <AnimationEffect />
+            </GameBoard>
+          </ScalableGameWrapper>
+        </DragDropContext>
+    </>
   );
 }
 
