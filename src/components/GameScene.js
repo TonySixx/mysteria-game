@@ -577,7 +577,7 @@ const RarityGem = styled.div`
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: calc(50% - 12px); // Posuneme gem na spodn hranu obrázku (obrázek m�� height: 50%)
+  top: calc(50% - 12px); // Posuneme gem na spodn�� hranu obrázku (obrázek má height: 50%)
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -1377,51 +1377,6 @@ const HeroAbilityIcon = styled.img`
     filter: drop-shadow(0 0 10px ${props => props.$isHealing ? '#00ff00' : '#ff0000'});
 `;
 
-// Přidáme novou komponentu pro zobrazení stavu připojení
-const ConnectionStatus = styled.div`
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 20px 40px;
-  border-radius: 8px;
-  z-index: 2000;
-  text-align: center;
-  animation: fadeIn 0.3s ease-in;
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-`;
-
-// Přidáme styled komponentu pro testovací tlačítka
-const TestButtons = styled.div`
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 2000;
-  display: flex;
-  gap: 10px;
-`;
-
-const TestButton = styled.button`
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  border: 1px solid #ffd700;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-
-  &:hover {
-    background: rgba(0, 0, 0, 0.9);
-    border-color: #ffed4a;
-  }
-`;
-
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -1429,7 +1384,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isMobile = useIsMobile();
   const [animation, setAnimation] = useState(null);
   const [isClosingAnimation, setIsClosingAnimation] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState(null);
 
   // Přidáme refs pro sledování pozic karet
   const opponentFieldRefs = useRef([]);
@@ -1517,49 +1471,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     }
   }, [gameState?.animation, gameState?.playerIndex]);
 
-  useEffect(() => {
-    const socket = socketService.socket;
-
-    const handleDisconnect = () => {
-      setConnectionStatus('Disconnected from server. Attempting to reconnect...');
-    };
-
-    const handleReconnecting = (attempt) => {
-      setConnectionStatus(`Reconnecting to server... (Attempt ${attempt})`);
-    };
-
-    // Změníme z 'reconnect' na 'connect'
-    const handleConnect = () => {
-      // Kontrolujeme, zda bylo předtím odpojení
-      if (connectionStatus) {
-        setConnectionStatus('Reconnected! Game will continue.');
-        setTimeout(() => setConnectionStatus(null), 3000);
-      }
-    };
-
-    const handleOpponentDisconnect = (data) => {
-      setConnectionStatus(`Opponent disconnected. Waiting ${data.timeout} seconds for reconnection...`);
-    };
-
-    const handleOpponentReconnect = () => {
-      setConnectionStatus('Opponent reconnected! Game will continue.');
-      setTimeout(() => setConnectionStatus(null), 3000);
-    };
-
-    socket.on('disconnect', handleDisconnect);
-    socket.on('reconnecting', handleReconnecting);
-    socket.on('connect', handleConnect); // Změněno z 'reconnect' na 'connect'
-    socket.on('opponentDisconnected', handleOpponentDisconnect);
-    socket.on('opponentReconnected', handleOpponentReconnect);
-
-    return () => {
-      socket.off('disconnect', handleDisconnect);
-      socket.off('reconnecting', handleReconnecting);
-      socket.off('connect', handleConnect); // Změněno z 'reconnect' na 'connect'
-      socket.off('opponentDisconnected', handleOpponentDisconnect);
-      socket.off('opponentReconnected', handleOpponentReconnect);
-    };
-  }, [connectionStatus]); // Přidáme connectionStatus do závislostí
 
   // Upravíme handleSkipAnimation pro plynulé ukončení
   const handleSkipAnimation = useCallback(() => {
@@ -1841,28 +1752,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     onEndTurn();
   }, [animation, onEndTurn]);
 
-    // Přidáme funkce pro testování
-    const handleTestDisconnect = useCallback(() => {
-      const socket = socketService.socket;
-      if (socket && socket.connected) {
-          // Dočasně vypneme automatický reconnect
-          socket.io.opts.reconnection = false;
-          // Odpojíme socket
-          socket.disconnect();
-          // Po 1 sekundě znovu povolíme automatický reconnect
-          setTimeout(() => {
-              socket.io.opts.reconnection = true;
-          }, 1000);
-      }
-  }, []);
-
-  const handleTestReconnect = useCallback(() => {
-      const socket = socketService.socket;
-      if (socket && !socket.connected) {
-          socket.connect();
-      }
-  }, []);
-
   const OpponentHandArea = styled(HandArea)`
     top: 10px;
     bottom: auto;
@@ -1903,21 +1792,8 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
 
 
-
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      {/* Přidáme testovací tlačítka pouze v development prostředí */}
-      {process.env.NODE_ENV === 'development' && (
-          <TestButtons>
-              <TestButton onClick={handleTestDisconnect}>
-                  Test Disconnect
-              </TestButton>
-              <TestButton onClick={handleTestReconnect}>
-                  Test Reconnect
-              </TestButton>
-          </TestButtons>
-      )}
-      
       <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
         <GameBoard>
           <TurnIndicator $isPlayerTurn={isPlayerTurn}>
@@ -2105,11 +1981,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
           />
           {/* Přidáme komponentu pro animace */}
           <AnimationEffect />
-          {connectionStatus && (
-            <ConnectionStatus>
-              {connectionStatus}
-            </ConnectionStatus>
-          )}
         </GameBoard>
       </ScalableGameWrapper>
     </DragDropContext>
