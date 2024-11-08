@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
-import { FaEdit } from 'react-icons/fa';
+import { FaEdit, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
 import priestHero from '../../assets/images/priest-hero.png';
 import mageHero from '../../assets/images/mage-hero.png';
 import mageAbility from '../../assets/images/mage.png';
 import priestAbility from '../../assets/images/priest.png';
+import seerHero from '../../assets/images/seer-hero.png';
+import seerAbility from '../../assets/images/seer.png';
+import defenderHero from '../../assets/images/defender-hero.png';
+import defenderAbility from '../../assets/images/defender.png';
 
 const glowAnimation = keyframes`
     0% { box-shadow: 0 0 5px ${theme.colors.primary}; }
@@ -78,55 +82,68 @@ const Modal = styled.div`
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.95) 100%);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
     opacity: 0;
     animation: fadeIn 0.3s forwards;
+    padding: 20px;
 
     @keyframes fadeIn {
         to { opacity: 1; }
     }
 `;
 
+const darkenGradient = (gradient) => {
+    return gradient.replace(
+        /(\d+\.?\d*%)/g, 
+        (match) => `${Math.max(0, parseInt(match) - 15)}%`
+    );
+};
+
 const ModalContent = styled.div`
-    background: ${theme.colors.background};
+    background: ${props => {
+        const heroType = props.$activeHero?.toLowerCase();
+        if (!heroType) return `linear-gradient(to bottom, 
+            ${theme.colors.background} 0%,
+            ${theme.colors.backgroundLight} 100%)`;
+
+        const baseGradient = theme.heroes[heroType].gradient;
+        const darkGradient = baseGradient
+            .replace('135deg', 'circle at center')
+            .replace(/\d+%/g, match => `${Math.max(0, parseInt(match) - 25)}%`)
+            .replace(/(#[0-9a-f]{6}|rgba?\([^)]+\))/gi, color => {
+                if (color.startsWith('#')) {
+                    return color + '99';
+                }
+                return color.replace(')', ', 0.6)');
+            });
+        
+        return `
+            radial-gradient(
+                circle at center,
+                ${darkGradient}
+            ),
+            linear-gradient(
+                to bottom,
+                ${theme.colors.background} 0%,
+                ${theme.colors.backgroundLight} 100%
+            )
+        `;
+    }};
     padding: 40px;
-    border-radius: 15px;
+    border-radius: 20px;
     border: 2px solid ${theme.colors.border.golden};
-    max-width: 900px;
-    width: 90%;
-    position: relative;
-`;
-
-const HeroesGrid = styled.div`
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
-    margin-top: 30px;
-`;
-
-const HeroCard = styled.div`
-    background: ${props => props.$isMage ? 
-        `linear-gradient(135deg, #050813 0%, #0d1642 100%)` : 
-        `linear-gradient(135deg, #0d1a1a 0%, #1a3333 100%)`};
-    border: 2px solid ${props => props.$isSelected ? theme.colors.primary : 'transparent'};
-    border-radius: 15px;
-    padding: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
+    width: 95%;
+    max-width: 1400px;
+    max-height: 90vh;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-
-    &:hover {
-        transform: translateY(-5px);
-        box-shadow: ${props => props.$isMage ? 
-            '0 8px 25px rgba(33, 150, 243, 0.1)' : 
-            '0 8px 25px rgba(218, 165, 32, 0.1)'};
-    }
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5),
+                inset 0 0 100px rgba(0, 0, 0, 0.2);
+    transition: background 0.5s ease;
 
     &::before {
         content: '';
@@ -134,16 +151,82 @@ const HeroCard = styled.div`
         top: 0;
         left: 0;
         right: 0;
-        bottom: 0;
-        background: linear-gradient(45deg, transparent, ${props => props.$isMage ? 
-            'rgba(33, 150, 243, 0.03)' : 
-            'rgba(218, 165, 32, 0.03)'}, transparent);
-        transform: translateX(-100%);
-        transition: transform 0.6s;
+        height: 100px;
+        background: linear-gradient(to bottom, 
+            rgba(0, 0, 0, 0.4) 0%,
+            transparent 100%);
+        pointer-events: none;
     }
 
-    &:hover::before {
-        transform: translateX(100%);
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 200px;
+        background: linear-gradient(to top, 
+            ${props => {
+                const heroType = props.$activeHero?.toLowerCase();
+                if (!heroType) return 'rgba(0, 0, 0, 0.8)';
+                return `${theme.heroes[heroType].accent.replace('0.3', '0.15')}`;
+            }} 0%,
+            transparent 100%);
+        pointer-events: none;
+        opacity: 0.8;
+    }
+`;
+
+const HeroesContainer = styled.div`
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: 0 40px;
+    margin: 20px 0;
+`;
+
+const NavigationContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 30px;
+`;
+
+const HeroesSlider = styled.div`
+    display: flex;
+    transition: ${props => props.$isTransitioning ? 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)' : 'none'};
+    transform: translateX(calc(50% - ${props => (props.$currentSlide + 2) * 395}px - 150px));
+    gap: 40px;
+    padding: 20px 0;
+    position: relative;
+    left: -70px;
+}
+`;
+
+const HeroCard = styled.div`
+    flex: 0 0 300px;
+    width: 300px;
+    background: ${props => theme.heroes[props.$heroType.toLowerCase()].gradient};
+    border: ${props => props.$isSelected ? 
+        `3px solid ${theme.colors.primary}` : 
+        '3px solid transparent'};
+    border-radius: 15px;
+    padding: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    box-shadow: ${props => props.$isSelected ? 
+        `0 0 20px ${theme.colors.primary}40` : 
+        '0 4px 15px rgba(0, 0, 0, 0.5)'};
+    transform: ${props => props.$isActive ? 'scale(1)' : 'scale(0.8)'};
+    opacity: ${props => props.$isActive ? '1' : '0.5'};
+    filter: ${props => props.$isActive ? 'blur(0)' : 'blur(2px)'};
+
+    &:hover {
+        transform: ${props => props.$isActive ? 'scale(1.05)' : 'scale(0.85)'};
+        box-shadow: 0 8px 25px ${props => theme.heroes[props.$heroType.toLowerCase()].glow};
+        opacity: ${props => props.$isActive ? '1' : '0.7'};
+        filter: blur(0);
     }
 `;
 
@@ -198,11 +281,25 @@ const ModalTitle = styled.h2`
     font-family: 'MedievalSharp', cursive;
     color: ${theme.colors.text.primary};
     text-align: center;
-    margin-bottom: 20px;
-    font-size: 1.8em;
+    margin-bottom: 30px;
+    font-size: 2.5em;
     text-transform: uppercase;
     letter-spacing: 3px;
-    text-shadow: ${theme.shadows.text};
+    text-shadow: ${theme.shadows.text},
+                 0 0 20px ${theme.colors.primary}40;
+    position: relative;
+    padding-bottom: 15px;
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 150px;
+        height: 3px;
+        background: ${theme.colors.border.golden};
+    }
 `;
 
 const CloseButton = styled.button`
@@ -301,27 +398,87 @@ const AbilityContainer = styled.div`
     margin-top: 30px;
 `;
 
+const NavigationButton = styled.button`
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid ${theme.colors.primary};
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: ${theme.colors.primary};
+    position: relative;
+    z-index: 2;
+
+    &:hover {
+        background: rgba(0, 0, 0, 0.9);
+        transform: scale(1.1);
+        box-shadow: 0 0 15px ${theme.colors.primary}40;
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        &:hover {
+            transform: none;
+        }
+    }
+
+    svg {
+        font-size: 20px;
+    }
+
+    &:active {
+        transform: scale(0.95);
+    }
+
+    &:focus {
+        outline: none;
+        box-shadow: 0 0 0 2px ${theme.colors.primary}40;
+    }
+`;
+
 export const heroImages = {
     priest: priestHero,
-    mage: mageHero
+    mage: mageHero,
+    seer: seerHero,
+    defender: defenderHero
 };
 
 export const heroAbilities = {
     priest: priestAbility,
-    mage: mageAbility
+    mage: mageAbility,
+    seer: seerAbility,
+    defender: defenderAbility
 };
 
 function HeroSelector({ userId, currentHeroId, onHeroChange }) {
+    const [currentSlide, setCurrentSlide] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [heroes, setHeroes] = useState([]);
     const [selectedHero, setSelectedHero] = useState(currentHeroId);
     const [currentHero, setCurrentHero] = useState(null);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+
+    const extendedHeroes = useMemo(() => {
+        if (heroes.length === 0) return [];
+        return [
+            ...heroes.slice(-2),
+            ...heroes,
+            ...heroes.slice(0, 2)
+        ];
+    }, [heroes]);
 
     useEffect(() => {
         const loadHeroes = async () => {
             try {
                 const heroesData = await supabaseService.getHeroes();
+                const selectedHeroIndex = heroesData.findIndex(h => h.id === currentHeroId);
                 setHeroes(heroesData);
+                setCurrentSlide(selectedHeroIndex);
                 const current = heroesData.find(h => h.id === currentHeroId);
                 setCurrentHero(current);
             } catch (error) {
@@ -331,6 +488,51 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
 
         loadHeroes();
     }, [currentHeroId]);
+
+    useEffect(() => {
+        if (isModalOpen) {
+            const selectedHeroIndex = heroes.findIndex(h => h.id === selectedHero);
+            setCurrentSlide(selectedHeroIndex);
+        }
+    }, [isModalOpen, heroes, selectedHero]);
+
+    const handlePrevSlide = useCallback(() => {
+        if (isTransitioning) return;
+        setIsTransitioning(true);
+        
+        if (currentSlide === 0) {
+            setIsTransitioning(false);
+            setCurrentSlide(heroes.length);
+            
+            setTimeout(() => {
+                setIsTransitioning(true);
+                setCurrentSlide(heroes.length - 1);
+            }, 50);
+        } else {
+            setCurrentSlide(prev => prev - 1);
+        }
+        
+        setTimeout(() => setIsTransitioning(false), 500);
+    }, [isTransitioning, currentSlide, heroes.length]);
+
+    const handleNextSlide = useCallback(() => {
+        if (isTransitioning) return;
+        setIsTransitioning(true);
+        
+        if (currentSlide === heroes.length - 1) {
+            setIsTransitioning(false);
+            setCurrentSlide(-1);
+            
+            setTimeout(() => {
+                setIsTransitioning(true);
+                setCurrentSlide(0);
+            }, 50);
+        } else {
+            setCurrentSlide(prev => prev + 1);
+        }
+        
+        setTimeout(() => setIsTransitioning(false), 500);
+    }, [isTransitioning, currentSlide, heroes.length]);
 
     const handleHeroSelect = async (heroId) => {
         try {
@@ -347,46 +549,94 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
 
     const heroQuotes = {
         'Mage': "Knowledge is power, and I have plenty of both.",
-        'Priest': "The Light shall bring victory!"
+        'Priest': "The Light shall bring victory!",
+        'Seer': "I see your future... and it's going to cost you 2 mana.",
+        'Defender': "Hide behind me! No, seriously, that's literally my job."
     };
+
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            if (!isModalOpen) return;
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    handlePrevSlide();
+                    break;
+                case 'ArrowRight':
+                    handleNextSlide();
+                    break;
+                case 'Enter':
+                    const currentHero = heroes[currentSlide];
+                    if (currentHero) {
+                        handleHeroSelect(currentHero.id);
+                    }
+                    break;
+                case 'Escape':
+                    setIsModalOpen(false);
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        
+        return () => {
+            window.removeEventListener('keydown', handleKeyPress);
+        };
+    }, [isModalOpen, currentSlide, heroes, handlePrevSlide, handleNextSlide, handleHeroSelect]);
 
     const modalContent = (
         <Modal>
-            <ModalContent>
+            <ModalContent $activeHero={heroes[currentSlide]?.name}>
                 <CloseButton onClick={() => setIsModalOpen(false)}>&times;</CloseButton>
                 <ModalTitle>Choose Your Hero</ModalTitle>
-                <HeroesGrid>
-                    {heroes.map(hero => (
-                        <HeroCard 
-                            key={hero.id}
-                            $isSelected={selectedHero === hero.id}
-                            $isMage={hero.name === 'Mage'}
-                            onClick={() => handleHeroSelect(hero.id)}
-                        >
-                            <HeroImage>
-                                <img src={heroImages[hero.image]} alt={hero.name} />
-                            </HeroImage>
-                            <HeroName>{hero.name}</HeroName>
-                            <AbilityContainer>
-                                <AbilitySection $isMage={hero.name === 'Mage'}>
-                                    <AbilityIcon $isMage={hero.name === 'Mage'}>
-                                        <img src={heroAbilities[hero.image]} alt={hero.ability_name} />
-                                    </AbilityIcon>
-                                    <AbilityInfo>
-                                        <HeroAbility $isMage={hero.name === 'Mage'}>
-                                            <h4>{hero.ability_name}</h4>
-                                            <p>{hero.ability_description}</p>
-                                        </HeroAbility>
-                                    </AbilityInfo>
-                                    <AbilityCost>{hero.ability_cost}</AbilityCost>
-                                </AbilitySection>
-                            </AbilityContainer>
-                            <HeroQuote $isMage={hero.name === 'Mage'}>
-                                {heroQuotes[hero.name]}
-                            </HeroQuote>
-                        </HeroCard>
-                    ))}
-                </HeroesGrid>
+                <NavigationContainer>
+                    <NavigationButton onClick={handlePrevSlide}>
+                        <FaChevronLeft />
+                    </NavigationButton>
+                    <NavigationButton onClick={handleNextSlide}>
+                        <FaChevronRight />
+                    </NavigationButton>
+                </NavigationContainer>
+                <HeroesContainer>
+                    <HeroesSlider 
+                        $currentSlide={currentSlide}
+                        $isTransitioning={isTransitioning}
+                    >
+                        {extendedHeroes.map((hero, index) => (
+                            <HeroCard 
+                                key={`${hero.id}-${index}`}
+                                $isSelected={selectedHero === hero.id}
+                                $heroType={hero.name}
+                                $isActive={index - 2 === currentSlide}
+                                onClick={() => handleHeroSelect(hero.id)}
+                            >
+                                <HeroImage>
+                                    <img src={heroImages[hero.image]} alt={hero.name} />
+                                </HeroImage>
+                                <HeroName>{hero.name}</HeroName>
+                                <AbilityContainer>
+                                    <AbilitySection $isMage={hero.name === 'Mage'}>
+                                        <AbilityIcon $isMage={hero.name === 'Mage'}>
+                                            <img src={heroAbilities[hero.image]} alt={hero.ability_name} />
+                                        </AbilityIcon>
+                                        <AbilityInfo>
+                                            <HeroAbility $isMage={hero.name === 'Mage'}>
+                                                <h4>{hero.ability_name}</h4>
+                                                <p>{hero.ability_description}</p>
+                                            </HeroAbility>
+                                        </AbilityInfo>
+                                        <AbilityCost>{hero.ability_cost}</AbilityCost>
+                                    </AbilitySection>
+                                </AbilityContainer>
+                                <HeroQuote $isMage={hero.name === 'Mage'}>
+                                    {heroQuotes[hero.name]}
+                                </HeroQuote>
+                            </HeroCard>
+                        ))}
+                    </HeroesSlider>
+                </HeroesContainer>
             </ModalContent>
         </Modal>
     );

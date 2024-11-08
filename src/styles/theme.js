@@ -49,5 +49,35 @@ export const theme = {
     animations: {
         shine: 'shine 3s infinite linear',
         float: 'float 3s infinite ease-in-out'
+    },
+    heroes: {
+        mage: {
+            gradient: 'linear-gradient(135deg, #050813 0%, #0d1642 100%)',
+            accent: 'rgba(33, 150, 243, 0.3)',
+            text: 'rgba(179, 229, 252, 0.9)',
+            quote: 'rgba(179, 229, 252, 0.7)',
+            glow: 'rgba(33, 150, 243, 0.1)'
+        },
+        priest: {
+            gradient: 'linear-gradient(135deg, #003333 0%, #006666 100%)',
+            accent: 'rgba(0, 255, 255, 0.3)',
+            text: 'rgba(179, 255, 255, 0.9)',
+            quote: 'rgba(153, 255, 255, 0.7)',
+            glow: 'rgba(0, 255, 255, 0.1)'
+        },
+        seer: {
+            gradient: 'linear-gradient(135deg, #1a0033 0%, #4d0066 100%)',
+            accent: 'rgba(255, 0, 255, 0.3)',
+            text: 'rgba(255, 179, 255, 0.9)',
+            quote: 'rgba(255, 204, 255, 0.7)',
+            glow: 'rgba(255, 0, 255, 0.1)'
+        },
+        defender: {
+            gradient: 'linear-gradient(135deg, #330000 0%, #660000 100%)',
+            accent: 'rgba(255, 0, 0, 0.3)',
+            text: 'rgba(255, 179, 179, 0.9)',
+            quote: 'rgba(255, 204, 204, 0.7)',
+            glow: 'rgba(255, 0, 0, 0.1)'
+        }
     }
 };

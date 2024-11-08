@@ -1374,7 +1374,38 @@ const HeroAbilityIcon = styled.img`
     width: 80px;
     height: 80px;
     object-fit: contain;
-    filter: drop-shadow(0 0 10px ${props => props.$isHealing ? '#00ff00' : '#ff0000'});
+    filter: ${props => {
+        switch(props.$heroType) {
+            case 'Mage':
+                return 'drop-shadow(0 0 10px #ff0000)'; // červená záře
+            case 'Priest':
+                return 'drop-shadow(0 0 10px #00ff00)'; // zelená záře
+            case 'Seer':
+                return 'drop-shadow(0 0 10px #ff00ff)'; // fialová záře
+            case 'Defender':
+                return 'drop-shadow(0 0 10px #0088ff)'; // modrá záře
+            default:
+                return 'none';
+        }
+    }};
+    transition: filter 0.3s ease;
+
+    &:hover {
+        filter: ${props => {
+            switch(props.$heroType) {
+                case 'Mage':
+                    return 'drop-shadow(0 0 15px #ff0000)';
+                case 'Priest':
+                    return 'drop-shadow(0 0 15px #00ff00)';
+                case 'Seer':
+                    return 'drop-shadow(0 0 15px #ff00ff)';
+                case 'Defender':
+                    return 'drop-shadow(0 0 15px #0088ff)';
+                default:
+                    return 'none';
+            }
+        }};
+    }
 `;
 
 // Přidáme nové styled komponenty
