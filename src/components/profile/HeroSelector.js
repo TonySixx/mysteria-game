@@ -107,8 +107,8 @@ const ModalContent = styled.div`
     background: ${props => {
         const heroType = props.$activeHero?.toLowerCase();
         if (!heroType) return `linear-gradient(to bottom, 
-            ${theme.colors.background} 0%,
-            ${theme.colors.backgroundLight} 100%)`;
+            rgba(0, 0, 0, 0.95) 0%,
+            rgba(0, 0, 0, 0.98) 100%)`;
 
         const baseGradient = theme.heroes[heroType].gradient;
         const darkGradient = baseGradient
@@ -128,8 +128,8 @@ const ModalContent = styled.div`
             ),
             linear-gradient(
                 to bottom,
-                ${theme.colors.background} 0%,
-                ${theme.colors.backgroundLight} 100%
+                rgba(0, 0, 0, 0.95) 0%,
+                rgba(0, 0, 0, 0.98) 100%
             )
         `;
     }};
@@ -138,12 +138,12 @@ const ModalContent = styled.div`
     border: 2px solid ${theme.colors.border.golden};
     width: 95%;
     max-width: 1400px;
-    max-height: 90vh;
+    max-height: 95vh;
     position: relative;
     overflow: hidden;
     box-shadow: 0 0 30px rgba(0, 0, 0, 0.5),
                 inset 0 0 100px rgba(0, 0, 0, 0.2);
-    transition: background 0.5s ease;
+    transition: all 0.5s ease;
 
     &::before {
         content: '';
@@ -189,7 +189,6 @@ const NavigationContainer = styled.div`
     display: flex;
     justify-content: center;
     gap: 20px;
-    margin-bottom: 30px;
 `;
 
 const HeroesSlider = styled.div`
@@ -282,6 +281,7 @@ const ModalTitle = styled.h2`
     color: ${theme.colors.text.primary};
     text-align: center;
     margin-bottom: 30px;
+    margin-top:0px;
     font-size: 2.5em;
     text-transform: uppercase;
     letter-spacing: 3px;
@@ -534,7 +534,7 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
         setTimeout(() => setIsTransitioning(false), 500);
     }, [isTransitioning, currentSlide, heroes.length]);
 
-    const handleHeroSelect = async (heroId) => {
+    const handleHeroSelect = useCallback(async (heroId) => {
         try {
             await supabaseService.updateProfile(userId, { hero_id: heroId });
             setSelectedHero(heroId);
@@ -545,7 +545,7 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
         } catch (error) {
             console.error('Error updating hero:', error);
         }
-    };
+    }, [userId, heroes, onHeroChange]);
 
     const heroQuotes = {
         'Mage': "Knowledge is power, and I have plenty of both.",
