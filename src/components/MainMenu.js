@@ -11,7 +11,7 @@ import { DeckList } from './deck/DeckList';
 import { deckService } from '../services/deckService';
 import DeckBuilder from './deck/DeckBuilder';
 import PropTypes from 'prop-types';
-import { FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
+import { FaVolumeUp, FaVolumeMute, FaExpand, FaCompress } from 'react-icons/fa';
 
 const MenuContainer = styled.div`
     min-height: 100vh;
@@ -456,10 +456,9 @@ const TabContent = styled.div`
 `;
 
 // Přidáme nový styled komponent pro tlačítko hudby
-const MusicToggleButton = styled.button`
+const ControlButton = styled.button`
     position: fixed;
     top: 20px;
-    right: 20px;
     background: ${theme.colors.backgroundLight};
     border: 2px solid ${theme.colors.border.golden};
     border-radius: 50%;
@@ -499,6 +498,14 @@ const MusicToggleButton = styled.button`
     }
 `;
 
+const MusicToggleButton = styled(ControlButton)`
+    right: 80px; // Posuneme tlačítko hudby doleva
+`;
+
+const FullscreenButton = styled(ControlButton)`
+    right: 20px;
+`;
+
 function MainMenu({ 
     user, 
     onGameStart, 
@@ -518,6 +525,28 @@ function MainMenu({
     const [isLoading, setIsLoading] = useState(false);
     const [contentVisible, setContentVisible] = useState(false);
     const scrollToContent = useScrollToContent();
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error(`Chyba při přepnutí do fullscreen: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    };
 
     const handleStartGame = () => {
         if (!user) {
@@ -700,6 +729,12 @@ function MainMenu({
             >
                 {isMusicEnabled ? <FaVolumeUp size={24} /> : <FaVolumeMute size={24} />}
             </MusicToggleButton>
+            <FullscreenButton
+                onClick={toggleFullscreen}
+                title={isFullscreen ? 'Ukončit režim celé obrazovky' : 'Přepnout na celou obrazovku'}
+            >
+                {isFullscreen ? <FaCompress size={24} /> : <FaExpand size={24} />}
+            </FullscreenButton>
             <ContentWrapper className={isLoading ? 'loading' : ''}>
                 <div>
                     <MenuHeader>
