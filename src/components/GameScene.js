@@ -10,6 +10,11 @@ import { theme } from '../styles/theme';
 import { cardImages } from './deck/DeckBuilder';
 import socketService from '../services/socketService';
 import { heroAbilities, heroImages } from './profile/HeroSelector';
+import { useSound } from 'use-sound';
+import cardSound from '../assets/sounds/card.mp3';
+import spellSound from '../assets/sounds/spell.mp3';
+import attackSound from '../assets/sounds/attack.mp3';
+import turnSound from '../assets/sounds/turn.mp3';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`
@@ -1493,6 +1498,10 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const opponentFieldRefs = useRef([]);
   const opponentHeroRef = useRef(null);
   const opponentHandRef = useRef(null);
+  const [playCardSound, { duration:durationCardSound,stop:stopCardSound }] = useSound(cardSound, { volume: 0.8 });
+  const [playSpellSound] = useSound(spellSound, { volume: 0.8 });
+  const [playAttackSound] = useSound(attackSound, { volume: 0.8 });
+  const [playTurnSound] = useSound(turnSound, { volume: 0.8 });
 
   // Přidáme useEffect pro sledování nových zpráv z combat logu
   useEffect(() => {
@@ -1551,30 +1560,66 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     return () => window.removeEventListener('resize', calculateScale);
   }, [isMobile]);
 
-  // Přidáme useEffect pro zpracování animací
+  // Upravíme useEffect pro zpracování animací a zvuků
   useEffect(() => {
-    if (gameState?.animation && gameState.playerIndex !== gameState.animation.playerIndex) {
-      setIsClosingAnimation(false);
-      setAnimation(gameState.animation);
+    if (gameState?.animation) {
+      // Přehrajeme zvuk podle typu animace bez ohledu na to, kdo ji vyvolal
+      switch (gameState.animation.type) {
+        case 'playCard':
+          if (gameState.animation.card.type === 'spell') {
+            playSpellSound();
+          } else {
+            playCardSound();
+          }
+          break;
+        case 'attack':
+          playAttackSound();
+          break;
+        case 'heroAbility':
+          playSpellSound();
+            break;
+        default:
+          break;
+      }
+
+      // Pokud je animace od protihráče, zobrazíme ji
+      if (gameState.playerIndex !== gameState.animation.playerIndex) {
+        setIsClosingAnimation(false);
+        setAnimation(gameState.animation);
 
       // Spustíme fadeout 0.5s před koncem animace
-      const fadeOutTimer = setTimeout(() => {
-        setIsClosingAnimation(true);
-      }, 2500);
+        const fadeOutTimer = setTimeout(() => {
+          setIsClosingAnimation(true);
+        }, 2500);
 
-      // Odstraníme animaci až po dokončení fadeout
-      const removeTimer = setTimeout(() => {
-        setAnimation(null);
-        setIsClosingAnimation(false);
-      }, 3000);
+        // Odstraníme animaci až po dokončení fadeout
+        const removeTimer = setTimeout(() => {
+          setAnimation(null);
+          setIsClosingAnimation(false);
+        }, 3000);
 
-      return () => {
-        clearTimeout(fadeOutTimer);
-        clearTimeout(removeTimer);
-      };
+        return () => {
+          clearTimeout(fadeOutTimer);
+          clearTimeout(removeTimer);
+        };
+      }
     }
-  }, [gameState?.animation, gameState?.playerIndex]);
+  }, [gameState?.animation, gameState?.playerIndex, playCardSound, playSpellSound, playAttackSound]);
 
+  // Přidáme useEffect pro sledování změny tahu
+  useEffect(() => {
+    const isNewTurn = gameState?.currentPlayer === gameState?.playerIndex;
+
+    if (isNewTurn ) {
+      playTurnSound();
+    }
+  }, [gameState?.currentPlayer, gameState?.playerIndex, playTurnSound]);
+
+
+  // Upravíme handleEndTurn pro přehrání zvuku při použití hero ability
+  const handleHeroAbility = useCallback(() => {
+    onUseHeroAbility();
+  }, [onUseHeroAbility]);
 
   // Upravíme handleSkipAnimation pro plynulé ukončení
   const handleSkipAnimation = useCallback(() => {
@@ -1975,7 +2020,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
 
 
-
   return (
     <>
         {showTestControls && (
@@ -2118,7 +2162,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
             <div style={{position:"relative",top:"-50px"}}>
                 <HeroArea $isMobile={isMobile}>
                 <div style={{position:"absolute"}}></div>
-                  <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} isCurrentPlayer={true} onUseAbility={onUseHeroAbility} currentMana={gameState.player.mana} />
+                  <HeroDisplay hero={gameState.player.hero} heroName={gameState.player.username} isCurrentPlayer={true} onUseAbility={handleHeroAbility} currentMana={gameState.player.mana} />
                 </HeroArea>
                 </div>
               </BattleArea>

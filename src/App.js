@@ -7,7 +7,9 @@ import ConnectionStatus from './components/ConnectionStatus';
 import GlobalStyles from './styles/GlobalStyles';
 import RewardNotification from './components/rewards/RewardNotification';
 import styled from 'styled-components';
-
+import { useSound } from 'use-sound';
+import mainMenuMusic from './assets/music/msc_main.mp3';
+import gameMusic from './assets/music/msc_game.mp3';
 const AppWrapper = styled.div`
     min-height: 100vh;
     width: 100%;
@@ -17,6 +19,17 @@ const AppWrapper = styled.div`
 `;
 
 function App() {
+    const [isMusicEnabled, setIsMusicEnabled] = useState(true);
+    const [playMainMenuMusic, { duration, stop: stopMainMenuMusic }] = useSound(mainMenuMusic, { 
+        volume: 0.5,
+        soundEnabled: isMusicEnabled, 
+        interrupt: true
+    });
+    const [playGameMusic, { duration: durationGameMusic, stop: stopGameMusic }] = useSound(gameMusic, { 
+        volume: 0.5,
+        soundEnabled: isMusicEnabled,
+        interrupt: true
+    });
     const [gameId, setGameId] = useState(null);
     const [gameState, setGameState] = useState(null);
     const [error, setError] = useState(null);
@@ -27,6 +40,26 @@ function App() {
         show: false
     });
     const [reward, setReward] = useState(null);
+
+    useEffect(() => {
+        if (duration && !gameId && isMusicEnabled) {
+            playMainMenuMusic();
+            stopGameMusic();
+        }
+        else {
+            if (durationGameMusic && isMusicEnabled) {
+                stopMainMenuMusic();
+                playGameMusic();
+            }
+        }
+    }, [duration, playMainMenuMusic, gameId, stopMainMenuMusic, playGameMusic, durationGameMusic, stopGameMusic, isMusicEnabled]);
+
+    useEffect(() => {
+        if (!isMusicEnabled) {
+            stopMainMenuMusic();
+            stopGameMusic();
+        }
+    }, [isMusicEnabled, stopGameMusic, stopMainMenuMusic]);
 
     useEffect(() => {
         // Inicializace session při načtení aplikace
@@ -262,6 +295,8 @@ function App() {
                             setUser(null);
                         }}
                         isConnected={connectionStatus.isConnected}
+                        isMusicEnabled={isMusicEnabled}
+                        onToggleMusic={() => setIsMusicEnabled(!isMusicEnabled)}
                     />
                 ) : (
                     gameState && <GameScene

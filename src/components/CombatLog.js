@@ -1,5 +1,7 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 import styled from 'styled-components';
+import { useSound } from 'use-sound';
+import messageSound from '../assets/sounds/message.mp3';
 
 const DraggableContainer = styled.div`
   position: fixed;
@@ -280,6 +282,9 @@ const _CombatLog = ({ logEntries, socket, playerUsername, opponentUsername }) =>
   const lastReadLogRef = useRef(0);
   const lastReadChatRef = useRef(0);
 
+  // Přidáme hook pro zvuk
+  const [playMessageSound] = useSound(messageSound, { volume: 0.4 });
+
   // Upravíme efekt pro scrollování
   useEffect(() => {
     if (activeTab === 'log' && logRef.current) {
@@ -308,6 +313,11 @@ const _CombatLog = ({ logEntries, socket, playerUsername, opponentUsername }) =>
       
       setChatMessages(prev => [...prev, newMessage]);
       
+      // Přehrajeme zvuk pouze pro příchozí zprávy (ne pro vlastní)
+      if (data.sender !== playerUsername) {
+        playMessageSound();
+      }
+      
       if (activeTab !== 'chat') {
         setUnreadChats(prev => prev + 1);
       } else {
@@ -318,7 +328,7 @@ const _CombatLog = ({ logEntries, socket, playerUsername, opponentUsername }) =>
     return () => {
       socket.off('chatMessage');
     };
-  }, [socket, playerUsername, activeTab, chatMessages.length]);
+  }, [socket, playerUsername, activeTab, chatMessages.length, playMessageSound]);
 
   // Odstraníme původní efekt pro počítání nepřečtených chat zpráv
   // a necháme pouze efekt pro combat log

@@ -10,6 +10,8 @@ import OnlinePlayers from './play/OnlinePlayers';
 import { DeckList } from './deck/DeckList';
 import { deckService } from '../services/deckService';
 import DeckBuilder from './deck/DeckBuilder';
+import PropTypes from 'prop-types';
+import { FaVolumeUp, FaVolumeMute } from 'react-icons/fa';
 
 const MenuContainer = styled.div`
     min-height: 100vh;
@@ -453,7 +455,59 @@ const TabContent = styled.div`
     min-height: 200px; // Minimální výška pro předejití skákání obsahu
 `;
 
-function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
+// Přidáme nový styled komponent pro tlačítko hudby
+const MusicToggleButton = styled.button`
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${theme.colors.backgroundLight};
+    border: 2px solid ${theme.colors.border.golden};
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: ${theme.colors.border.golden};
+    z-index: 9999;
+    box-shadow: 
+        0 0 10px rgba(0, 0, 0, 0.5),
+        0 0 5px ${theme.colors.border.golden};
+    padding: 8px;
+
+    &:hover {
+        transform: scale(1.1);
+        box-shadow: 
+            0 0 15px rgba(255, 215, 0, 0.5),
+            0 0 25px rgba(255, 215, 0, 0.2);
+        background: ${theme.colors.secondary};
+    }
+
+    svg {
+        width: 28px;
+        height: 28px;
+        filter: drop-shadow(0 0 2px rgba(255, 215, 0, 0.5));
+    }
+
+    &:focus {
+        outline: none;
+        box-shadow: 
+            0 0 0 2px ${theme.colors.border.golden},
+            0 0 15px rgba(255, 215, 0, 0.3);
+    }
+`;
+
+function MainMenu({ 
+    user, 
+    onGameStart, 
+    onLogin, 
+    onLogout, 
+    isConnected, 
+    isMusicEnabled, 
+    onToggleMusic 
+}) {
     const [activeTab, setActiveTab] = useState(user ? 'play' : 'login');
     const [isSearching, setIsSearching] = useState(false);
     const [onlinePlayers, setOnlinePlayers] = useState([]);
@@ -640,6 +694,12 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
 
     return (
         <MenuContainer>
+            <MusicToggleButton 
+                onClick={onToggleMusic} 
+                title={isMusicEnabled ? 'Vypnout hudbu' : 'Zapnout hudbu'}
+            >
+                {isMusicEnabled ? <FaVolumeUp size={24} /> : <FaVolumeMute size={24} />}
+            </MusicToggleButton>
             <ContentWrapper className={isLoading ? 'loading' : ''}>
                 <div>
                     <MenuHeader>
@@ -775,5 +835,11 @@ function MainMenu({ user, onGameStart, onLogin, onLogout, isConnected }) {
         </MenuContainer>
     );
 }
+
+MainMenu.propTypes = {
+    // ... existující PropTypes ...
+    isMusicEnabled: PropTypes.bool.isRequired,
+    onToggleMusic: PropTypes.func.isRequired,
+};
 
 export default MainMenu;
