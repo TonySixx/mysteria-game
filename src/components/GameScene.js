@@ -949,6 +949,10 @@ const GameOverContent = styled.div`
   text-align: center;
   color: #ffd700;
   animation: slideIn 0.5s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
 
   @keyframes slideIn {
     from {
@@ -1450,6 +1454,29 @@ const ReconnectMessage = styled.div`
     text-align: center;
 `;
 
+const DefeatDetails = styled.div`
+  font-size: 1.2em;
+  color: #ff9999;
+  margin: 10px 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  border: 1px solid #ff4444;
+  max-width: 400px;
+
+  .defeat-card {
+    display: inline-block;
+    color: #ffd700;
+    font-weight: bold;
+    text-shadow: 0 0 5px #ffd700;
+  }
+
+  .damage {
+    color: #ff4444;
+    font-weight: bold;
+  }
+`;
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -1725,6 +1752,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   ), [gameState.opponent.field, gameState.player.field, isMobile]);
 
 
+
   // Vylepšený onDragEnd s logováním
   const onDragEnd = useCallback((result) => {
     const { source, destination } = result;
@@ -1898,6 +1926,8 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   // Přidáme early return pro konec hry
   if (gameState.gameOver) {
     const isWinner = gameState.winner === gameState.playerIndex;
+    const lastAnimation = animation; // Použijeme poslední animaci
+
     return (
       <GameBoard>
         <GameOverOverlay>
@@ -1906,6 +1936,31 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
             <GameOverMessage $isWinner={isWinner}>
               {isWinner ? 'Victory!' : 'Defeat!'}
             </GameOverMessage>
+            {!isWinner && lastAnimation && (
+              <DefeatDetails>
+                {lastAnimation.type === 'attack' ? (
+                  <>
+                    Defeated by{' '}
+                    <span className="defeat-card">{lastAnimation.card.name}</span>
+                    {lastAnimation.card.attack && (
+                      <> dealing <span className="damage">{lastAnimation.card.attack} damage</span></>
+                    )}
+                  </>
+                ) : lastAnimation.type === 'heroAbility' ? (
+                  <>
+                    Defeated by hero ability{' '}
+                    <span className="defeat-card">{lastAnimation.hero.abilityName}</span>
+                  </>
+                ) : lastAnimation.type === 'playCard' && lastAnimation.card.type === 'spell' ? (
+                  <>
+                    Defeated by spell{' '}
+                    <span className="defeat-card">{lastAnimation.card.name}</span>
+                  </>
+                ) : (
+                  'Defeated by opponent'
+                )}
+              </DefeatDetails>
+            )}
             <PlayAgainButton onClick={() => window.location.reload()}>
               Play Again
             </PlayAgainButton>

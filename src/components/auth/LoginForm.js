@@ -121,7 +121,7 @@ function LoginForm({ onSuccess }) {
         } catch (error) {
             console.error('Login error:', error);
             if (error.message.includes('websocket error') || error.message.includes('connect_error')) {
-                setError('Game server is currently unavailable. Please try again later.');
+                setError('Game server is currently unavailable. Please wait about 1 minute and try again (server should be back online by then).');
             } else {
                 setError(error.message);
             }
