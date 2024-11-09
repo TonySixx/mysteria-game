@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import styled, { keyframes } from 'styled-components';
 import { theme } from '../../styles/theme';
@@ -6,6 +6,9 @@ import cardTexture from '../../assets/images/card-texture.png';
 import cardBack from '../../assets/images/card-back.png';
 import { cardImages } from '../deck/DeckBuilder';
 import { CARD_RARITY } from '../../constants';
+import useSound from 'use-sound';
+import openPackSound from '../../assets/sounds/open_pack.mp3';
+import showCardSound from '../../assets/sounds/card.mp3';
 
 const glowAnimation = (color) => keyframes`
     0% { box-shadow: 0 0 5px ${color}, 0 0 10px ${color}, 0 0 15px ${color}; }
@@ -213,9 +216,21 @@ const CloseButton = styled.button`
 function CardPackOpening({ cards, onClose }) {
     const [hoveredCard, setHoveredCard] = useState(null);
     const [flippedCards, setFlippedCards] = useState(new Set());
+    const [playOpenPackSound,{duration: durationOpenPackSound}] = useSound(openPackSound, { volume: 0.8 });
+    const [playShowCardSound,{duration: durationShowCardSound}] = useSound(showCardSound, { volume: 0.8 });
+
+    useEffect(() => {
+        if (durationOpenPackSound) {
+            playOpenPackSound();
+        }
+    }, [durationOpenPackSound, playOpenPackSound]);
+
 
     const handleCardClick = (index) => {
         if (!flippedCards.has(index)) {
+            if (durationShowCardSound) {
+                playShowCardSound();
+            }
             const newFlippedCards = new Set(flippedCards);
             newFlippedCards.add(index);
             setFlippedCards(newFlippedCards);

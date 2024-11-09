@@ -23,12 +23,14 @@ function App() {
     const [playMainMenuMusic, { duration, stop: stopMainMenuMusic }] = useSound(mainMenuMusic, { 
         volume: 0.5,
         soundEnabled: isMusicEnabled, 
-        interrupt: true
+        interrupt: true,
+        loop: true
     });
     const [playGameMusic, { duration: durationGameMusic, stop: stopGameMusic }] = useSound(gameMusic, { 
         volume: 0.5,
         soundEnabled: isMusicEnabled,
-        interrupt: true
+        interrupt: true,
+        loop: true
     });
     const [gameId, setGameId] = useState(null);
     const [gameState, setGameState] = useState(null);

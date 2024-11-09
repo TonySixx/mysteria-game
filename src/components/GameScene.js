@@ -15,6 +15,7 @@ import cardSound from '../assets/sounds/card.mp3';
 import spellSound from '../assets/sounds/spell.mp3';
 import attackSound from '../assets/sounds/attack.mp3';
 import turnSound from '../assets/sounds/turn.mp3';
+import backgroundImage from "../assets/images/background.png";
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`
@@ -102,7 +103,7 @@ const GameBoard = styled.div`
   position: relative;
   width: 100%;
   height: 100%;
-  background: url('/background.png') no-repeat center center;
+  background: url(${backgroundImage}) no-repeat center center;
   background-size: cover;
   color: #ffd700;
   font-family: 'Cinzel', serif;
@@ -1496,7 +1497,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
 
   // Přidáme refs pro sledování pozic karet
   const opponentFieldRefs = useRef([]);
-  const opponentHeroRef = useRef(null);
   const opponentHandRef = useRef(null);
   const [playCardSound, { duration:durationCardSound,stop:stopCardSound }] = useSound(cardSound, { volume: 0.8 });
   const [playSpellSound] = useSound(spellSound, { volume: 0.8 });
