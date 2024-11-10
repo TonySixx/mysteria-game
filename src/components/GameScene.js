@@ -16,7 +16,7 @@ import spellSound from '../assets/sounds/spell.mp3';
 import attackSound from '../assets/sounds/attack.mp3';
 import turnSound from '../assets/sounds/turn.mp3';
 import backgroundImage from "../assets/images/background.png";
-import HeroSpeechBubble from './game/HeroSpeechBubble';
+import HeroSpeechBubble from './HeroSpeechBubble';
 
 // Přesuneme Tooltip komponentu na začátek, hned po importech
 const Tooltip = styled.div`

@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { useSound } from 'use-sound';
-import mageSpeech from "../../assets/sounds/mage_speech.mp3";
-import defenderSpeech from "../../assets/sounds/defender_speech.mp3";
-import priestSpeech from "../../assets/sounds/priest_speech.mp3";
-import seerSpeech from "../../assets/sounds/seer_speech.mp3";
+import mageSpeech from "../assets/sounds/mage_speech.mp3";
+import defenderSpeech from "../assets/sounds/defender_speech.mp3";
+import priestSpeech from "../assets/sounds/priest_speech.mp3";
+import seerSpeech from "../assets/sounds/seer_speech.mp3";
 
 const heroStartQuotes = {
     'mage': "Time to make things disappear... permanently!",
