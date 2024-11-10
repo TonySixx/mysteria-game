@@ -780,7 +780,7 @@ function MainMenu({
             return;
         }
         setIsPlayingAI(true);
-        // TODO: Implementace logiky pro hru proti AI
+        socketService.startAIGame();
     };
 
     if (currentScreen === 'deck-builder') {

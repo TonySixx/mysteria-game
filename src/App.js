@@ -42,6 +42,7 @@ function App() {
         show: false
     });
     const [reward, setReward] = useState(null);
+    const [gameType, setGameType] = useState(null);
 
     useEffect(() => {
         if (duration && !gameId && isMusicEnabled) {
@@ -256,8 +257,9 @@ function App() {
         }
     }, [user, isInitialized]);
 
-    const handleGameStart = useCallback((newGameId) => {
+    const handleGameStart = useCallback((newGameId, type = 'pvp') => {
         setGameId(newGameId);
+        setGameType(type);
     }, []);
 
     useEffect(() => {
@@ -271,6 +273,12 @@ function App() {
             document.removeEventListener('contextmenu', handleContextMenu);
         };
     }, []);
+
+    useEffect(() => {
+        if (!gameId) {
+            setGameType(null);
+        }
+    }, [gameId]);
 
     return (
         <>
@@ -307,6 +315,7 @@ function App() {
                         onAttack={(attackData) => socketService.attack(attackData)}
                         onUseHeroAbility={() => socketService.useHeroAbility()}
                         onEndTurn={() => socketService.endTurn()}
+                        isAIGame={gameType === 'ai'}
                     />
                 )}
             </AppWrapper>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
 import styled from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Notification } from './Notification';
@@ -521,7 +521,7 @@ const DefeatDetails = styled.div`
   }
 `;
 
-function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility }) {
+function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility, isAIGame }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
   const [scale, setScale] = useState(1);
@@ -1009,6 +1009,45 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     transform: translateX(-50%) rotate(180deg);
   `;
 
+
+
+  // Přidáme efekt pro zobrazení "AI přemýšlí" notifikace
+  // useEffect(() => {
+  //   if (isAIGame && gameState.currentPlayer === 1) {
+  //     setNotification({
+  //       message: "AI is thinking...",
+  //       type: "info",
+  //       duration: 1500  // Notifikace zmizí po 1.5s
+  //     });
+  //   }
+  // }, [isAIGame, gameState.currentPlayer]);
+
+
+
+  // // Přidáme bezpečnostní kontroly pro gameState
+  // const safeGameState = useMemo(() => {
+  //   if (!gameState) return null;
+
+  //   return {
+  //     ...gameState,
+  //     player: gameState.player || {},
+  //     opponent: gameState.opponent || {},
+  //     currentPlayer: gameState.currentPlayer ?? -1,
+  //     playerIndex: gameState.playerIndex ?? -1
+  //   };
+  // }, [gameState]);
+
+  //   // Bezpečné získání jména protihráče
+  //   const opponentName = useMemo(() => {
+  //     if (isAIGame) return "AI Opponent";
+  //     return safeGameState.opponent?.username || "Opponent";
+  //   }, [isAIGame, safeGameState.opponent]);
+  
+  //   // Bezpečné získání stavu tahu
+  //   const isPlayerTurn = useMemo(() => {
+  //     return safeGameState.currentPlayer === safeGameState.playerIndex;
+  //   }, [safeGameState.currentPlayer, safeGameState.playerIndex])
+
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
 
 
@@ -1016,7 +1055,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   if (!gameState || !gameState.player) {
     return (
       <GameBoard>
-        <h1>Waiting for opponent...</h1>
+       <h1>Waiting for opponent...</h1>
       </GameBoard>
     );
   }
@@ -1113,13 +1152,13 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
             <PlayerInfo $isMobile={isMobile}>
               <DeckAndManaContainer>
                 <DeckContainer>
-                  {gameState.opponent.deckSize}
+                  {gameState.opponent?.deckSize || 0}
                   <Tooltip $position="bottom">
                     Cards in deck
                   </Tooltip>
                 </DeckContainer>
                 <ManaInfo>
-                  💎 {gameState.opponent.mana}/{gameState.opponent.maxMana}
+                  💎 {gameState.opponent?.mana || 0}/{gameState.opponent?.maxMana || 0}
                   <Tooltip $position="bottom">
                     Mana crystals
                   </Tooltip>

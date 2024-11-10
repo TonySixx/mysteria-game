@@ -302,6 +302,42 @@ class SocketService {
     onDisconnect(callback) {
         this.disconnectCallback = callback;
     }
+
+    // Přidáme metodu pro start AI hry
+    startAIGame() {
+        if (!this.socket?.connected) {
+            console.error('Socket není připojen');
+            if (this.errorCallback) {
+                this.errorCallback('Není připojení k serveru');
+            }
+            return;
+        }
+
+        if (!this.userId) {
+            console.error('Uživatel není přihlášen');
+            if (this.errorCallback) {
+                this.errorCallback('Pro hraní se musíte přihlásit');
+            }
+            return;
+        }
+
+        console.log('Odesílám požadavek na AI hru');
+        
+        // Přidáme handler pro chyby specifické pro AI hru
+        const handleAIGameError = (error) => {
+            console.error('AI Game Error:', error);
+            if (this.errorCallback) {
+                this.errorCallback(typeof error === 'string' ? error : error.message || 'Failed to start AI game');
+            }
+        };
+
+        this.socket.once('error', handleAIGameError);
+        
+        this.socket.emit('startAIGame', {
+            userId: this.userId,
+            username: this.userProfile?.username
+        });
+    }
 }
 
 const socketService = new SocketService();
