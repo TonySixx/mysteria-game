@@ -270,7 +270,7 @@ const Tab = styled.button`
 
 const PlayButton = styled.button`
     font-family: 'Cinzel', serif;
-    width: 300px;
+    width: 250px;
     padding: 20px;
     background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
     border: 3px solid transparent;
@@ -506,6 +506,66 @@ const FullscreenButton = styled(ControlButton)`
     right: 20px;
 `;
 
+// Přidáme nové styled komponenty pro AI tlačítko
+const PlayAIButton = styled(PlayButton)`
+    background: linear-gradient(45deg, 
+        rgba(26, 71, 42, 0.9),  // Tmavší, méně sytá zelená s průhledností
+        ${props => props.disabled ? theme.colors.secondary : 'rgba(45, 90, 64, 0.9)'}  // Tmavší odstín pro hover
+    );
+
+    &:hover {
+        transform: translateY(-3px);
+        box-shadow: ${theme.shadows.intense};
+        background: linear-gradient(45deg, 
+            rgba(45, 90, 64, 0.9),
+            rgba(26, 71, 42, 0.9)
+        );
+    }
+
+    &:disabled {
+        background: ${theme.colors.secondary};
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+
+    // Zachováme stejný border jako u PlayButton
+    border: 3px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+
+    // Zachováme stejný gradient efekt při hoveru
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            45deg,
+            transparent 0%,
+            rgba(255, 215, 0, 0.1) 50%,
+            transparent 100%
+        );
+        transform: translateY(-100%);
+        opacity: 0;
+        transition: all 0.3s;
+    }
+
+    &:hover::after {
+        transform: translateY(0);
+        opacity: 1;
+    }
+`;
+
+const ButtonsContainer = styled.div`
+    display: flex;
+    flex-direction: row;  // Změníme na row pro horizontální layout
+    justify-content: center;
+    gap: 20px;  // Zvětšíme mezeru mezi tlačítky
+    margin: 30px 0;
+`;
+
 function MainMenu({ 
     user, 
     onGameStart, 
@@ -526,6 +586,7 @@ function MainMenu({
     const [contentVisible, setContentVisible] = useState(false);
     const scrollToContent = useScrollToContent();
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isPlayingAI, setIsPlayingAI] = useState(false);
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -554,6 +615,7 @@ function MainMenu({
             return;
         }
         setIsSearching(true);
+        setIsPlayingAI(false); // Deaktivujeme AI tlačítko
         socketService.joinGame();
     };
 
@@ -711,6 +773,16 @@ function MainMenu({
         }
     }, [isLoading]);
 
+    // Přidáme handler pro hru proti AI
+    const handlePlayAI = () => {
+        if (!user) {
+            setActiveTab('login');
+            return;
+        }
+        setIsPlayingAI(true);
+        // TODO: Implementace logiky pro hru proti AI
+    };
+
     if (currentScreen === 'deck-builder') {
         return (
             <DeckBuilder 
@@ -817,17 +889,25 @@ function MainMenu({
                                                         You need to select an active deck before starting a game!
                                                     </WarningMessage>
                                                 )}
-                                                <PlayButton 
-                                                    onClick={handleStartGame}
-                                                    disabled={!decks.some(deck => deck.is_active) || !isConnected}
-                                                >
-                                                    {isConnected ? 'Find Game' : 'Connecting to server...'}
-                                                    {!isConnected && (
-                                                        <Tooltip>
-                                                            Please wait while connecting to the server
-                                                        </Tooltip>
-                                                    )}
-                                                </PlayButton>
+                                                <ButtonsContainer>
+                                                    <PlayButton 
+                                                        onClick={handleStartGame}
+                                                        disabled={!decks.some(deck => deck.is_active) || !isConnected || isPlayingAI}
+                                                    >
+                                                        {isConnected ? 'Find Game' : 'Connecting to server...'}
+                                                        {!isConnected && (
+                                                            <Tooltip>
+                                                                Please wait while connecting to the server
+                                                            </Tooltip>
+                                                        )}
+                                                    </PlayButton>
+                                                    <PlayAIButton
+                                                        onClick={handlePlayAI}
+                                                        disabled={!decks.some(deck => deck.is_active) || isSearching}
+                                                    >
+                                                        Play vs AI
+                                                    </PlayAIButton>
+                                                </ButtonsContainer>
                                             </>
                                         )}
                                         {console.log('MainMenu - Rendering OnlinePlayers with:', onlinePlayers)}
