@@ -78,6 +78,13 @@ export const theme = {
             text: 'rgba(255, 179, 179, 0.9)',
             quote: 'rgba(255, 204, 204, 0.7)',
             glow: 'rgba(255, 0, 0, 0.1)'
+        },
+        warrior: {
+            gradient: 'linear-gradient(135deg, #2F4F2F 0%, #556B2F 100%)',
+            accent: 'rgba(107, 142, 35, 0.3)',
+            text: 'rgba(238, 232, 170, 0.9)',
+            quote: 'rgba(238, 232, 170, 0.7)',
+            glow: 'rgba(107, 142, 35, 0.1)'
         }
     }
 };

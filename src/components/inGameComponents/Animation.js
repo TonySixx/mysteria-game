@@ -255,6 +255,8 @@ export const HeroAbilityIcon = styled.img`
         return 'drop-shadow(0 0 10px #ff00ff)'; // fialová záře
       case 'Defender':
         return 'drop-shadow(0 0 10px #0088ff)'; // modrá záře
+      case 'Warrior':
+        return 'drop-shadow(0 0 10px #8B9355)'; // olivově zelená záře
       default:
         return 'none';
     }
@@ -272,6 +274,8 @@ export const HeroAbilityIcon = styled.img`
         return 'drop-shadow(0 0 15px #ff00ff)';
       case 'Defender':
         return 'drop-shadow(0 0 15px #0088ff)';
+      case 'Warrior':
+        return 'drop-shadow(0 0 15px #8B9355)';
       default:
         return 'none';
     }

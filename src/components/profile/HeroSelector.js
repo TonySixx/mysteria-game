@@ -12,6 +12,8 @@ import seerHero from '../../assets/images/seer-hero.png';
 import seerAbility from '../../assets/images/seer.png';
 import defenderHero from '../../assets/images/defender-hero.png';
 import defenderAbility from '../../assets/images/defender.png';
+import warriorHero from '../../assets/images/warrior-hero.png';
+import warriorAbility from '../../assets/images/warrior.png';
 
 const glowAnimation = keyframes`
     0% { box-shadow: 0 0 5px ${theme.colors.primary}; }
@@ -445,14 +447,16 @@ export const heroImages = {
     priest: priestHero,
     mage: mageHero,
     seer: seerHero,
-    defender: defenderHero
+    defender: defenderHero,
+    warrior: warriorHero
 };
 
 export const heroAbilities = {
     priest: priestAbility,
     mage: mageAbility,
     seer: seerAbility,
-    defender: defenderAbility
+    defender: defenderAbility,
+    warrior: warriorAbility
 };
 
 function HeroSelector({ userId, currentHeroId, onHeroChange }) {
@@ -551,7 +555,8 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
         'Mage': "Knowledge is power, and I have plenty of both.",
         'Priest': "The Light shall bring victory!",
         'Seer': "I see your future... and it's going to cost you 2 mana.",
-        'Defender': "Hide behind me! No, seriously, that's literally my job."
+        'Defender': "Hide behind me! No, seriously, that's literally my job.",
+        'Warrior': "I don't always hit things... but when I do, I hit them harder!"
     };
 
     useEffect(() => {
