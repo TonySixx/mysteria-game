@@ -78,6 +78,10 @@ import soulHarvester from '../../assets/images/soul-harvester.png';
 import sacrificePact from '../../assets/images/sacrifice-pact.png';
 import massFortification from '../../assets/images/mass-fortification.png';
 import deathProphet from '../../assets/images/death-prophet.png';
+import phoenix from '../../assets/images/phoenix.png';
+import ragingBerserker from '../../assets/images/raging-berserker.png';
+import cursedImp from '../../assets/images/cursed-imp.png';
+import phoenixHatchling from '../../assets/images/phoenix-hatchling.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -149,8 +153,11 @@ export const cardImages = {
   'soulHarvester': soulHarvester,
   'sacrificePact': sacrificePact,
   'massFortification': massFortification,
-  'deathProphet': deathProphet
-
+  'deathProphet': deathProphet,
+  'phoenix': phoenix,
+  'ragingBerserker': ragingBerserker,
+  'cursedImp': cursedImp,
+  'phoenixHatchling': phoenixHatchling
 };
 
 const DeckBuilderContainer = styled(motion.div)`
