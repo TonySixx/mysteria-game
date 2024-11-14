@@ -11,7 +11,8 @@ import cardSound from '../assets/sounds/card.mp3';
 import spellSound from '../assets/sounds/spell.mp3';
 import attackSound from '../assets/sounds/attack.mp3';
 import turnSound from '../assets/sounds/turn.mp3';
-import backgroundImage from "../assets/images/background.png";
+import backgroundImage from "../assets/images/background.webp";
+import backgroundImage2 from "../assets/images/background-2.webp";
 import HeroSpeechBubble from './HeroSpeechBubble';
 import { useIsMobile } from './inGameComponents/useIsMobile';
 import CardDisplay from './inGameComponents/CardDisplay';
@@ -44,12 +45,23 @@ const ScalableGameWrapper = styled.div`
   height: ${props => props.$isMobile ? MOBILE_BASE_HEIGHT : BASE_HEIGHT}px;
 `;
 
-// Upravíme GameBoard styled component
+// Přidáme funkci pro generování seedované náhodné hodnoty
+const getSeededRandom = (seed) => {
+    // Převedeme seed string na číslo
+    const numericSeed = seed.split('').reduce((acc, char, i) => {
+        return acc + char.charCodeAt(0) * Math.pow(31, i);
+    }, 0);
+    
+    const x = Math.sin(numericSeed) * 10000;
+    return x - Math.floor(x);
+};
+
+// Upravíme styled komponentu GameBoard
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
   height: 100%;
-  background: url(${backgroundImage}) no-repeat center center;
+  background: url(${props => props.$background}) no-repeat center center;
   background-size: cover;
   color: #ffd700;
   font-family: 'Cinzel', serif;
@@ -1049,12 +1061,19 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   //   }, [safeGameState.currentPlayer, safeGameState.playerIndex])
 
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
-
+  // Přidáme výběr pozadí na základě gameId
+  const backgroundSelection = useMemo(() => {
+    
+    if (!gameState?.gameId) return backgroundImage;
+    
+    const randomValue = getSeededRandom(gameState.gameId);
+    return randomValue < 0.5 ? backgroundImage : backgroundImage2;
+  }, [gameState?.gameId]);
 
   // Přidáme early return pro případ, že gameState není definován
   if (!gameState || !gameState.player) {
     return (
-      <GameBoard>
+      <GameBoard $background={backgroundSelection}>
        <h1>Waiting for opponent...</h1>
       </GameBoard>
     );
@@ -1066,7 +1085,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     const lastAnimation = animation; // Použijeme poslední animaci
 
     return (
-      <GameBoard>
+      <GameBoard $background={backgroundSelection}>
         <GameOverOverlay>
           <GameOverContent>
             <GameOverTitle>Game Over</GameOverTitle>
@@ -1144,7 +1163,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
 
       <DragDropContext onDragEnd={onDragEnd}>
         <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
-          <GameBoard>
+          <GameBoard $background={backgroundSelection}>
             <TurnIndicator $isPlayerTurn={isPlayerTurn}>
               {isPlayerTurn ? 'Your Turn' : 'Opponent\'s Turn'}
             </TurnIndicator>
