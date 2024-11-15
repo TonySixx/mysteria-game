@@ -13,6 +13,7 @@ import attackSound from '../assets/sounds/attack.mp3';
 import turnSound from '../assets/sounds/turn.mp3';
 import backgroundImage from "../assets/images/background.webp";
 import backgroundImage2 from "../assets/images/background-2.webp";
+import backgroundImage3 from "../assets/images/background-3.webp";
 import HeroSpeechBubble from './HeroSpeechBubble';
 import { useIsMobile } from './inGameComponents/useIsMobile';
 import CardDisplay from './inGameComponents/CardDisplay';
@@ -1063,11 +1064,18 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
   // Přidáme výběr pozadí na základě gameId
   const backgroundSelection = useMemo(() => {
-    
     if (!gameState?.gameId) return backgroundImage;
     
     const randomValue = getSeededRandom(gameState.gameId);
-    return randomValue < 0.5 ? backgroundImage : backgroundImage2;
+    
+    // Rozdělíme interval 0-1 na tři části
+    if (randomValue < 0.33) {
+      return backgroundImage;
+    } else if (randomValue < 0.66) {
+      return backgroundImage2;
+    } else {
+      return backgroundImage3;
+    }
   }, [gameState?.gameId]);
 
   // Přidáme early return pro případ, že gameState není definován

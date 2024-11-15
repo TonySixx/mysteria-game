@@ -82,6 +82,9 @@ import phoenix from '../../assets/images/phoenix.png';
 import ragingBerserker from '../../assets/images/raging-berserker.png';
 import cursedImp from '../../assets/images/cursed-imp.png';
 import phoenixHatchling from '../../assets/images/phoenix-hatchling.png';
+import spiritGuardian from '../../assets/images/spirit-guardian.png';
+import flameWarrior from '../../assets/images/flame-warrior.png';
+import arcaneWisp from '../../assets/images/arcane-wisp.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -157,7 +160,10 @@ export const cardImages = {
   'phoenix': phoenix,
   'ragingBerserker': ragingBerserker,
   'cursedImp': cursedImp,
-  'phoenixHatchling': phoenixHatchling
+  'phoenixHatchling': phoenixHatchling,
+  'spiritGuardian': spiritGuardian,
+  'flameWarrior': flameWarrior,
+  'arcaneWisp': arcaneWisp
 };
 
 const DeckBuilderContainer = styled(motion.div)`
