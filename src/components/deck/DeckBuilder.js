@@ -85,6 +85,10 @@ import phoenixHatchling from '../../assets/images/phoenix-hatchling.png';
 import spiritGuardian from '../../assets/images/spirit-guardian.png';
 import flameWarrior from '../../assets/images/flame-warrior.png';
 import arcaneWisp from '../../assets/images/arcane-wisp.png';
+import armoredElephant from '../../assets/images/armored-elephant.png';
+import holyElemental from '../../assets/images/holy-elemental.png';
+import divineHealer from '../../assets/images/divine-healer.png';
+import friendlySpirit from '../../assets/images/friendly-spirit.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -163,7 +167,11 @@ export const cardImages = {
   'phoenixHatchling': phoenixHatchling,
   'spiritGuardian': spiritGuardian,
   'flameWarrior': flameWarrior,
-  'arcaneWisp': arcaneWisp
+  'arcaneWisp': arcaneWisp,
+  'armoredElephant': armoredElephant,
+  'holyElemental': holyElemental,
+  'divineHealer': divineHealer,
+  'friendlySpirit': friendlySpirit
 };
 
 const DeckBuilderContainer = styled(motion.div)`
