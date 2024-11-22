@@ -89,6 +89,10 @@ import armoredElephant from '../../assets/images/armored-elephant.png';
 import holyElemental from '../../assets/images/holy-elemental.png';
 import divineHealer from '../../assets/images/divine-healer.png';
 import friendlySpirit from '../../assets/images/friendly-spirit.png';
+import chargingKnight from '../../assets/images/charging-knight.png';
+import rookieGuard from '../../assets/images/rookie-guard.png';
+import sacredDefender from '../../assets/images/sacred-defender.png';
+import magicArrows from '../../assets/images/magic-arrows.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -171,7 +175,11 @@ export const cardImages = {
   'armoredElephant': armoredElephant,
   'holyElemental': holyElemental,
   'divineHealer': divineHealer,
-  'friendlySpirit': friendlySpirit
+  'friendlySpirit': friendlySpirit,
+  'chargingKnight': chargingKnight,
+  'rookieGuard': rookieGuard,
+  'sacredDefender': sacredDefender,
+  'magicArrows': magicArrows
 };
 
 const DeckBuilderContainer = styled(motion.div)`
