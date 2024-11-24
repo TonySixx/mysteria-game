@@ -93,6 +93,8 @@ import chargingKnight from '../../assets/images/charging-knight.png';
 import rookieGuard from '../../assets/images/rookie-guard.png';
 import sacredDefender from '../../assets/images/sacred-defender.png';
 import magicArrows from '../../assets/images/magic-arrows.png';
+import fireDragon from '../../assets/images/fire-dragon.png';
+import sacredDragon from '../../assets/images/sacred-dragon.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -179,7 +181,9 @@ export const cardImages = {
   'chargingKnight': chargingKnight,
   'rookieGuard': rookieGuard,
   'sacredDefender': sacredDefender,
-  'magicArrows': magicArrows
+  'magicArrows': magicArrows,
+  'fireDragon': fireDragon,
+  'sacredDragon': sacredDragon
 };
 
 const DeckBuilderContainer = styled(motion.div)`
