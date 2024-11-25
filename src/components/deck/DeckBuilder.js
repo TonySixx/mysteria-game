@@ -95,6 +95,8 @@ import sacredDefender from '../../assets/images/sacred-defender.png';
 import magicArrows from '../../assets/images/magic-arrows.png';
 import fireDragon from '../../assets/images/fire-dragon.png';
 import sacredDragon from '../../assets/images/sacred-dragon.png';
+import ancientColossus from '../../assets/images/ancient-colossus.png';
+import divineFormation from '../../assets/images/divine-formation.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -183,7 +185,9 @@ export const cardImages = {
   'sacredDefender': sacredDefender,
   'magicArrows': magicArrows,
   'fireDragon': fireDragon,
-  'sacredDragon': sacredDragon
+  'sacredDragon': sacredDragon,
+  'ancientColossus': ancientColossus,
+  'divineFormation': divineFormation
 };
 
 const DeckBuilderContainer = styled(motion.div)`
