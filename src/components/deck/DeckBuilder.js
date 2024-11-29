@@ -97,6 +97,12 @@ import fireDragon from '../../assets/images/fire-dragon.png';
 import sacredDragon from '../../assets/images/sacred-dragon.png';
 import ancientColossus from '../../assets/images/ancient-colossus.png';
 import divineFormation from '../../assets/images/divine-formation.png';
+import mindCopy from '../../assets/images/mind-copy.png';
+import wiseOracle from '../../assets/images/wise-oracle.png';
+import assassinScout from '../../assets/images/assassin-scout.png';
+import shieldBreaker from '../../assets/images/shield-breaker.png';
+import divineSquire from '../../assets/images/divine-squire.png';
+import mindTheft from '../../assets/images/mind-theft.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -187,7 +193,13 @@ export const cardImages = {
   'fireDragon': fireDragon,
   'sacredDragon': sacredDragon,
   'ancientColossus': ancientColossus,
-  'divineFormation': divineFormation
+  'divineFormation': divineFormation,
+  'mindCopy': mindCopy,
+  'wiseOracle': wiseOracle,
+  'assassinScout': assassinScout,
+  'shieldBreaker': shieldBreaker,
+  'divineSquire': divineSquire,
+  'mindTheft': mindTheft
 };
 
 const DeckBuilderContainer = styled(motion.div)`
