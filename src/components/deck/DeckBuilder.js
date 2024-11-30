@@ -103,6 +103,10 @@ import assassinScout from '../../assets/images/assassin-scout.png';
 import shieldBreaker from '../../assets/images/shield-breaker.png';
 import divineSquire from '../../assets/images/divine-squire.png';
 import mindTheft from '../../assets/images/mind-theft.png';
+import massDispel from '../../assets/images/mass-dispel.png';
+import divineProtector from '../../assets/images/divine-protector.png';
+import elendralis from '../../assets/images/elendralis.png';
+import prideHunter from '../../assets/images/pride-hunter.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -199,7 +203,11 @@ export const cardImages = {
   'assassinScout': assassinScout,
   'shieldBreaker': shieldBreaker,
   'divineSquire': divineSquire,
-  'mindTheft': mindTheft
+  'mindTheft': mindTheft,
+  'massDispel': massDispel,
+  'divineProtector': divineProtector,
+  'elendralis': elendralis,
+  'prideHunter': prideHunter
 };
 
 const DeckBuilderContainer = styled(motion.div)`

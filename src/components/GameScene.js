@@ -347,19 +347,76 @@ const GameOverMessage = styled.h2`
 `;
 
 const PlayAgainButton = styled.button`
-  font-size: 1.5em;
-  padding: 15px 30px;
-  background: linear-gradient(45deg, #ffd700, #ff9900);
-  border: none;
-  border-radius: 8px;
-  color: #000;
+  font-family: 'Cinzel', serif;
+  padding: 8px 24px;
+  background: linear-gradient(45deg, 
+      rgba(44, 24, 16, 0.95) 0%,
+      rgba(56, 34, 25, 0.95) 100%
+  );
+  border: 2px solid transparent;
+  border-image: ${theme.colors.border.golden};
+  border-image-slice: 1;
+  color: ${theme.colors.text.primary};
+  font-weight: bold;
   cursor: pointer;
   transition: all 0.3s;
-  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.5em;
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   
   &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 15px #ffd700;
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3),
+                0 0 30px rgba(255, 215, 0, 0.2);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 215, 0, 0.1) 50%,
+        transparent 100%
+    );
+    transition: 0.5s;
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 6px;
+    background: linear-gradient(45deg, 
+        rgba(255, 215, 0, 0.1),
+        rgba(255, 215, 0, 0.05)
+    );
+    z-index: -1;
+    opacity: 0;
+    transition: 0.3s;
+  }
+
+  &:hover::after {
+    opacity: 1;
   }
 `;
 
@@ -1126,7 +1183,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
               </DefeatDetails>
             )}
             <PlayAgainButton onClick={() => window.location.reload()}>
-              Play Again
+              Continue
             </PlayAgainButton>
           </GameOverContent>
         </GameOverOverlay>
