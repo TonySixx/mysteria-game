@@ -1354,7 +1354,6 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                           }}
                         >
                           <CardDisplay
-                            spellsPlayedThisGame={gameState?.spellsPlayedThisGame}
                             card={card}
                             isInHand={true}
                             isDragging={snapshot.isDragging}

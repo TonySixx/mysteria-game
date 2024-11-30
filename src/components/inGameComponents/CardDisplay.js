@@ -5,7 +5,7 @@ import { useIsMobile } from "./useIsMobile";
 import { cardImages } from "../deck/DeckBuilder";
 
 // Upravte CardDisplay komponentu
-const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, spellsPlayedThisGame, isPlayerTurn, gameState }) => {
+const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, gameState }) => {
     const isMobile = useIsMobile();
   
     if (!card) return null;
@@ -26,9 +26,6 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
     const cardImage = cardImages[card.image] || cardBackImage;
   
     let effectText = card.effect;
-    if (card.name === 'Arcane Storm' && spellsPlayedThisGame !== undefined) {
-      effectText = `Deal ${spellsPlayedThisGame} damage to all characters (${card.effect})`;
-    }
   
     // Spočítáme počet Spell Breaker karet na poli protivníka
     const spellBreakerCount = gameState?.opponent?.field?.filter(unit => unit.name === 'Spell Breaker')?.length || 0;
