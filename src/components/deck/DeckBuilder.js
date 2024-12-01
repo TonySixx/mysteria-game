@@ -107,6 +107,8 @@ import massDispel from '../../assets/images/mass-dispel.png';
 import divineProtector from '../../assets/images/divine-protector.png';
 import elendralis from '../../assets/images/elendralis.png';
 import prideHunter from '../../assets/images/pride-hunter.png';
+import frostbolt from '../../assets/images/frostbolt.png';
+import frostKnight from '../../assets/images/frost-knight.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -207,7 +209,9 @@ export const cardImages = {
   'massDispel': massDispel,
   'divineProtector': divineProtector,
   'elendralis': elendralis,
-  'prideHunter': prideHunter
+  'prideHunter': prideHunter,
+  'frostbolt': frostbolt,
+  'frostKnight': frostKnight
 };
 
 const DeckBuilderContainer = styled(motion.div)`
