@@ -109,6 +109,11 @@ import elendralis from '../../assets/images/elendralis.png';
 import prideHunter from '../../assets/images/pride-hunter.png';
 import frostbolt from '../../assets/images/frostbolt.png';
 import frostKnight from '../../assets/images/frost-knight.png';
+import sneakyInfiltrator from '../../assets/images/sneaky-infiltrator.png';
+import silenceAssassin from '../../assets/images/silence-assassin.png';
+import holyStrike from '../../assets/images/holy-strike.png';
+import polymorphWave from '../../assets/images/polymorph-wave.png';
+import duck from '../../assets/images/duck.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -211,7 +216,12 @@ export const cardImages = {
   'elendralis': elendralis,
   'prideHunter': prideHunter,
   'frostbolt': frostbolt,
-  'frostKnight': frostKnight
+  'frostKnight': frostKnight,
+  'sneakyInfiltrator': sneakyInfiltrator,
+  'silenceAssassin': silenceAssassin,
+  'holyStrike': holyStrike,
+  'polymorphWave': polymorphWave,
+  'duck': duck
 };
 
 const DeckBuilderContainer = styled(motion.div)`
