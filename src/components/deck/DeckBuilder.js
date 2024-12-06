@@ -114,6 +114,11 @@ import silenceAssassin from '../../assets/images/silence-assassin.png';
 import holyStrike from '../../assets/images/holy-strike.png';
 import polymorphWave from '../../assets/images/polymorph-wave.png';
 import duck from '../../assets/images/duck.png';
+import desperateScout from '../../assets/images/desperate-scout.png';
+import chaosLord from '../../assets/images/chaos-lord.png';
+import bloodKnight from '../../assets/images/blood-knight.png';
+import frostWarden from '../../assets/images/frost-warden.png';
+import battleCry from '../../assets/images/battle-cry.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -221,7 +226,12 @@ export const cardImages = {
   'silenceAssassin': silenceAssassin,
   'holyStrike': holyStrike,
   'polymorphWave': polymorphWave,
-  'duck': duck
+  'duck': duck,
+  'desperateScout': desperateScout,
+  'chaosLord': chaosLord,
+  'bloodKnight': bloodKnight,
+  'frostWarden': frostWarden,
+  'battleCry': battleCry
 };
 
 const DeckBuilderContainer = styled(motion.div)`
