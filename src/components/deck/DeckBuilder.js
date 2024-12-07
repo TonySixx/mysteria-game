@@ -119,6 +119,10 @@ import chaosLord from '../../assets/images/chaos-lord.png';
 import bloodKnight from '../../assets/images/blood-knight.png';
 import frostWarden from '../../assets/images/frost-warden.png';
 import battleCry from '../../assets/images/battle-cry.png';
+import balancedWarrior from '../../assets/images/balanced-warrior.png';
+import aggressiveWarrior from '../../assets/images/aggressive-warrior.png';
+import healingSentinel from '../../assets/images/healing-sentinel.png';
+import frostOverseer from '../../assets/images/frost-overseer.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -231,7 +235,11 @@ export const cardImages = {
   'chaosLord': chaosLord,
   'bloodKnight': bloodKnight,
   'frostWarden': frostWarden,
-  'battleCry': battleCry
+  'battleCry': battleCry,
+  'healingSentinel': healingSentinel,
+  'frostOverseer': frostOverseer,
+  'balancedWarrior': balancedWarrior,
+  'aggressiveWarrior': aggressiveWarrior
 };
 
 const DeckBuilderContainer = styled(motion.div)`
