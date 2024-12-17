@@ -123,6 +123,11 @@ import balancedWarrior from '../../assets/images/balanced-warrior.png';
 import aggressiveWarrior from '../../assets/images/aggressive-warrior.png';
 import healingSentinel from '../../assets/images/healing-sentinel.png';
 import frostOverseer from '../../assets/images/frost-overseer.png';
+import legionCommander from '../../assets/images/legion-commander.png';
+import recruit from '../../assets/images/recruit.png';
+import mindMimic from '../../assets/images/mind-mimic.png';
+import eternalWanderer from '../../assets/images/eternal-wanderer.png';
+import arcaneSummoner from '../../assets/images/arcane-summoner.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -239,7 +244,12 @@ export const cardImages = {
   'healingSentinel': healingSentinel,
   'frostOverseer': frostOverseer,
   'balancedWarrior': balancedWarrior,
-  'aggressiveWarrior': aggressiveWarrior
+  'aggressiveWarrior': aggressiveWarrior,
+  'legionCommander': legionCommander,
+  'recruit': recruit,
+  'mindMimic': mindMimic,
+  'eternalWanderer': eternalWanderer,
+  'arcaneSummoner': arcaneSummoner
 };
 
 const DeckBuilderContainer = styled(motion.div)`
