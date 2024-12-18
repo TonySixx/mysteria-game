@@ -128,6 +128,11 @@ import recruit from '../../assets/images/recruit.png';
 import mindMimic from '../../assets/images/mind-mimic.png';
 import eternalWanderer from '../../assets/images/eternal-wanderer.png';
 import arcaneSummoner from '../../assets/images/arcane-summoner.png';
+import spiritSummoner from '../../assets/images/spirit-summoner.png';
+import tinyProtector from '../../assets/images/tiny-protector.png';
+import soothingReturn from '../../assets/images/soothing-return.png';
+import deathTouch from '../../assets/images/death-touch.png';
+import spirit from '../../assets/images/spirit.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -249,7 +254,12 @@ export const cardImages = {
   'recruit': recruit,
   'mindMimic': mindMimic,
   'eternalWanderer': eternalWanderer,
-  'arcaneSummoner': arcaneSummoner
+  'arcaneSummoner': arcaneSummoner,
+  'spiritSummoner': spiritSummoner,
+  'tinyProtector': tinyProtector,
+  'soothingReturn': soothingReturn,
+  'deathTouch': deathTouch,
+  'spirit': spirit,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
