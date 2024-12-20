@@ -133,6 +133,10 @@ import tinyProtector from '../../assets/images/tiny-protector.png';
 import soothingReturn from '../../assets/images/soothing-return.png';
 import deathTouch from '../../assets/images/death-touch.png';
 import spirit from '../../assets/images/spirit.png';
+import angelGuardian from '../../assets/images/angel-guardian.png';
+import runeDefender from '../../assets/images/rune-defender.png';
+import unityStrike from '../../assets/images/unity-strike.png';
+import sourceHealing from '../../assets/images/source-healing.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -260,6 +264,10 @@ export const cardImages = {
   'soothingReturn': soothingReturn,
   'deathTouch': deathTouch,
   'spirit': spirit,
+  'angelGuardian': angelGuardian,
+  'runeDefender': runeDefender,
+  'unityStrike': unityStrike,
+  'sourceHealing': sourceHealing,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
