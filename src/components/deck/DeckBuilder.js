@@ -137,6 +137,8 @@ import angelGuardian from '../../assets/images/angel-guardian.png';
 import runeDefender from '../../assets/images/rune-defender.png';
 import unityStrike from '../../assets/images/unity-strike.png';
 import sourceHealing from '../../assets/images/source-healing.png';
+import fateToken from '../../assets/images/fate-token.png';
+import handOfFate from '../../assets/images/hand-of-fate.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -268,6 +270,8 @@ export const cardImages = {
   'runeDefender': runeDefender,
   'unityStrike': unityStrike,
   'sourceHealing': sourceHealing,
+  'fateToken': fateToken,
+  'handOfFate': handOfFate,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
