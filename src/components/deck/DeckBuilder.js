@@ -139,6 +139,9 @@ import unityStrike from '../../assets/images/unity-strike.png';
 import sourceHealing from '../../assets/images/source-healing.png';
 import fateToken from '../../assets/images/fate-token.png';
 import handOfFate from '../../assets/images/hand-of-fate.png';
+import zoxus from '../../assets/images/zoxus.png';
+import manaBenefactor from '../../assets/images/mana-benefactor.png';
+import mercifulProtector from '../../assets/images/merciful-protector.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -272,6 +275,9 @@ export const cardImages = {
   'sourceHealing': sourceHealing,
   'fateToken': fateToken,
   'handOfFate': handOfFate,
+  'zoxus': zoxus,
+  'manaBenefactor': manaBenefactor,
+  'mercifulProtector': mercifulProtector,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
