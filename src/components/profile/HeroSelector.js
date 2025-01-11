@@ -5,7 +5,7 @@ import { FaEdit, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import supabaseService from '../../services/supabaseService';
 import { theme } from '../../styles/theme';
 import priestHero from '../../assets/images/priest-hero.png';
-import mageHero from '../../assets/images/mage-hero.png';
+import mageHero from '../../assets/images/fire-mage-hero.png';
 import mageAbility from '../../assets/images/mage.png';
 import priestAbility from '../../assets/images/priest.png';
 import seerHero from '../../assets/images/seer-hero.png';
@@ -14,6 +14,8 @@ import defenderHero from '../../assets/images/defender-hero.png';
 import defenderAbility from '../../assets/images/defender.png';
 import warriorHero from '../../assets/images/warrior-hero.png';
 import warriorAbility from '../../assets/images/warrior.png';
+import frostMageHero from '../../assets/images/frost-mage-hero.png';
+import frostMageAbility from '../../assets/images/frost-mage.png';
 
 const glowAnimation = keyframes`
     0% { box-shadow: 0 0 5px ${theme.colors.primary}; }
@@ -366,7 +368,7 @@ const AbilityIcon = styled.div`
     flex-shrink: 0;
     border: 2px solid ${props => props.$isMage ? 
         'rgba(33, 150, 243, 0.3)' : 
-        'rgba(218, 165, 32, 0.3)'};
+        'rgba(150, 150, 150, 0.3)'};
 
     img {
         width: 100%;
@@ -448,7 +450,8 @@ export const heroImages = {
     mage: mageHero,
     seer: seerHero,
     defender: defenderHero,
-    warrior: warriorHero
+    warrior: warriorHero,
+    frostmage: frostMageHero
 };
 
 export const heroAbilities = {
@@ -456,7 +459,8 @@ export const heroAbilities = {
     mage: mageAbility,
     seer: seerAbility,
     defender: defenderAbility,
-    warrior: warriorAbility
+    warrior: warriorAbility,
+    frostmage: frostMageAbility
 };
 
 function HeroSelector({ userId, currentHeroId, onHeroChange }) {
@@ -552,11 +556,12 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
     }, [userId, heroes, onHeroChange]);
 
     const heroQuotes = {
-        'Mage': "Knowledge is power, and I have plenty of both.",
+        'Fire Mage': "Knowledge is power, and I have plenty of both.",
         'Priest': "The Light shall bring victory!",
         'Seer': "I see your future... and it's going to cost you 2 mana.",
         'Defender': "Hide behind me! No, seriously, that's literally my job.",
-        'Warrior': "I don't always hit things... but when I do, I hit them harder!"
+        'Warrior': "I don't always hit things... but when I do, I hit them harder!",
+        'Frost Mage': "Winter is coming... and it's going to freeze your board!"
     };
 
     useEffect(() => {
@@ -593,7 +598,7 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
 
     const modalContent = (
         <Modal>
-            <ModalContent $activeHero={heroes[currentSlide]?.name}>
+            <ModalContent $activeHero={heroes[currentSlide]?.image}>
                 <CloseButton onClick={() => setIsModalOpen(false)}>&times;</CloseButton>
                 <ModalTitle>Choose Your Hero</ModalTitle>
                 <NavigationContainer>
@@ -613,7 +618,7 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
                             <HeroCard 
                                 key={`${hero.id}-${index}`}
                                 $isSelected={selectedHero === hero.id}
-                                $heroType={hero.name}
+                                $heroType={hero.image}
                                 $isActive={index - 2 === currentSlide}
                                 onClick={() => handleHeroSelect(hero.id)}
                             >
@@ -622,12 +627,12 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
                                 </HeroImage>
                                 <HeroName>{hero.name}</HeroName>
                                 <AbilityContainer>
-                                    <AbilitySection $isMage={hero.name === 'Mage'}>
-                                        <AbilityIcon $isMage={hero.name === 'Mage'}>
+                                    <AbilitySection $isMage={false}>
+                                        <AbilityIcon $isMage={false}>
                                             <img src={heroAbilities[hero.image]} alt={hero.ability_name} />
                                         </AbilityIcon>
                                         <AbilityInfo>
-                                            <HeroAbility $isMage={hero.name === 'Mage'}>
+                                            <HeroAbility $isMage={false}>
                                                 <h4>{hero.ability_name}</h4>
                                                 <p>{hero.ability_description}</p>
                                             </HeroAbility>
@@ -635,7 +640,7 @@ function HeroSelector({ userId, currentHeroId, onHeroChange }) {
                                         <AbilityCost>{hero.ability_cost}</AbilityCost>
                                     </AbilitySection>
                                 </AbilityContainer>
-                                <HeroQuote $isMage={hero.name === 'Mage'}>
+                                <HeroQuote $isMage={false}>
                                     {heroQuotes[hero.name]}
                                 </HeroQuote>
                             </HeroCard>

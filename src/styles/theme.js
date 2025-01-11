@@ -52,11 +52,11 @@ export const theme = {
     },
     heroes: {
         mage: {
-            gradient: 'linear-gradient(135deg, #050813 0%, #0d1642 100%)',
-            accent: 'rgba(33, 150, 243, 0.3)',
-            text: 'rgba(179, 229, 252, 0.9)',
-            quote: 'rgba(179, 229, 252, 0.7)',
-            glow: 'rgba(33, 150, 243, 0.1)'
+            gradient: 'linear-gradient(135deg, #8B2500 0%, #D2691E 100%)',
+            accent: 'rgba(205, 133, 63, 0.4)',
+            text: 'rgba(255, 222, 173, 0.9)',
+            quote: 'rgba(255, 198, 145, 0.8)',
+            glow: 'rgba(210, 105, 30, 0.2)'
         },
         priest: {
             gradient: 'linear-gradient(135deg, #003333 0%, #006666 100%)',
@@ -64,6 +64,13 @@ export const theme = {
             text: 'rgba(179, 255, 255, 0.9)',
             quote: 'rgba(153, 255, 255, 0.7)',
             glow: 'rgba(0, 255, 255, 0.1)'
+        },
+        frostmage: {
+            gradient: 'linear-gradient(135deg, #001B3D 0%, #004C99 100%)',
+            accent: 'rgba(135, 206, 250, 0.3)',
+            text: 'rgba(173, 216, 230, 0.9)',
+            quote: 'rgba(176, 224, 230, 0.7)',
+            glow: 'rgba(135, 206, 250, 0.15)'
         },
         seer: {
             gradient: 'linear-gradient(135deg, #1a0033 0%, #4d0066 100%)',

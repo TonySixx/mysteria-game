@@ -6,13 +6,15 @@ import defenderSpeech from "../assets/sounds/defender_speech.mp3";
 import priestSpeech from "../assets/sounds/priest_speech.mp3";
 import seerSpeech from "../assets/sounds/seer_speech.mp3";
 import warriorSpeech from "../assets/sounds/warrior_speech.mp3";
+import frostmageSpeech from "../assets/sounds/frostmage-speech.mp3";
 
 const heroStartQuotes = {
     'mage': "Time to make things disappear... permanently!",
     'priest': "Let's heal... your defeat!",
     'seer': "I already saw you lose!",
     'defender': "Stand behind me... or else!",
-    'warrior': "Strength needs no strategy!"
+    'warrior': "Strength needs no strategy!",
+    'frostmage': "Ice to meet you!"
 };
 
 const SpeechBubbleContainer = styled.div`
@@ -89,7 +91,8 @@ const HeroSpeechBubble = ({ heroClass, isPlayer, isVisible, onAnimationComplete 
     'priest': priestSpeech,
     'seer': seerSpeech,
     'defender': defenderSpeech,
-    'warrior': warriorSpeech
+    'warrior': warriorSpeech,
+    'frostmage': frostmageSpeech
   };
 
   const [playSound, { duration: soundDuration }] = useSound(soundMap[heroClass.toLowerCase()], { volume: 0.8 });
