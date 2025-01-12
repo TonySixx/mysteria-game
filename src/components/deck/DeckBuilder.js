@@ -142,6 +142,9 @@ import handOfFate from '../../assets/images/hand-of-fate.png';
 import zoxus from '../../assets/images/zoxus.png';
 import manaBenefactor from '../../assets/images/mana-benefactor.png';
 import mercifulProtector from '../../assets/images/merciful-protector.png';
+import beeGuardian from '../../assets/images/bee-guardian.png';
+import frostSpirit from '../../assets/images/frost-spirit.png';
+import healingAcolyte from '../../assets/images/healing-acolyte.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -278,6 +281,9 @@ export const cardImages = {
   'zoxus': zoxus,
   'manaBenefactor': manaBenefactor,
   'mercifulProtector': mercifulProtector,
+  'beeGuardian': beeGuardian,
+  'frostSpirit': frostSpirit,
+  'healingAcolyte': healingAcolyte,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
