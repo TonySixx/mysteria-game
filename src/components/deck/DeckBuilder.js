@@ -145,6 +145,9 @@ import mercifulProtector from '../../assets/images/merciful-protector.png';
 import beeGuardian from '../../assets/images/bee-guardian.png';
 import frostSpirit from '../../assets/images/frost-spirit.png';
 import healingAcolyte from '../../assets/images/healing-acolyte.png';
+import overloadingGiant from '../../assets/images/overloading-giant.png';
+import manaFusion from '../../assets/images/mana-fusion.png';
+import swiftGuardian from '../../assets/images/swift-guardian.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -284,6 +287,9 @@ export const cardImages = {
   'beeGuardian': beeGuardian,
   'frostSpirit': frostSpirit,
   'healingAcolyte': healingAcolyte,
+  'overloadingGiant': overloadingGiant,
+  'manaFusion': manaFusion,
+  'swiftGuardian': swiftGuardian,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
