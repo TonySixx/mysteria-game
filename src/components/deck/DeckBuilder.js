@@ -148,6 +148,9 @@ import healingAcolyte from '../../assets/images/healing-acolyte.png';
 import overloadingGiant from '../../assets/images/overloading-giant.png';
 import manaFusion from '../../assets/images/mana-fusion.png';
 import swiftGuardian from '../../assets/images/swift-guardian.png';
+import tacticalScout from '../../assets/images/tactical-scout.png';
+import frostHarvester from '../../assets/images/frost-harvester.png';
+import tauntCollector from '../../assets/images/taunt-collector.png';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -290,6 +293,9 @@ export const cardImages = {
   'overloadingGiant': overloadingGiant,
   'manaFusion': manaFusion,
   'swiftGuardian': swiftGuardian,
+  'tacticalScout': tacticalScout,
+  'frostHarvester': frostHarvester,
+  'tauntCollector': tauntCollector
 };
 
 const DeckBuilderContainer = styled(motion.div)`
