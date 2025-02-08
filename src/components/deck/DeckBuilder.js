@@ -151,6 +151,10 @@ import swiftGuardian from '../../assets/images/swift-guardian.png';
 import tacticalScout from '../../assets/images/tactical-scout.png';
 import frostHarvester from '../../assets/images/frost-harvester.png';
 import tauntCollector from '../../assets/images/taunt-collector.png';
+import darkScholar from '../../assets/images/dark-scholar.png';
+import vigilantGuard from '../../assets/images/vigilant-guard.png';
+import loneProtector from '../../assets/images/lone-protector.png';
+
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -295,7 +299,10 @@ export const cardImages = {
   'swiftGuardian': swiftGuardian,
   'tacticalScout': tacticalScout,
   'frostHarvester': frostHarvester,
-  'tauntCollector': tauntCollector
+  'tauntCollector': tauntCollector,
+  'darkScholar':darkScholar,
+  'vigilantGuard':vigilantGuard,
+  'loneProtector':loneProtector
 };
 
 const DeckBuilderContainer = styled(motion.div)`
