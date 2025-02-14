@@ -154,6 +154,9 @@ import tauntCollector from '../../assets/images/taunt-collector.png';
 import darkScholar from '../../assets/images/dark-scholar.png';
 import vigilantGuard from '../../assets/images/vigilant-guard.png';
 import loneProtector from '../../assets/images/lone-protector.png';
+import chaosImp from '../../assets/images/chaos-imp.png';
+import wisdomSeeker from '../../assets/images/wisdom-seeker.png';
+import echoWarrior from '../../assets/images/echo-warrior.png';
 
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
@@ -302,7 +305,10 @@ export const cardImages = {
   'tauntCollector': tauntCollector,
   'darkScholar':darkScholar,
   'vigilantGuard':vigilantGuard,
-  'loneProtector':loneProtector
+  'loneProtector':loneProtector,
+  'chaosImp':chaosImp,
+  'echoWarrior':echoWarrior,
+  'wisdomSeeker':wisdomSeeker
 };
 
 const DeckBuilderContainer = styled(motion.div)`
