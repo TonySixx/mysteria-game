@@ -1,8 +1,22 @@
 import { memo } from "react";
-import { HeroComponent, HeroImage, HeroInfo, HeroHealth, HeartIcon, HeroName, HeroAbility, AbilityIcon, AbilityCost, AbilityTooltip } from "./HeroComponent";
+import { 
+  HeroComponent, 
+  HeroImage, 
+  HeroImageContainer,
+  HeroSecretsWrapper,
+  HeroSecretIcon,
+  HeroInfo, 
+  HeroHealth, 
+  HeartIcon, 
+  HeroName, 
+  HeroAbility, 
+  AbilityIcon, 
+  AbilityCost, 
+  AbilityTooltip 
+} from "./HeroComponent";
 import { heroAbilities, heroImages } from "../profile/HeroSelector";
 
-const HeroDisplay = memo(({ hero, onClick, isTargetable, heroName, isCurrentPlayer, onUseAbility, currentMana }) => {
+const HeroDisplay = memo(({ hero, onClick, isTargetable, heroName, isCurrentPlayer, onUseAbility, currentMana, secrets = [] }) => {
     const canUseAbility = isCurrentPlayer &&
       !hero.hasUsedAbility &&
       hero.abilityCost <= currentMana;
@@ -11,10 +25,24 @@ const HeroDisplay = memo(({ hero, onClick, isTargetable, heroName, isCurrentPlay
   
     return (
       <HeroComponent onClick={isTargetable ? onClick : null} $isTargetable={isTargetable}>
-        <HeroImage
-          src={heroImages[hero.image]}
-          alt={hero.name}
-        />
+        <HeroImageContainer>
+          <HeroImage
+            src={heroImages[hero.image]}
+            alt={hero.name}
+          />
+          {secrets && secrets.length > 0 && (
+            <HeroSecretsWrapper>
+              {secrets.map((secret, index) => (
+                <HeroSecretIcon 
+                  key={secret.id}
+                  data-secret-name={secret.isRevealed ? secret.name : "Secret"}
+                >
+                  <span role="img" aria-label="secret">✨</span>
+                </HeroSecretIcon>
+              ))}
+            </HeroSecretsWrapper>
+          )}
+        </HeroImageContainer>
         <HeroInfo>
           <HeroHealth>
             <HeartIcon>❤️</HeartIcon>
