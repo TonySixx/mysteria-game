@@ -115,6 +115,7 @@ const HandArea = styled.div`
   gap: ${props => props.$isMobile ? '2px' : '5px'};
   padding: ${props => props.$isMobile ? '5px 0' : '10px 0'};
   perspective: 1000px;
+  z-index: 2;
   min-height: ${props => props.$isMobile ? '160px' : '220px'};
 `;
 
@@ -588,6 +589,65 @@ const DefeatDetails = styled.div`
   .damage {
     color: #ff4444;
     font-weight: bold;
+  }
+`;
+
+// Přidáme nové styled komponenty pro oblast tajných karet
+const SecretsArea = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  position: absolute;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  background-color: rgba(128, 0, 128, 0.2);
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(128, 0, 128, 0.5);
+  box-shadow: 0 0 10px rgba(128, 0, 128, 0.3);
+  min-height: 25px;
+  min-width: 50px;
+`;
+
+const PlayerSecretsArea = styled(SecretsArea)`
+  bottom: ${props => props.$isMobile ? '180px' : '255px'};
+  left: calc(50% + 5px);
+`;
+
+const OpponentSecretsArea = styled(SecretsArea)`
+  top: ${props => props.$isMobile ? '175px' : '205px'};
+  left: calc(50% + 5px);
+`;
+
+// Přidáme novou komponentu pro ikonu tajné karty
+const SecretIcon = styled.div`
+  font-size: ${props => props.$isMobile ? '20px' : '20px'};
+  color: #ffd700;
+  animation: pulseSecret 2s infinite;
+  margin: 0 3px;
+  cursor: help;
+  position: relative;
+  
+  @keyframes pulseSecret {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  
+  &:hover::after {
+    content: '${props => props.isRevealed ? props.secretName : "Secret"}';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 5px;
+    border-radius: 5px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
   }
 `;
 
@@ -1077,6 +1137,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     top: 10px;
     bottom: auto;
     transform: translateX(-50%) rotate(180deg);
+    z-index: unset;
   `;
 
 
@@ -1264,6 +1325,20 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
               ))}
             </OpponentHandArea>
 
+            {/* Oblast pro tajné karty protihráče */}
+            <OpponentSecretsArea $isMobile={isMobile}>
+              {gameState.opponent.secrets && gameState.opponent.secrets.map((secret, index) => (
+                <SecretIcon 
+                  key={secret.id}
+                  $isMobile={isMobile}
+                  isRevealed={secret.isRevealed}
+                  secretName={secret.name}
+                >
+                  🔮
+                </SecretIcon>
+              ))}
+            </OpponentSecretsArea>
+
             <BattleArea>
               <Droppable droppableId="opponentHero" direction="horizontal">
                 {(provided, snapshot) => (
@@ -1362,6 +1437,20 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                 </HeroArea>
               </div>
             </BattleArea>
+
+            {/* Oblast pro tajné karty hráče */}
+            <PlayerSecretsArea $isMobile={isMobile}>
+              {gameState.player.secrets && gameState.player.secrets.map((secret, index) => (
+                <SecretIcon 
+                  key={secret.id}
+                  $isMobile={isMobile}
+                  isRevealed={secret.isRevealed}
+                  secretName={secret.name}
+                >
+                  🔮
+                </SecretIcon>
+              ))}
+            </PlayerSecretsArea>
 
             <PlayerInfo $isPlayer={true} $isMobile={isMobile} $isBottom={true}>
               <DeckAndManaContainer>

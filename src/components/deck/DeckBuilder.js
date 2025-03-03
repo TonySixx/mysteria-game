@@ -157,6 +157,11 @@ import loneProtector from '../../assets/images/lone-protector.png';
 import chaosImp from '../../assets/images/chaos-imp.png';
 import wisdomSeeker from '../../assets/images/wisdom-seeker.png';
 import echoWarrior from '../../assets/images/echo-warrior.png';
+import counterspell from '../../assets/images/counterspell.png';
+import explosiveTrap from '../../assets/images/explosive-trap.png';
+import ambush from '../../assets/images/ambush.png';
+import ambusher from '../../assets/images/ambusher.png';
+import secretCard from '../../assets/images/secret-card.png';
 
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
@@ -308,7 +313,12 @@ export const cardImages = {
   'loneProtector':loneProtector,
   'chaosImp':chaosImp,
   'echoWarrior':echoWarrior,
-  'wisdomSeeker':wisdomSeeker
+  'wisdomSeeker':wisdomSeeker,
+  'counterspell':counterspell,
+  'explosiveTrap':explosiveTrap,
+  'ambush':ambush,
+  'ambusher':ambusher,
+  'secretCard':secretCard
 };
 
 const DeckBuilderContainer = styled(motion.div)`

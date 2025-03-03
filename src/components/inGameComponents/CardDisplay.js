@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { CardBack, CardComponent, CardContent, CardDescription, CardImage, CardName, CardStats, DivineShieldOverlay, FrozenOverlay, ManaCost, RarityGem, TauntLabel } from "./CardComponent";
+import { CardBack, CardComponent, CardContent, CardDescription, CardImage, SecretLabel, CardName, CardStats, DivineShieldOverlay, FrozenOverlay, ManaCost, RarityGem, TauntLabel } from "./CardComponent";
 import cardBackImage from '../../assets/images/card-back.png';
 import { useIsMobile } from "./useIsMobile";
 import { cardImages } from "../deck/DeckBuilder";
@@ -62,6 +62,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
           alt={card.name}
         />
         {card.hasTaunt && <TauntLabel $isMobile={isMobile}>Taunt</TauntLabel>}
+        {card.type === 'secret' && <SecretLabel $isMobile={isMobile}>Secret</SecretLabel>}
         {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
         <CardContent>
           <CardName $isMobile={isMobile}>{card.name}</CardName>

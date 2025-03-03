@@ -24,6 +24,7 @@ export const CardComponent = styled.div`
     if (props.$isSelected) return '#ffd700';
     if (props.$isTargetable) return '#ff9900';
     if (props.$type === 'spell') return '#48176e';
+    if (props.$type === 'secret') return '#25285e'; // Fialový okraj pro tajné karty
     return '#000';
   }};
   border-radius: 8px;
@@ -35,7 +36,11 @@ export const CardComponent = styled.div`
   position: relative;
   transition: all 0.3s;
   transform-style: preserve-3d;
-  box-shadow: ${(props) => props.$type === 'spell' ? '0 0 10px rgba(156, 39, 176, 0.3)' : '0 4px 8px rgba(0, 0, 0, 0.3)'};
+  box-shadow: ${(props) => {
+    if (props.$type === 'spell') return '0 0 10px rgba(156, 39, 176, 0.3)';
+    if (props.$type === 'secret') return '0 0 10px rgba(27, 13, 105, 0.3)'; // Fialový stín pro tajné karty
+    return '0 4px 8px rgba(0, 0, 0, 0.3)';
+  }};
   overflow: visible;
   
   &::before {
@@ -139,6 +144,19 @@ export const TauntLabel = styled.div`
   background-color: #ffd700;
   color: #000;
   font-weight: bold;
+  padding: ${props => props.$isMobile ? '1px 3px' : '2px 5px'};
+  border-radius: 5px;
+  font-size: ${props => props.$isMobile ? '8px' : '12px'};
+`;
+
+export const SecretLabel = styled.div`
+  position: absolute;
+  top: ${props => props.$isMobile ? '2px' : '5px'};
+  right: ${props => props.$isMobile ? '2px' : '5px'};
+  background-color: #800080;
+  color: #000;
+  font-weight: bold;
+  color: white;
   padding: ${props => props.$isMobile ? '1px 3px' : '2px 5px'};
   border-radius: 5px;
   font-size: ${props => props.$isMobile ? '8px' : '12px'};
