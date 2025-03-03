@@ -1102,6 +1102,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             <option value="all">All</option>
                             <option value="unit">Minion</option>
                             <option value="spell">Spell</option>
+                            <option value="secret">Secret</option>
                         </FilterSelect>
                     </FilterGroup>
 
