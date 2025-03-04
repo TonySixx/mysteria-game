@@ -162,6 +162,9 @@ import explosiveTrap from '../../assets/images/explosive-trap.png';
 import ambush from '../../assets/images/ambush.png';
 import ambusher from '../../assets/images/ambusher.png';
 import secretCard from '../../assets/images/secret-card.png';
+import soulGuardian from '../../assets/images/soul-guardian.png';
+import phantomMirage from '../../assets/images/phantom-mirage.png';
+import spellReflector from '../../assets/images/spell-reflector.png';
 
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
@@ -318,7 +321,10 @@ export const cardImages = {
   'explosiveTrap':explosiveTrap,
   'ambush':ambush,
   'ambusher':ambusher,
-  'secretCard':secretCard
+  'secretCard':secretCard,
+  'soulGuardian':soulGuardian,
+  'phantomMirage':phantomMirage,
+  'spellReflector':spellReflector
 };
 
 const DeckBuilderContainer = styled(motion.div)`
