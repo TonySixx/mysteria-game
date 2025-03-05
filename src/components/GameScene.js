@@ -709,6 +709,39 @@ const secretRevealSpin = keyframes`
   100% { transform: rotate(360deg) scale(1); opacity: 1; }
 `;
 
+const secretTextBounce = keyframes`
+  0% { transform: translateY(-20px); opacity: 0; }
+  50% { transform: translateY(10px); opacity: 1; }
+  75% { transform: translateY(-5px); }
+  100% { transform: translateY(0); opacity: 1; }
+`;
+
+const secretBoom = keyframes`
+  0% { transform: scale(0.5); opacity: 0; }
+  10% { transform: scale(1.2); opacity: 1; }
+  20% { transform: scale(0.9); }
+  30% { transform: scale(1.1); }
+  40% { transform: scale(0.95); }
+  50% { transform: scale(1.05); }
+  60% { transform: scale(0.98); }
+  70% { transform: scale(1.02); }
+  80% { transform: scale(0.99); }
+  100% { transform: scale(1); opacity: 1; }
+`;
+
+const secretSparkleSpin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const secretShake = keyframes`
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+`;
+
 const SecretAnimationContainer = memo(styled.div`
   position: fixed;
   left: 0;
@@ -745,16 +778,65 @@ const SecretAnimationContent = memo(styled.div`
   align-items: center;
   z-index: 1001;
   box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
-  animation: ${secretGlow} 2s infinite alternate;
+  animation: ${secretGlow} 2s infinite alternate, ${secretBoom} 0.7s ease-out;
+  overflow: hidden;
+  
+  &::before, &::after {
+    content: "";
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 215, 0, 0.5);
+    border-radius: 50%;
+    animation: ${secretSparkleSpin} 5s linear infinite;
+  }
+  
+  &::before {
+    top: -10px;
+    left: -10px;
+  }
+  
+  &::after {
+    bottom: -10px;
+    right: -10px;
+  }
 `);
 
-const SecretAnimationIcon = memo(styled.div`
+const SecretAnimationMainIcon = memo(styled.div`
   font-size: 64px;
   margin-bottom: 20px;
   animation: ${secretIconPulse} 2s infinite alternate, ${secretRevealSpin} 1s ease-out;
   text-shadow: 0 0 15px gold;
   color: gold;
   user-select: none;
+`);
+
+const SecretAnimationSmallIcons = memo(styled.div`
+  position: absolute;
+  font-size: 24px;
+  animation: ${secretIconPulse} 1.5s infinite alternate, ${secretShake} 1s infinite;
+  text-shadow: 0 0 10px gold;
+  user-select: none;
+  
+  &:nth-child(1) {
+    top: 20px;
+    left: 20px;
+  }
+  
+  &:nth-child(2) {
+    top: 20px;
+    right: 20px;
+  }
+  
+  &:nth-child(3) {
+    bottom: 20px;
+    left: 20px;
+  }
+  
+  &:nth-child(4) {
+    bottom: 20px;
+    right: 20px;
+  }
 `);
 
 const SecretAnimationTitle = memo(styled.h2`
@@ -764,6 +846,7 @@ const SecretAnimationTitle = memo(styled.h2`
   text-align: center;
   text-transform: uppercase;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+  animation: ${secretTextBounce} 0.7s ease-out;
 `);
 
 const SecretAnimationText = memo(styled.p`
@@ -772,14 +855,25 @@ const SecretAnimationText = memo(styled.p`
   margin-bottom: 20px;
   text-align: center;
   line-height: 1.5;
+  animation: ${secretTextBounce} 0.7s ease-out 0.2s both;
 
-  .secret-name {  
+  .secret-name {
     color: #ffd700;
     font-weight: bold;
   }
 `);
 
-const SecretCardDisplay = styled.div`
+const SecretAnimationFunnyText = memo(styled.p`
+  color: #ff9900;
+  font-size: 16px;
+  font-style: italic;
+  margin-bottom: 15px;
+  text-align: center;
+  line-height: 1.3;
+  animation: ${secretTextBounce} 0.7s ease-out 0.4s both;
+`);
+
+const SecretCardDisplay = memo(styled.div`
   transform: scale(0.8);
   margin: 10px 0;
   position: relative;
@@ -789,7 +883,7 @@ const SecretCardDisplay = styled.div`
   &:hover {
     transform: scale(0.9);
   }
-`;
+`);
 
 const SecretAnimationButton = memo(styled.button`
   background: linear-gradient(to bottom, #ffd700, #b8860b);
@@ -803,6 +897,7 @@ const SecretAnimationButton = memo(styled.button`
   margin-top: 20px;
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
   transition: all 0.3s ease;
+  animation: ${secretTextBounce} 0.7s ease-out 0.6s both;
 
   &:hover {
     background: linear-gradient(to bottom, #ffef00, #ffd700);
@@ -991,17 +1086,20 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
         isOwner: gameState.secretAnimation.owner === gameState.playerIndex
       });
       
+      // Přehrajeme spell zvuk
+      playSpellSound();
+      
       // Nastavíme secret animaci podle stavu hry
       setSecretAnimation(gameState.secretAnimation);
       
-      // Použijeme timeout pro automatické uzavření animace po 5 sekundách
+      // Použijeme timeout pro automatické uzavření animace po 7 sekundách
       const timer = setTimeout(() => {
         handleSkipSecretAnimation();
-      }, 5000);
+      }, 7000);
       
       return () => clearTimeout(timer);
     }
-  }, [gameState.secretAnimation]);
+  }, [gameState.secretAnimation, playSpellSound]);
 
 
 
@@ -1148,17 +1246,67 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
 
     // Zjistíme, zda current player je owner sekretu
     const isPlayerOwner = secretAnimation.owner === gameState.playerIndex;
-    const ownerName = isPlayerOwner ? 'Vaše' : 'Soupeřova';
+    const ownerText = isPlayerOwner ? 'Your' : 'Opponent\'s';
+    
+    // Vybereme vhodné emoji podle typu secret karty
+    const getSecretEmoji = (secretName) => {
+      switch (secretName.toLowerCase()) {
+        case 'counterspell': return '🧙‍♂️';
+        case 'explosive trap': return '💣';
+        case 'ambush': return '🕵️';
+        case 'soul guardian': return '👼';
+        default: return '🔮';
+      }
+    };
+    
+    // Vybereme vtipnou hlášku podle typu karty
+    const getFunnyQuote = (secretName) => {
+      switch (secretName.toLowerCase()) {
+        case 'counterspell':
+          return 'Magic meets magic! Your spell just got... cancelled!';
+        case 'explosive trap':
+          return 'BOOM! Who doesn\'t love explosions? (Except your minions...)';
+        case 'ambush':
+          return 'Surprise attack! Bet you didn\'t see that coming!';
+        case 'soul guardian':
+          return 'Divine protection activated! Your hero just got a guardian angel!';
+        default:
+          return 'The element of surprise is the most powerful card of all!';
+      }
+    };
+    
+    // Náhodné doplňkové emoji pro vylepšení vizuálu
+    const getRandomEmojis = (mainEmoji) => {
+      const additionalEmojis = {
+        '🧙‍♂️': ['✨', '📜', '⚡', '🌟'],
+        '💣': ['🔥', '💥', '⚡', '🧨'],
+        '🕵️': ['🗡️', '🏹', '🔪', '🥷'],
+        '👼': ['✨', '💫', '🌟', '😇'],
+        '🔮': ['✨', '💫', '🌟', '🎭']
+      };
+      
+      return additionalEmojis[mainEmoji] || ['✨', '💫', '🌟', '🎭'];
+    };
+    
+    const mainEmoji = getSecretEmoji(secretAnimation.secret.name);
+    const supportEmojis = getRandomEmojis(mainEmoji);
     
     return (
       <SecretAnimationContainer $isClosing={isClosingSecretAnimation} onClick={handleSkipSecretAnimation}>
         <SecretAnimationBackground />
         <SecretAnimationContent>
-          <SecretAnimationIcon>🔮</SecretAnimationIcon>
-          <SecretAnimationTitle>Secret odhalen!</SecretAnimationTitle>
+          <SecretAnimationSmallIcons>{supportEmojis[0]}</SecretAnimationSmallIcons>
+          <SecretAnimationSmallIcons>{supportEmojis[1]}</SecretAnimationSmallIcons>
+          <SecretAnimationSmallIcons>{supportEmojis[2]}</SecretAnimationSmallIcons>
+          <SecretAnimationSmallIcons>{supportEmojis[3]}</SecretAnimationSmallIcons>
+          <SecretAnimationMainIcon>{mainEmoji}</SecretAnimationMainIcon>
+          <SecretAnimationTitle>Secret Revealed!</SecretAnimationTitle>
           <SecretAnimationText>
-            {ownerName} tajná karta <span className="secret-name">{secretAnimation.secret.name}</span> byla aktivována!
+            {ownerText} secret card <span className="secret-name">{secretAnimation.secret.name}</span> has been activated!
           </SecretAnimationText>
+          <SecretAnimationFunnyText>
+            {getFunnyQuote(secretAnimation.secret.name)}
+          </SecretAnimationFunnyText>
           <SecretCardDisplay>
             <CardDisplay
               card={secretAnimation.secret}
@@ -1168,7 +1316,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
             />
           </SecretCardDisplay>
           <SecretAnimationButton onClick={handleSkipSecretAnimation}>
-            Pokračovat
+            Continue
           </SecretAnimationButton>
         </SecretAnimationContent>
       </SecretAnimationContainer>
