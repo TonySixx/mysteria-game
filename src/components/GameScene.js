@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes, css } from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Notification } from './Notification';
 import { CombatLog } from './CombatLog';
@@ -675,6 +675,141 @@ const SecretIcon = styled.div`
   }
 `;
 
+// Animace pro secret karty
+const secretFadeIn = keyframes`
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+`;
+
+const secretFadeOut = keyframes`
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+`;
+
+const secretGlow = keyframes`
+  0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.7); }
+  50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.9); }
+  100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.7); }
+`;
+
+const secretBackgroundReveal = keyframes`
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+`;
+
+const secretIconPulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+`;
+
+const secretRevealSpin = keyframes`
+  0% { transform: rotate(0deg) scale(0); opacity: 0; }
+  50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
+  100% { transform: rotate(360deg) scale(1); opacity: 1; }
+`;
+
+const SecretAnimationContainer = memo(styled.div`
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  perspective: 1000px;
+  animation: ${props => props.$isClosing ? secretFadeOut : secretFadeIn} 0.5s ease;
+`);
+
+const SecretAnimationBackground = memo(styled.div`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  animation: ${secretBackgroundReveal} 0.5s ease;
+`);
+
+const SecretAnimationContent = memo(styled.div`
+  position: relative;
+  background: rgba(36, 20, 0, 0.95);
+  border: 3px solid #ffd700;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1001;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+  animation: ${secretGlow} 2s infinite alternate;
+`);
+
+const SecretAnimationIcon = memo(styled.div`
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: ${secretIconPulse} 2s infinite alternate, ${secretRevealSpin} 1s ease-out;
+  text-shadow: 0 0 15px gold;
+  color: gold;
+  user-select: none;
+`);
+
+const SecretAnimationTitle = memo(styled.h2`
+  color: #ffd700;
+  font-size: 32px;
+  margin-bottom: 15px;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+`);
+
+const SecretAnimationText = memo(styled.p`
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.5;
+
+  .secret-name {  
+    color: #ffd700;
+    font-weight: bold;
+  }
+`);
+
+const SecretCardDisplay = styled.div`
+  transform: scale(0.8);
+  margin: 10px 0;
+  position: relative;
+  transition: transform 0.3s ease;
+  animation: ${secretFadeIn} 0.5s ease 0.5s both;
+  
+  &:hover {
+    transform: scale(0.9);
+  }
+`;
+
+const SecretAnimationButton = memo(styled.button`
+  background: linear-gradient(to bottom, #ffd700, #b8860b);
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  color: #000;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: linear-gradient(to bottom, #ffef00, #ffd700);
+    transform: scale(1.05);
+  }
+`);
+
 function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility, isAIGame }) {
   const [notification, setNotification] = useState(null);
   const [logEntries, setLogEntries] = useState([]);
@@ -682,6 +817,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
   const isMobile = useIsMobile();
   const [animation, setAnimation] = useState(null);
   const [isClosingAnimation, setIsClosingAnimation] = useState(false);
+  // Přidáme state pro secret animaci
+  const [secretAnimation, setSecretAnimation] = useState(null);
+  const [isClosingSecretAnimation, setIsClosingSecretAnimation] = useState(false);
   // V komponentě GameScene přidáme nové stavy
   const [isDisconnected, setIsDisconnected] = useState(false);
   const [reconnectTimer, setReconnectTimer] = useState(null);
@@ -834,6 +972,39 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     }, 500);
   }, []);
 
+    // Přidáme funkci pro ukončení secret animace
+    const handleSkipSecretAnimation = useCallback(() => {
+      setIsClosingSecretAnimation(true);
+      setTimeout(() => {
+        setSecretAnimation(null);
+        setIsClosingSecretAnimation(false);
+      }, 500);
+    }, []);
+
+  // Přidáme useEffect pro sledování nových secret animací
+  useEffect(() => {
+    if (gameState.secretAnimation) {
+      // Pro debugování vypíšeme informace o vlastnictví
+      console.log('Secret animation triggered:', {
+        secretOwner: gameState.secretAnimation.owner,
+        playerIndex: gameState.playerIndex,
+        isOwner: gameState.secretAnimation.owner === gameState.playerIndex
+      });
+      
+      // Nastavíme secret animaci podle stavu hry
+      setSecretAnimation(gameState.secretAnimation);
+      
+      // Použijeme timeout pro automatické uzavření animace po 5 sekundách
+      const timer = setTimeout(() => {
+        handleSkipSecretAnimation();
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.secretAnimation]);
+
+
+
   // Upravíme AnimationEffect
   const AnimationEffect = useCallback(() => {
     if (!animation) return null;
@@ -970,6 +1141,39 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
       </AnimationOverlay>
     );
   }, [animation, isMobile, gameState, isClosingAnimation, handleSkipAnimation]);
+
+  // Komponent pro zobrazení animace aktivace Secret karty
+  const SecretAnimationEffect = useCallback(() => {
+    if (!secretAnimation) return null;
+
+    // Zjistíme, zda current player je owner sekretu
+    const isPlayerOwner = secretAnimation.owner === gameState.playerIndex;
+    const ownerName = isPlayerOwner ? 'Vaše' : 'Soupeřova';
+    
+    return (
+      <SecretAnimationContainer $isClosing={isClosingSecretAnimation} onClick={handleSkipSecretAnimation}>
+        <SecretAnimationBackground />
+        <SecretAnimationContent>
+          <SecretAnimationIcon>🔮</SecretAnimationIcon>
+          <SecretAnimationTitle>Secret odhalen!</SecretAnimationTitle>
+          <SecretAnimationText>
+            {ownerName} tajná karta <span className="secret-name">{secretAnimation.secret.name}</span> byla aktivována!
+          </SecretAnimationText>
+          <SecretCardDisplay>
+            <CardDisplay
+              card={secretAnimation.secret}
+              isInHand={false}
+              isDragging={false}
+              gameState={gameState}
+            />
+          </SecretCardDisplay>
+          <SecretAnimationButton onClick={handleSkipSecretAnimation}>
+            Pokračovat
+          </SecretAnimationButton>
+        </SecretAnimationContent>
+      </SecretAnimationContainer>
+    );
+  }, [secretAnimation, isClosingSecretAnimation, handleSkipSecretAnimation, gameState]);
 
   // Upravíme renderování karet protivníka pro přidání refs
   const renderOpponentField = useCallback(() => (
@@ -1282,6 +1486,9 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
 
   return (
     <>
+      {/* Přidáme SecretAnimationEffect na nejvyšší úroveň */}
+      <SecretAnimationEffect />
+      
       {showTestControls && (
         <TestControls>
           <TestButton onClick={simulateDisconnect}>
