@@ -312,6 +312,7 @@ export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, o
                             
                             return (
                                 <DeckCard
+                                    onClick={() => onDeckSelect(deck)}
                                     key={deck.id}
                                     isActive={deck.is_active}
                                     layout
@@ -328,7 +329,7 @@ export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, o
                                     whileHover={{ scale: 1.01 }}
                                     whileTap={{ scale: 0.99 }}
                                 >
-                                    <DeckInfo onClick={() => onDeckSelect(deck)}>
+                                    <DeckInfo>
                                         <AnimatePresence>
                                             {deck.is_active && (
                                                 <motion.div
@@ -344,12 +345,12 @@ export const DeckList = ({ decks = [], onDeckSelect, onCreateDeck, onEditDeck, o
                                         <CardCount>{cardCount}/30 cards</CardCount>
                                     </DeckInfo>
                                     <DeckActions className="deck-actions">
-                                        <ActionButton onClick={() => onEditDeck(deck)}>
+                                        <ActionButton onClick={(e) => {onEditDeck(deck); e.stopPropagation();}}>
                                             <FaEdit size={16} />
                                         </ActionButton>
                                         <ActionButton 
                                             className="delete"
-                                            onClick={(e) => handleDeleteClick(e, deck, onDeleteDeck, setDeletingDeck)}
+                                            onClick={(e) => {handleDeleteClick(e, deck, onDeleteDeck, setDeletingDeck); e.stopPropagation();}}
                                         >
                                             <FaTrash size={16} />
                                         </ActionButton>
