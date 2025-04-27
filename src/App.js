@@ -6,6 +6,7 @@ import MainMenu from './components/MainMenu';
 import ConnectionStatus from './components/ConnectionStatus';
 import GlobalStyles from './styles/GlobalStyles';
 import RewardNotification from './components/rewards/RewardNotification';
+import TutorialGuide from './components/tutorial/TutorialGuide';
 import styled from 'styled-components';
 import { useSound } from 'use-sound';
 import mainMenuMusic from './assets/music/msc_main.mp3';
@@ -43,6 +44,7 @@ function App() {
     });
     const [reward, setReward] = useState(null);
     const [gameType, setGameType] = useState(null);
+    const [showTutorial, setShowTutorial] = useState(false);
 
     useEffect(() => {
         if (duration && !gameId && isMusicEnabled) {
@@ -141,6 +143,12 @@ function App() {
                 profile
             );
 
+            // Check if tutorial has been completed from localStorage
+            const tutorialCompleted = localStorage.getItem(`tutorial_completed_${user.id}`) === 'true';
+            if (!tutorialCompleted) {
+                setShowTutorial(true);
+            }
+
             // Počkáme na připojení socketu
             const connected = await socketService.connect();
             
@@ -169,6 +177,13 @@ function App() {
             if (success) {
                 console.log('User session initialized successfully, setting user');
                 setUser(userData.user);
+                
+                // Check if tutorial has been completed from localStorage
+                const tutorialCompleted = localStorage.getItem(`tutorial_completed_${userData.user.id}`) === 'true';
+                if (!tutorialCompleted) {
+                    setShowTutorial(true);
+                }
+                
                 return true;
             } else {
                 console.error('Failed to initialize user session');
@@ -292,6 +307,12 @@ function App() {
                     <RewardNotification
                         reward={reward}
                         onClose={() => setReward(null)}
+                    />
+                )}
+                {showTutorial && user && (
+                    <TutorialGuide 
+                        userId={user.id}
+                        onClose={() => setShowTutorial(false)}
                     />
                 )}
                 {!gameId ? (
