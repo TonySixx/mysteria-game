@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ReactDOM from 'react-dom';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaArrowLeft, FaSave } from 'react-icons/fa';
+import { FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
 import { deckService } from '../../services/deckService';
 import { theme } from '../../styles/theme';
 import { CARD_RARITY, DECK_RULES } from '../../constants';
@@ -845,6 +846,255 @@ const StatsValue = styled.span`
     }
 `;
 
+// Styled components for AbilityGuideModal
+const Modal = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.95) 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+  animation: fadeIn 0.3s forwards;
+  padding: 20px;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const ModalContent = styled.div`
+  background: linear-gradient(135deg, rgba(20, 10, 6, 0.98) 0%, rgba(28, 15, 8, 0.98) 100%);
+  padding: 40px;
+  border-radius: 20px;
+  border: 2px solid ${theme.colors.border.golden};
+  width: 95%;
+  max-width: 800px;
+  max-height: 95vh;
+  position: relative;
+  overflow-y: auto;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5),
+              inset 0 0 100px rgba(0, 0, 0, 0.2);
+  transition: all 0.5s ease;
+
+  &::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+      to bottom,
+      ${theme.colors.primary} 0%,
+      ${theme.colors.secondary} 100%
+    );
+    border-radius: 6px;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+      to bottom,
+      ${theme.colors.primaryHover} 0%,
+      ${theme.colors.secondary} 100%
+    );
+  }
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: ${theme.colors.text.primary};
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+
+  &:hover {
+    opacity: 1;
+  }
+`;
+
+const ModalTitle = styled.h2`
+  font-family: 'MedievalSharp', cursive;
+  color: ${theme.colors.text.primary};
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2.5em;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: ${theme.shadows.text},
+              0 0 20px ${theme.colors.primary}40;
+  position: relative;
+  padding-bottom: 15px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 150px;
+    height: 3px;
+    background: ${theme.colors.border.golden};
+  }
+`;
+
+const AbilitiesContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px 20px;
+`;
+
+const AbilitySection = styled.div`
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid ${theme.colors.border.primary};
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  }
+`;
+
+const AbilityName = styled.h3`
+  color: ${theme.colors.text.primary};
+  font-family: 'Cinzel', serif;
+  margin-bottom: 10px;
+  font-size: 1.4em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid ${theme.colors.border.primary};
+  padding-bottom: 5px;
+`;
+
+const AbilityDescription = styled.p`
+  color: ${theme.colors.text.secondary};
+  font-family: 'Crimson Pro', serif;
+  font-size: 1.1em;
+  line-height: 1.5;
+
+  strong, b {
+    color: ${theme.colors.text.primary};
+  }
+`;
+
+const HelpButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(45deg, ${theme.colors.secondary}, ${theme.colors.backgroundLight});
+  border: 2px solid transparent;
+  border-image: ${theme.colors.border.golden};
+  border-image-slice: 1;
+  color: ${theme.colors.text.primary};
+  padding: 8px 15px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  height: 36px;
+  align-self: flex-end;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${theme.shadows.golden};
+  }
+
+  svg {
+    font-size: 1.2em;
+  }
+`;
+
+// AbilityGuideModal component
+const AbilityGuideModal = ({ onClose }) => {
+  const handleModalClick = (e) => {
+    // Only close if clicking directly on the Modal background
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
+  return (
+    <Modal onClick={handleModalClick}>
+      <ModalContent>
+        <CloseButton onClick={onClose}>&times;</CloseButton>
+        <ModalTitle>Card Abilities Guide</ModalTitle>
+        
+        <AbilitiesContainer>
+          <AbilitySection>
+            <AbilityName>Taunt</AbilityName>
+            <AbilityDescription>
+              Units with Taunt must be attacked first by the opponent before they can attack other minions or your hero. This creates a defensive barrier protecting your other minions and hero.
+            </AbilityDescription>
+          </AbilitySection>
+          
+          <AbilitySection>
+            <AbilityName>Divine Shield</AbilityName>
+            <AbilityDescription>
+              A unit with Divine Shield will ignore the first instance of damage it receives, regardless of how much damage it would be. The shield is broken after absorbing one attack or damaging effect.
+            </AbilityDescription>
+          </AbilitySection>
+          
+          <AbilitySection>
+            <AbilityName>Frozen</AbilityName>
+            <AbilityDescription>
+              Frozen units cannot attack during their next turn. Units typically become frozen through spell effects or abilities of other units. Frozen units are visually indicated by a snowflake icon.
+            </AbilityDescription>
+          </AbilitySection>
+          
+          <AbilitySection>
+            <AbilityName>Secret</AbilityName>
+            <AbilityDescription>
+              Secrets are special cards that are played but don't take effect immediately. They remain hidden from your opponent and trigger automatically during your opponent's turn when specific conditions are met. Once triggered, the secret is revealed and its effect is applied.
+            </AbilityDescription>
+          </AbilitySection>
+          
+          <AbilitySection>
+            <AbilityName>Overload</AbilityName>
+            <AbilityDescription>
+              When you play a card with Overload, some of your mana crystals will be locked during your next turn, reducing the amount of mana available. The number after Overload indicates how many mana crystals will be locked.
+            </AbilityDescription>
+          </AbilitySection>
+          
+          <AbilitySection>
+            <AbilityName>Area of Effect (AoE)</AbilityName>
+            <AbilityDescription>
+              Area of Effect spells deal damage or apply effects to multiple units at once, often all enemy units or all units on the board, rather than targeting a single unit. These are powerful tools for clearing the board.
+            </AbilityDescription>
+          </AbilitySection>
+          
+          <AbilitySection>
+            <AbilityName>Card Types</AbilityName>
+            <AbilityDescription>
+              <b>Minion:</b> Units that remain on the board and can attack. They have attack and health values.<br/>
+              <b>Spell:</b> One-time effects that are played and immediately take effect.<br/>
+              <b>Secret:</b> Hidden cards that trigger when specific conditions are met during your opponent's turn.
+            </AbilityDescription>
+          </AbilitySection>
+        </AbilitiesContainer>
+      </ModalContent>
+    </Modal>
+  );
+};
+
 // V komponentě DeckBuilder přidáme výpočet unikátních karet
 const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [availableCards, setAvailableCards] = useState([]);
@@ -856,6 +1106,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
     const [typeFilter, setTypeFilter] = useState('all');
     const [ownedCardsOnly, setOwnedCardsOnly] = useState(true);
     const [ownedCards, setOwnedCards] = useState({});
+    const [isAbilityGuideOpen, setIsAbilityGuideOpen] = useState(false);
 
     useEffect(() => {
         loadCards();
@@ -1080,6 +1331,11 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             <strong>{uniqueOwnedCards}</strong>/{totalUniqueCards}
                         </StatsValue>
                     </CardStatsBox>
+                    
+                    <HelpButton onClick={() => setIsAbilityGuideOpen(true)}>
+                        <FaQuestionCircle /> Card Abilities
+                    </HelpButton>
+                    
                     <FilterGroup>
                         <FilterLabel>Mana Cost</FilterLabel>
                         <FilterSelect value={manaFilter} onChange={(e) => setManaFilter(e.target.value)}>
@@ -1181,6 +1437,11 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                     ))}
                 </CardCollection>
             </RightSection>
+            
+            {isAbilityGuideOpen && ReactDOM.createPortal(
+                <AbilityGuideModal onClose={() => setIsAbilityGuideOpen(false)} />,
+                document.body
+            )}
         </DeckBuilderContainer>
     );
 };
