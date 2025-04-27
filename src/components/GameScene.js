@@ -1,74 +1,68 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import styled from 'styled-components';
+import React, { useState, useEffect, useCallback, useRef, memo, useMemo } from 'react';
+import styled, { keyframes, css } from 'styled-components';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import earthGolem from '../assets/images/earth-golem.png';
-import fireball from '../assets/images/fireball.png';
-import healingTouch from '../assets/images/healing-touch.png';
-import lightningBolt from '../assets/images/lightning-bolt.png';
-import arcaneIntellect from '../assets/images/arcane-intellect.png';
-import fireElemental from '../assets/images/fire-elemental.png';
-import shieldBearer from '../assets/images/shield-bearer.png';
-import waterElemental from '../assets/images/water-elemental.png';
-import coinImage from '../assets/images/mana-coin.png';
-import cardTexture from '../assets/images/card-texture.png';
-import playerHeroImage from '../assets/images/player-hero.png';
-import aiHeroImage from '../assets/images/ai-hero.png';
-import { css } from 'styled-components';
-import { VisualFeedbackContainer } from './VisualFeedback';
 import { Notification } from './Notification';
+import { CombatLog } from './CombatLog';
+import { theme } from '../styles/theme';
+import socketService from '../services/socketService';
+import { heroAbilities } from './profile/HeroSelector';
+import { useSound } from 'use-sound';
+import cardSound from '../assets/sounds/card.mp3';
+import spellSound from '../assets/sounds/spell.mp3';
+import attackSound from '../assets/sounds/attack.mp3';
+import turnSound from '../assets/sounds/turn.mp3';
+import backgroundImage from "../assets/images/background.webp";
+import backgroundImage2 from "../assets/images/background-2.webp";
+import backgroundImage3 from "../assets/images/background-3.webp";
+import HeroSpeechBubble from './HeroSpeechBubble';
+import { useIsMobile } from './inGameComponents/useIsMobile';
+import CardDisplay from './inGameComponents/CardDisplay';
+import HeroDisplay from './inGameComponents/HeroDisplay';
+import { Tooltip } from './inGameComponents/Tooltip';
+import { AbilityAnimation, AnimatedCard, AnimationCards, AnimationContent, AnimationOverlay, AnimationText, AnimationVS, CompactAnimationContainer, CompactAnimationContent, CompactAnimationText, CompactCardContainer, HeroAbilityIcon, SkipText } from './inGameComponents/Animation';
+import { HeroFrame } from './inGameComponents/HeroComponent';
+
+
+const BASE_WIDTH = 1920; // Základní šířka pro full HD
+const BASE_HEIGHT = 1080; // Základní výška pro full HD
+const MIN_SCALE = 0.5; // Minimální scale faktor
+const MAX_SCALE = 1.2; // Maximální scale faktor
+
+// Přidejte tyto konstanty pod existující BASE konstanty
+const MOBILE_BASE_WIDTH = 1280; // Základní šířka pro mobilní zobrazení
+const MOBILE_BASE_HEIGHT = 720; // Základní výška pro mobilní zobrazení
+const MOBILE_CARD_SCALE = 0.8; // Zmenšení karet pro mobilní zobrazení
 
 
 
+// Přidejte tento styled component pro wrapper celé hry
+const ScalableGameWrapper = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(${props => props.$scale});
+  transform-origin: center center;
+  width: ${props => props.$isMobile ? MOBILE_BASE_WIDTH : BASE_WIDTH}px;
+  height: ${props => props.$isMobile ? MOBILE_BASE_HEIGHT : BASE_HEIGHT}px;
+`;
 
-// Základní třída pro kartu
-class Card {
-  constructor(id, name, manaCost, type, image = null) {
-    this.id = id;
-    this.name = name;
-    this.manaCost = manaCost;
-    this.type = type;
-    this.image = image;
-  }
-}
+// Přidáme funkci pro generování seedované náhodné hodnoty
+const getSeededRandom = (seed) => {
+    // Převedeme seed string na číslo
+    const numericSeed = seed.split('').reduce((acc, char, i) => {
+        return acc + char.charCodeAt(0) * Math.pow(31, i);
+    }, 0);
+    
+    const x = Math.sin(numericSeed) * 10000;
+    return x - Math.floor(x);
+};
 
-// Tída pro jednotku
-class UnitCard extends Card {
-  constructor(id, name, manaCost, attack, health, effect = null, image = null) {
-    super(id, name, manaCost, 'unit');
-    this.attack = attack;
-    this.health = health;
-    this.effect = effect;
-    this.hasAttacked = false;
-    this.hasTaunt = effect === 'Taunt';
-    this.image = image;
-    this.frozen = false; // Přidáno
-  }
-}
-
-// Třída pro kouzlo
-class SpellCard extends Card {
-  constructor(id, name, manaCost, effect, image = null) {
-    super(id, name, manaCost, 'spell');
-    this.effect = effect;
-    this.image = image;
-  }
-}
-
-// Třída pro hrdinu
-class Hero {
-  constructor(name, health = 30, specialAbility = null, image) {
-    this.name = name;
-    this.health = health;
-    this.specialAbility = specialAbility;
-    this.image = image;
-  }
-}
-
+// Upravíme styled komponentu GameBoard
 const GameBoard = styled.div`
   position: relative;
   width: 100%;
-  height: 100vh;
-  background: url('/background.png') no-repeat center center fixed;
+  height: 100%;
+  background: url(${props => props.$background}) no-repeat center center;
   background-size: cover;
   color: #ffd700;
   font-family: 'Cinzel', serif;
@@ -81,14 +75,6 @@ const GameBoard = styled.div`
   -ms-user-select: none;
 `;
 
-const PlayerArea = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  flex: 1;
-  padding: 10px 0;
-`;
 
 const BattleArea = styled.div`
   display: flex;
@@ -103,31 +89,34 @@ const HeroArea = styled.div`
   justify-content: center;
   align-items: center;
   width: 100%;
-  height: 150px;
+  margin-top: ${props => props.$isMobile ? '-30px' : '0px'};
+  height: ${props => props.$isMobile ? '130px' : '150px'};
+  position: relative;
 `;
 
 const FieldArea = styled.div`
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: ${props => props.$isMobile ? '5px' : '10px'};
   flex-wrap: wrap;
   width: 100%;
-  padding: 10px 0;
+  padding: ${props => props.$isMobile ? '5px 0' : '10px 0'};
   box-sizing: border-box;
-  min-height: 220px; // Zvětšeno pro lepší prostor pro přetahování
+  min-height: ${props => props.$isMobile ? '160px' : '220px'};
 `;
 
 const HandArea = styled.div`
-  position: fixed;
-  bottom: -40px;
+  position: absolute;
+  bottom: ${props => props.$isMobile ? '-20px' : '-40px'};
   left: 50%;
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
-  gap: 5px;
-  padding: 10px 0;
+  gap: ${props => props.$isMobile ? '2px' : '5px'};
+  padding: ${props => props.$isMobile ? '5px 0' : '10px 0'};
   perspective: 1000px;
-  min-height: 220px; // Přidáno pro zajištění prostoru pro karty
+  z-index: 2;
+  min-height: ${props => props.$isMobile ? '160px' : '220px'};
 `;
 
 const PlayerInfo = styled.div`
@@ -135,8 +124,11 @@ const PlayerInfo = styled.div`
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 10px 20px;
+  padding: ${props => props.$isMobile ? '5px 10px' : '10px 20px'};
   background-color: rgba(0, 0, 0, 0.7);
+  position: ${props => props.$isBottom && props.$isMobile ? 'relative' : 'relative'};
+  bottom: ${props => props.$isBottom && props.$isMobile ? 'auto' : 'auto'};
+  margin-top: ${props => props.$isPlayer && props.$isMobile ? '-60px' : '0px'};
 `;
 
 const DeckAndManaContainer = styled.div`
@@ -145,44 +137,149 @@ const DeckAndManaContainer = styled.div`
   gap: 10px;
 `;
 
-const DeckContainer = styled.div`
-  width: 40px;
-  height: 60px;
-  background: linear-gradient(45deg, #4a4a4a, #3a3a3a);
-  border: 2px solid #ffd700;
-  border-radius: 5px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #ffd700;
-  font-size: 14px;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-`;
+const DeckContainer = memo(styled.div`
+    position: relative;
+    width: 40px;
+    height: 60px;
+    background: linear-gradient(135deg, 
+        rgba(20, 10, 6, 0.98) 0%,
+        rgba(28, 15, 8, 0.98) 100%
+    );
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: ${theme.colors.text.primary};
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: help;
+    box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.3),
+        inset 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('./background-pattern.jpg') repeat;
+        opacity: 0.02;
+        pointer-events: none;
+        border-radius: 4px;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 4px 8px rgba(0, 0, 0, 0.4),
+            inset 0 0 10px rgba(0, 0, 0, 0.5),
+            0 0 10px rgba(255, 215, 0, 0.2);
+
+        ${Tooltip} {
+            opacity: 1;
+        }
+    }
+`);
 
 const ManaInfo = styled.div`
+  position: relative;
   font-size: 18px;
   color: #4fc3f7;
   text-shadow: 0 0 5px #4fc3f7;
-`;
+  cursor: help;
 
-const EndTurnButton = styled.button`
-  font-size: 16px;
-  padding: 8px 16px;
-  background: linear-gradient(45deg, #ffd700, #ff9900);
-  border: none;
-  border-radius: 5px;
-  color: #000;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-right: 36px;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 10px #ffd700;
+  &:hover ${Tooltip} {
+    opacity: 1;
   }
 `;
+
+const EndTurnButton = memo(styled.button`
+    font-family: 'Cinzel', serif;
+    padding: 8px 24px;
+    background: linear-gradient(45deg, 
+        rgba(44, 24, 16, 0.95) 0%,
+        rgba(56, 34, 25, 0.95) 100%
+    );
+    border: 2px solid transparent;
+    border-image: ${theme.colors.border.golden};
+    border-image-slice: 1;
+    color: ${theme.colors.text.primary};
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-right: 36px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 1.1em;
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+    
+    opacity: ${props => props.disabled ? 0.5 : 1};
+    cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+    
+    &:hover {
+        transform: ${props => props.disabled ? 'none' : 'translateY(-2px)'};
+        box-shadow: ${props => props.disabled ?
+    'none' :
+    `0 0 15px rgba(255, 215, 0, 0.3),
+             0 0 30px rgba(255, 215, 0, 0.2)`
+  };
+    }
+
+    &:active {
+        transform: ${props => props.disabled ? 'none' : 'translateY(1px)'};
+    }
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 215, 0, 0.1) 50%,
+            transparent 100%
+        );
+        transition: 0.5s;
+    }
+
+    &:hover::before {
+        left: 100%;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        right: -2px;
+        bottom: -2px;
+        border-radius: 6px;
+        background: linear-gradient(45deg, 
+            rgba(255, 215, 0, 0.1),
+            rgba(255, 215, 0, 0.05)
+        );
+        z-index: -1;
+        opacity: 0;
+        transition: 0.3s;
+    }
+
+    &:hover::after {
+        opacity: 1;
+    }
+`);
 
 const DraggableCardWrapper = styled.div`
   z-index: 1000;
@@ -193,848 +290,1144 @@ const DraggableCardWrapper = styled.div`
   }
 `;
 
-const CardComponent = styled.div`
-  width: ${(props) => (props.$isInHand ? '120px' : '140px')};
-  height: ${(props) => (props.$isInHand ? '180px' : '200px')};
-  border: 2px solid ${(props) => (props.$isSelected ? '#ffd700' : props.$isTargetable ? '#ff9900' : '#000')};
-  border-radius: 8px;
+
+
+
+const GameOverOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 5px;
-  cursor: ${(props) => (props.$canAttack || props.$isTargetable ? 'pointer' : 'default')};
-  position: relative;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease-in;
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+`;
+
+const GameOverContent = styled.div`
+  text-align: center;
+  color: #ffd700;
+  animation: slideIn 0.5s ease-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+`;
+
+const GameOverTitle = styled.h1`
+  font-size: 4em;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px #ffd700;
+`;
+
+const GameOverMessage = styled.h2`
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  color: ${props => props.$isWinner ? '#4CAF50' : '#f44336'};
+  text-shadow: 0 0 8px ${props => props.$isWinner ? '#4CAF50' : '#f44336'};
+`;
+
+const PlayAgainButton = styled.button`
+  font-family: 'Cinzel', serif;
+  padding: 8px 24px;
+  background: linear-gradient(45deg, 
+      rgba(44, 24, 16, 0.95) 0%,
+      rgba(56, 34, 25, 0.95) 100%
+  );
+  border: 2px solid transparent;
+  border-image: ${theme.colors.border.golden};
+  border-image-slice: 1;
+  color: ${theme.colors.text.primary};
+  font-weight: bold;
+  cursor: pointer;
   transition: all 0.3s;
-  transform-style: preserve-3d;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  overflow: visible;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.5em;
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.3),
+                0 0 30px rgba(255, 215, 0, 0.2);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
   &::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: url(${cardTexture});
-    background-size: 130%;
-    background-position: center;
-    filter: grayscale(50%);
-    z-index: -1;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 215, 0, 0.1) 50%,
+        transparent 100%
+    );
+    transition: 0.5s;
   }
-  
-  ${(props) => props.$isInHand && `
-    transform: translateY(35%) rotate(${-10 + Math.random() * 20}deg);
-    &:hover {
-      transform: translateY(-80px) rotate(0deg) scale(1.2);
-      z-index: 1001;
-    }
-  `}
 
-  ${(props) =>
-    props.$isDragging &&
-    `
-    transform: rotate(5deg) scale(1.05);
-    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-    opacity: 1.0
-  `}
+  &:hover::before {
+    left: 100%;
+  }
 
-  ${props => props.$isFrozen && frozenStyle}
+  &::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 6px;
+    background: linear-gradient(45deg, 
+        rgba(255, 215, 0, 0.1),
+        rgba(255, 215, 0, 0.05)
+    );
+    z-index: -1;
+    opacity: 0;
+    transition: 0.3s;
+  }
 
-  ${(props) => props.$canAttack && !props.$isInHand && css`
-    box-shadow: 0 0 10px 3px #00ff00;
-    &:hover {
-      box-shadow: 0 0 15px 5px #00ff00;
-    }
-  `}
-
-  ${(props) => props.$isTargetable && css`
-    box-shadow: 0 0 10px 3px #ff0000;
-    &:hover {
-      box-shadow: 0 0 15px 5px #ff0000;
-    }
-  `}
-`;
-
-const CardContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: 100%;
-`;
-
-const CardImage = styled.img`
-  width: 100%;
-  height: 50%;
-  object-fit: cover;
-  border-radius: 4px;
-  margin-bottom: 2px;
-`;
-
-const TauntLabel = styled.div`
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  background-color: #ffd700;
-  color: #000;
-  font-weight: bold;
-  padding: 2px 5px;
-  border-radius: 5px;
-  font-size: 12px;
-`;
-
-const CardName = styled.div`
-  font-weight: bold;
-  text-align: center;
-  font-size: 14px;
-  margin-bottom: 5px;
-  color: white; // Změníme barvu na bílou
-  text-shadow: 
-    -1px -1px 0 #000,  
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
+  &:hover::after {
+    opacity: 1;
+  }
 `;
 
 
-const CardStats = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 16px;
-  font-weight: bold;
-  color: white;
-    text-shadow: 
-    -1px -1px 0 #000,  
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme černý obrys pomocí text-shadow
-`;
 
-
-const CardDescription = styled.div`
-  font-family: 'Arial', sans-serif;
-  font-size: 11px;
-  text-align: center;
-  margin-top: 2px;
-  margin-bottom: 2px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  color: white; // Bílý text
-  text-shadow: 
-    -1px -1px 0 #000,  
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000; // Vytvoříme erný obrys pomocí text-shadow
-`;
-
-const ManaCost = styled.div`
-  position: absolute;
-  top: -10px;
-  left: -10px;
-  width: 30px;
-  height: 30px;
-  background-color: #4fc3f7;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-size: 16px;
-  border: 2px solid #2196f3;
-  box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
-  z-index: 10;
-`;
-
-const frozenStyle = css`
-  filter: brightness(0.8) sepia(1) hue-rotate(180deg) saturate(5);
-  box-shadow: 0 0 10px 2px #00ffff;
-`;
-
-const FrozenOverlay = styled.div`
+// Přidáme nové styled komponenty pro drop zóny
+const DropZoneOverlay = memo(styled.div`
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
+  border-radius: 8px;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 5;
+  
+  ${props => props.$type === 'attack' && `
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(255, 0, 0, 0.2) 100%);
+    border: 2px solid rgba(255, 0, 0, 0.3);
+    box-shadow: 
+      inset 0 0 20px rgba(255, 0, 0, 0.2),
+      0 0 15px rgba(255, 0, 0, 0.3);
+    
+    &::after {
+      content: '⚔️';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  `}
+  
+  ${props => props.$type === 'play' && `
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 215, 0, 0.2) 100%);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    box-shadow: 
+      inset 0 0 20px rgba(255, 215, 0, 0.2),
+      0 0 15px rgba(255, 215, 0, 0.3);
+    
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  `}
+  
+  ${props => props.$type === 'hero' && `
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.1) 0%, rgba(255, 0, 0, 0.2) 100%);
+    border: 2px solid rgba(255, 0, 0, 0.3);
+    border-radius: 50%;
+    box-shadow: 
+      inset 0 0 20px rgba(255, 0, 0, 0.2),
+      0 0 15px rgba(255, 0, 0, 0.3);
+    
+    &::after {
+      content: '⚔️';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      opacity: 0.7;
+    }
+  `}
+`);
+
+// Přidáme nov styled komponenty pro indikátor tahu
+const TurnIndicator = styled.div`
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, 
+    ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'} 0%, 
+    ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)'} 100%
+  );
+  border: 2px solid ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.3)' : 'rgba(255, 0, 0, 0.3)'};
+  border-radius: 8px;
+  color: ${theme.colors.text.primary};
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 
+    inset 0 0 20px ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)'},
+    0 0 15px ${props => props.$isPlayerTurn ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)'};
+  z-index: 100;
+  text-shadow: ${theme.shadows.golden};
+  animation: pulse 2s infinite;
+
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+
+  &::before {
+    content: '👑';
+    margin-right: 8px;
+  }
+`;
+
+
+// Přidáme nové styled komponenty
+const TestControls = styled.div`
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+`;
+
+const TestButton = styled.button`
+    padding: 5px 10px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid #ffd700;
+    cursor: pointer;
+    
+    &:hover {
+        background: rgba(0, 0, 0, 0.9);
+    }
+`;
+
+const ReconnectOverlay = styled.div`
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+`;
+
+const ReconnectMessage = styled.div`
+    color: white;
+    font-size: 24px;
+    text-align: center;
+`;
+
+const DefeatDetails = styled.div`
+  font-size: 1.2em;
+  color: #ff9999;
+  margin: 10px 0;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 8px;
+  border: 1px solid #ff4444;
+  max-width: 400px;
+
+  .defeat-card {
+    display: inline-block;
+    color: #ffd700;
+    font-weight: bold;
+    text-shadow: 0 0 5px #ffd700;
+  }
+
+  .damage {
+    color: #ff4444;
+    font-weight: bold;
+  }
+`;
+
+// Můžeme ponechat jako zálohu, ale nebudeme ji používat
+const SecretsArea = styled.div`
+  display: none; /* Skryjeme původní kontejner */
+  /* Původní styly zachované pro případné budoucí použití */
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: rgba(0, 255, 255, 0.3);
-  color: white;
-  font-weight: bold;
-  font-size: 50px;
-  text-shadow: 1px 1px 2px black;
-  pointer-events: none;
-`;
-
-function HeroDisplay({ hero, onClick, isTargetable }) {
-  return (
-    <HeroComponent onClick={isTargetable ? onClick : null} isTargetable={isTargetable}>
-      <HeroImage src={hero.name === 'Player' ? playerHeroImage : aiHeroImage} alt={hero.name} isTargetable={isTargetable} />
-      <HeroHealth>
-        <HeartIcon>❤️</HeartIcon>
-        {hero.health}
-      </HeroHealth>
-    </HeroComponent>
-  );
-}
-
-const HeroComponent = styled.div.withConfig({
-  shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
-})`
-  width: 120px;
-  height: 120px;
-  position: relative;
-  cursor: ${(props) => (props.isTargetable ? 'pointer' : 'default')};
-`;
-
-const HeroImage = styled.img.withConfig({
-  shouldForwardProp: (prop) => !['isTargetable'].includes(prop),
-})`
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 4px solid #ffd700;
-  box-shadow: ${(props) => props.isTargetable ? '0 0 10px 3px #ff0000' : '0 0 10px rgba(255, 215, 0, 0.5)'};
-  transition: all 0.3s ease;
-
-  ${(props) => props.isTargetable && `
-    &:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 15px 5px #ff0000;
-    }
-  `}
-`;
-
-const HeroHealth = styled.div`
+  gap: 8px;
   position: absolute;
-  top: 0;
-  left: 0;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 14px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(50, 10, 60, 0.7), rgba(100, 20, 120, 0.5));
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(200, 100, 255, 0.6);
+  box-shadow: 0 0 15px rgba(180, 70, 250, 0.4), inset 0 0 8px rgba(255, 215, 0, 0.3);
+  min-height: 30px;
+  min-width: 60px;
+  backdrop-filter: blur(2px);
+`;
+
+const PlayerSecretsArea = styled(SecretsArea)`
+  bottom: ${props => props.$isMobile ? '180px' : '255px'};
+  left: calc(50% + 5px);
+`;
+
+const OpponentSecretsArea = styled(SecretsArea)`
+  top: ${props => props.$isMobile ? '175px' : '205px'};
+  left: calc(50% + 5px);
+`;
+
+// Ponecháme pro možnost budoucího použití
+const SecretIcon = styled.div`
+  font-size: ${props => props.$isMobile ? '22px' : '24px'};
+  color: #ffd700;
+  animation: pulseSecret 2s infinite;
+  margin: 0 3px;
+  cursor: help;
+  position: relative;
+  width: 30px;
+  height: 30px;
+  background: radial-gradient(circle, rgba(128, 0, 128, 0.7) 0%, rgba(80, 0, 80, 0.5) 100%);
+  border-radius: 50%;
   display: flex;
   align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 215, 0, 0.6);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+    border-color: rgba(255, 215, 0, 0.9);
+  }
+  
+  @keyframes pulseSecret {
+    0% { filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5)); }
+    50% { filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8)); }
+    100% { filter: drop-shadow(0 0 3px rgba(255, 215, 0, 0.5)); }
+  }
+  
+  &:hover::after {
+    content: '${props => props.isRevealed ? props.secretName : "Secret"}';
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(40, 0, 40, 0.95), rgba(80, 20, 100, 0.95));
+    color: #ffd700;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    white-space: nowrap;
+    z-index: 10;
+    border: 1px solid rgba(255, 215, 0, 0.5);
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+    letter-spacing: 0.5px;
+  }
 `;
 
-const HeartIcon = styled.span`
-  margin-right: 2px;
-  font-size: 12px;
+// Animace pro secret karty
+const secretFadeIn = keyframes`
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
 `;
 
-const CardDisplay = ({ card, canAttack, isTargetable, isSelected, isInHand, isDragging }) => {
-  if (!card) return null;
+const secretFadeOut = keyframes`
+  0% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.8); }
+`;
 
-  return (
-    <CardComponent
-      $type={card.type}
-      $canAttack={canAttack}
-      $isTargetable={isTargetable}
-      $isSelected={isSelected}
-      $isInHand={isInHand}
-      $isDragging={isDragging}
-      $isFrozen={card.frozen}
-    >
-      <ManaCost>{card.manaCost}</ManaCost>
-      <CardImage style={{ borderRadius: '4px', border: '1px solid #000000' }} src={card.image} alt={card.name} />
-      {card.hasTaunt && <TauntLabel>Taunt</TauntLabel>}
-      <CardContent>
-        <CardName>{card.name}</CardName>
-        <CardStats>
-          {card.type === 'unit' && (
-            <>
-              <span>⚔️ {card.attack}</span>
-              <span>❤️ {card.health}</span>
-            </>
-          )}
-        </CardStats>
-        <CardDescription>{card.effect}</CardDescription>
-      </CardContent>
-      {card.frozen && (
-        <FrozenOverlay>
-          <span role="img" aria-label="snowflake">❄️</span>
-        </FrozenOverlay>
-      )}
-    </CardComponent>
-  );
-}
+const secretGlow = keyframes`
+  0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.7); }
+  50% { box-shadow: 0 0 25px rgba(255, 215, 0, 0.9); }
+  100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.7); }
+`;
 
-const playCardCommon = (state, playerIndex, cardIndex) => {
-  const currentPlayerIndex = playerIndex;
-  const opponentPlayerIndex = (playerIndex + 1) % 2;
+const secretBackgroundReveal = keyframes`
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+`;
 
-  const currentPlayer = { ...state.players[currentPlayerIndex] };
-  const opponentPlayer = { ...state.players[opponentPlayerIndex] };
+const secretIconPulse = keyframes`
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+`;
 
-  const playedCard = currentPlayer.hand[cardIndex];
+const secretRevealSpin = keyframes`
+  0% { transform: rotate(0deg) scale(0); opacity: 0; }
+  50% { transform: rotate(180deg) scale(1.2); opacity: 1; }
+  100% { transform: rotate(360deg) scale(1); opacity: 1; }
+`;
 
-  if (!playedCard) {
-    return state;
+const secretTextBounce = keyframes`
+  0% { transform: translateY(-20px); opacity: 0; }
+  50% { transform: translateY(10px); opacity: 1; }
+  75% { transform: translateY(-5px); }
+  100% { transform: translateY(0); opacity: 1; }
+`;
+
+const secretBoom = keyframes`
+  0% { transform: scale(0.5); opacity: 0; }
+  10% { transform: scale(1.2); opacity: 1; }
+  20% { transform: scale(0.9); }
+  30% { transform: scale(1.1); }
+  40% { transform: scale(0.95); }
+  50% { transform: scale(1.05); }
+  60% { transform: scale(0.98); }
+  70% { transform: scale(1.02); }
+  80% { transform: scale(0.99); }
+  100% { transform: scale(1); opacity: 1; }
+`;
+
+const secretSparkleSpin = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const secretShake = keyframes`
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  50% { transform: translateX(5px); }
+  75% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+`;
+
+const SecretAnimationContainer = memo(styled.div`
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  perspective: 1000px;
+  animation: ${props => props.$isClosing ? secretFadeOut : secretFadeIn} 0.5s ease;
+`);
+
+const SecretAnimationBackground = memo(styled.div`
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(5px);
+  animation: ${secretBackgroundReveal} 0.5s ease;
+`);
+
+const SecretAnimationContent = memo(styled.div`
+  position: relative;
+  background: rgba(36, 20, 0, 0.95);
+  border: 3px solid #ffd700;
+  border-radius: 15px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1001;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+  animation: ${secretGlow} 2s infinite alternate, ${secretBoom} 0.7s ease-out;
+  overflow: hidden;
+  
+  &::before, &::after {
+    content: "";
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 215, 0, 0.5);
+    border-radius: 50%;
+    animation: ${secretSparkleSpin} 5s linear infinite;
   }
-
-  // Speciální případ pro "The Coin"
-  if (playedCard.name === 'The Coin') {
-    return playCoin(currentPlayerIndex, state);
+  
+  &::before {
+    top: -10px;
+    left: -10px;
   }
-
-  if (currentPlayer.mana < playedCard.manaCost) {
-    return state;
+  
+  &::after {
+    bottom: -10px;
+    right: -10px;
   }
+`);
 
-  currentPlayer.mana -= playedCard.manaCost;
-  currentPlayer.hand = currentPlayer.hand.filter((_, index) => index !== cardIndex);
+const SecretAnimationMainIcon = memo(styled.div`
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: ${secretIconPulse} 2s infinite alternate, ${secretRevealSpin} 1s ease-out;
+  text-shadow: 0 0 15px gold;
+  color: gold;
+  user-select: none;
+`);
 
-  if (playedCard.type === 'unit') {
-    const newUnit = { ...playedCard, hasAttacked: false, frozen: false };
-    currentPlayer.field = [...currentPlayer.field, newUnit];
-    
-    // Aplikujeme efekt karty při zahrání
-    if (playedCard.effect === 'Deals 2 damage when played') {
-      opponentPlayer.hero.health -= 2;
+const SecretAnimationSmallIcons = memo(styled.div`
+  position: absolute;
+  font-size: 24px;
+  animation: ${secretIconPulse} 1.5s infinite alternate, ${secretShake} 1s infinite;
+  text-shadow: 0 0 10px gold;
+  user-select: none;
+  
+  &:nth-child(1) {
+    top: 20px;
+    left: 20px;
+  }
+  
+  &:nth-child(2) {
+    top: 20px;
+    right: 20px;
+  }
+  
+  &:nth-child(3) {
+    bottom: 20px;
+    left: 20px;
+  }
+  
+  &:nth-child(4) {
+    bottom: 20px;
+    right: 20px;
+  }
+`);
+
+const SecretAnimationTitle = memo(styled.h2`
+  color: #ffd700;
+  font-size: 32px;
+  margin-bottom: 15px;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.7);
+  animation: ${secretTextBounce} 0.7s ease-out;
+`);
+
+const SecretAnimationText = memo(styled.p`
+  color: #fff;
+  font-size: 18px;
+  margin-bottom: 20px;
+  text-align: center;
+  line-height: 1.5;
+  animation: ${secretTextBounce} 0.7s ease-out 0.2s both;
+
+  .secret-name {
+    color: #ffd700;
+    font-weight: bold;
+  }
+`);
+
+const SecretAnimationFunnyText = memo(styled.p`
+  color: #ff9900;
+  font-size: 16px;
+  font-style: italic;
+  margin-bottom: 15px;
+  text-align: center;
+  line-height: 1.3;
+  animation: ${secretTextBounce} 0.7s ease-out 0.4s both;
+`);
+
+const SecretCardDisplay = memo(styled.div`
+  transform: scale(0.8);
+  margin: 10px 0;
+  position: relative;
+  transition: transform 0.3s ease;
+  animation: ${secretFadeIn} 0.5s ease 0.5s both;
+  
+  &:hover {
+    transform: scale(0.9);
+  }
+`);
+
+const SecretAnimationButton = memo(styled.button`
+  background: linear-gradient(to bottom, #ffd700, #b8860b);
+  border: none;
+  border-radius: 5px;
+  padding: 10px 20px;
+  color: #000;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  transition: all 0.3s ease;
+  animation: ${secretTextBounce} 0.7s ease-out 0.6s both;
+
+  &:hover {
+    background: linear-gradient(to bottom, #ffef00, #ffd700);
+    transform: scale(1.05);
+  }
+`);
+
+function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbility, isAIGame }) {
+  const [notification, setNotification] = useState(null);
+  const [logEntries, setLogEntries] = useState([]);
+  const [scale, setScale] = useState(1);
+  const isMobile = useIsMobile();
+  const [animation, setAnimation] = useState(null);
+  const [isClosingAnimation, setIsClosingAnimation] = useState(false);
+  // Přidáme state pro secret animaci
+  const [secretAnimation, setSecretAnimation] = useState(null);
+  const [isClosingSecretAnimation, setIsClosingSecretAnimation] = useState(false);
+  // V komponentě GameScene přidáme nové stavy
+  const [isDisconnected, setIsDisconnected] = useState(false);
+  const [reconnectTimer, setReconnectTimer] = useState(null);
+  const [showTestControls] = useState(process.env.NODE_ENV === 'development');
+  const [showPlayerBubble, setShowPlayerBubble] = useState(false);
+  const [showOpponentBubble, setShowOpponentBubble] = useState(false);
+
+  // Přidáme refs pro sledování pozic karet
+  const opponentFieldRefs = useRef([]);
+  const opponentHandRef = useRef(null);
+  const [playCardSound] = useSound(cardSound, { volume: 0.8 });
+  const [playSpellSound] = useSound(spellSound, { volume: 0.8 });
+  const [playAttackSound] = useSound(attackSound, { volume: 0.8 });
+  const [playTurnSound] = useSound(turnSound, { volume: 0.8 });
+
+  // Přidáme useEffect pro sledování nových zpráv z combat logu
+  useEffect(() => {
+    if (gameState?.combatLogMessages && gameState.combatLogMessages.length > 0) {
+      // Přidáme všechny nové zprávy s unikátními ID
+      const newEntries = gameState.combatLogMessages.map(message => ({
+        ...message,
+        id: Math.random().toString(36).substr(2, 9) // Přidáme unikátní ID pro React key
+      }));
+      setLogEntries(prev => [...prev, ...newEntries]);
     }
-    if (playedCard.effect === 'Freeze enemy when played') {
-      const opponentField = opponentPlayer.field;
-      if (opponentField.length > 0) {
-        const randomIndex = Math.floor(Math.random() * opponentField.length);
-        opponentField[randomIndex] = { 
-          ...opponentField[randomIndex], 
-          frozen: true,
-          frozenTurns: 2  // Zmrazení na 2 kola
-        };
-        console.log(`Zmrazena nepřátelská karta na pozici ${randomIndex}`);
-      } else {
-        console.log('Žádná nepřátelská karta k zmrazení');
+  }, [gameState?.combatLogMessages]);
+
+  // Zjednodušený useEffect pro notifikace
+  useEffect(() => {
+    if (gameState?.notification) {
+      const notificationMessage = typeof gameState.notification === 'object'
+        ? gameState.notification.message
+        : gameState.notification;
+
+      const isForThisPlayer = typeof gameState.notification === 'object'
+        ? !gameState.notification.forPlayer || gameState.notification.forPlayer === gameState.playerIndex
+        : true;
+
+      if (isForThisPlayer) {
+        setNotification(notificationMessage);
+        // Automaticky odstraníme notifikaci po 3 sekundách
+        const timer = setTimeout(() => {
+          setNotification(null);
+        }, 3000);
+        return () => clearTimeout(timer);
       }
     }
-  } else if (playedCard.type === 'spell') {
-    // Aplikujeme efekt kouzla
-    if (playedCard.effect === 'Deal 6 damage') {
-      opponentPlayer.hero.health -= 6;
-    } else if (playedCard.effect === 'Restore 8 health') {
-      currentPlayer.hero.health = Math.min(30, currentPlayer.hero.health + 8);
-    } else if (playedCard.effect === 'Deal 3 damage') {
-      opponentPlayer.hero.health -= 3;
-    } else if (playedCard.effect === 'Draw 2 cards') {
-      const cardsToDraw = Math.min(2, currentPlayer.deck.length);
-      const drawnCards = currentPlayer.deck.slice(0, cardsToDraw);
-      currentPlayer.hand = [...currentPlayer.hand, ...drawnCards];
-      currentPlayer.deck = currentPlayer.deck.slice(cardsToDraw);
-    }
-  }
+  }, [gameState?.notification, gameState?.playerIndex]);
 
-  const updatedPlayers = [...state.players];
-  updatedPlayers[currentPlayerIndex] = currentPlayer;
-  updatedPlayers[opponentPlayerIndex] = opponentPlayer;
-
-  return {
-    ...state,
-    players: updatedPlayers,
-  };
-};
-
-const playCoin = (playerIndex, state) => {
-  const updatedPlayers = [...state.players];
-  const currentPlayer = {...updatedPlayers[playerIndex]};
-  currentPlayer.mana += 1;
-  currentPlayer.hand = currentPlayer.hand.filter(card => card.name !== 'The Coin');
-  updatedPlayers[playerIndex] = currentPlayer;
-  return { ...state, players: updatedPlayers };
-};
-
-function GameScene() {
-  const [gameState, setGameState] = useState(() => {
-    const initialState = {
-      players: [
-        { hero: new Hero('Player', 30, null, playerHeroImage), deck: [], hand: [], field: [], mana: 0 },
-        { hero: new Hero('AI', 30, null, aiHeroImage), deck: [], hand: [], field: [], mana: 0 },
-      ],
-      currentPlayer: Math.random() < 0.5 ? 0 : 1, // Náhodný začínající hráč
-      turn: 1,
-      gameOver: false,
-      winner: null,
-      isAIOpponent: true,
-    };
-
-    return initialState;
-  });
-
-  const [selectedAttackerIndex, setSelectedAttackerIndex] = useState(null);
-  const [visualFeedbacks, setVisualFeedbacks] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const notificationIdRef = useRef(0);
-
+  // Přidejte useEffect pro výpočet scale faktoru
   useEffect(() => {
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-    };
-    document.addEventListener('contextmenu', handleContextMenu);
-    return () => {
-      document.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, []);
+    const calculateScale = () => {
+      const windowWidth = window.innerWidth;
+      const windowHeight = window.innerHeight;
 
+      const baseWidth = isMobile ? MOBILE_BASE_WIDTH : BASE_WIDTH;
+      const baseHeight = isMobile ? MOBILE_BASE_HEIGHT : BASE_HEIGHT;
+
+      const scaleX = windowWidth / baseWidth;
+      const scaleY = windowHeight / baseHeight;
+
+      let newScale = Math.min(scaleX, scaleY);
+      newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+      setScale(newScale);
+    };
+
+    calculateScale();
+    window.addEventListener('resize', calculateScale);
+    return () => window.removeEventListener('resize', calculateScale);
+  }, [isMobile]);
+
+  // Upravíme useEffect pro zpracování animací a zvuků
   useEffect(() => {
-    const initializeDeck = () => {
-      // Vytvoříme balíček s unikátními ID pro každého hráče
-      const baseDeck = [
-        { id: 1, name: 'Fire Elemental', manaCost: 4, attack: 5, health: 6, effect: 'Deals 2 damage when played', image: fireElemental },
-        { id: 2, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
-        { id: 3, name: 'Fireball', manaCost: 4, effect: 'Deal 6 damage', image: fireball },
-        { id: 4, name: 'Healing Touch', manaCost: 3, effect: 'Restore 8 health', image: healingTouch },
-        { id: 5, name: 'Water Elemental', manaCost: 3, attack: 3, health: 5, effect: 'Freeze enemy when played', image: waterElemental },
-        { id: 6, name: 'Earth Golem', manaCost: 5, attack: 4, health: 8, effect: 'Taunt', image: earthGolem },
-        { id: 7, name: 'Lightning Bolt', manaCost: 2, effect: 'Deal 3 damage', image: lightningBolt },
-        { id: 8, name: 'Arcane Intellect', manaCost: 3, effect: 'Draw 2 cards', image: arcaneIntellect },
-        { id: 9, name: 'Shield Bearer', manaCost: 2, attack: 1, health: 7, effect: 'Taunt', image: shieldBearer },
-        { id: 10, name: 'Fire Elemental', manaCost: 4, attack: 5, health: 6, effect: 'Deals 2 damage when played', image: fireElemental },
-      ];
-
-      // Duplikujeme balíček pro každého hráče a přiřadíme unikátní ID
-      const playerDecks = [0, 1].map((playerIndex) => {
-        return baseDeck.map((card) => {
-          let newCard;
-          const uniqueId = `${playerIndex}-${card.id}`;
-          if (card.attack !== undefined) {
-            newCard = new UnitCard(uniqueId, card.name, card.manaCost, card.attack, card.health, card.effect, card.image);
+    if (gameState?.animation) {
+      // Přehrajeme zvuk podle typu animace bez ohledu na to, kdo ji vyvolal
+      switch (gameState.animation.type) {
+        case 'playCard':
+          if (gameState.animation.card.type === 'spell') {
+            playSpellSound();
           } else {
-            newCard = new SpellCard(uniqueId, card.name, card.manaCost, card.effect, card.image);
+            playCardSound();
           }
-          return newCard;
-        });
-      });
-
-      return playerDecks;
-    };
-
-    const [player1Deck, player2Deck] = initializeDeck();
-
-    setGameState((prevState) => {
-      const startingPlayer = prevState.currentPlayer;
-      const updatedState = {
-        ...prevState,
-        players: prevState.players.map((player, index) => {
-          const deck = [...(index === 0 ? player1Deck : player2Deck)].sort(() => Math.random() - 0.5);
-          const hand = deck.splice(0, 3); // Oba hráči začínají se 3 kartami
-          if (index !== startingPlayer) {
-            hand.push(new SpellCard('coin', 'The Coin', 0, 'Gain 1 Mana Crystal.', coinImage));  
-          }     
-          return {
-            ...player,
-            deck,
-            hand,
-            mana: index === startingPlayer ? 1 : 0,
-          };
-        }),
-      };
-
-      // Pokud AI začíná, provedeme jeho tah
-      if (startingPlayer === 1) {
-        return performAITurn(updatedState);
-      }
-
-      return updatedState;
-    });
-  }, []);
-
-  const startNextTurn = (state, nextPlayer) => {
-    const newTurn = state.turn + 1;
-
-    let updatedPlayers = state.players.map((player, index) => {
-      let updatedPlayer = { ...player };
-      if (index === nextPlayer) {
-        updatedPlayer.mana = Math.min(10, player.mana + 1);
-      }
-      updatedPlayer.field = updatedPlayer.field.map((unit) => {
-        let updatedUnit = { ...unit };
-        updatedUnit.hasAttacked = false;
-        
-        // Pokud je jednotka zmrazená, snížíme počet kol zmrazení o 1
-        if (updatedUnit.frozen) {
-          updatedUnit.frozenTurns = (updatedUnit.frozenTurns || 1) - 1;
-          if (updatedUnit.frozenTurns <= 0) {
-            updatedUnit.frozen = false;
-            delete updatedUnit.frozenTurns;
-          }
-        }
-        
-        return updatedUnit;
-      });
-      return updatedPlayer;
-    });
-
-    // Přidání karty do ruky nového hráče
-    if (updatedPlayers[nextPlayer].deck.length > 0) {
-      const drawnCard = updatedPlayers[nextPlayer].deck.pop();
-      updatedPlayers[nextPlayer].hand.push(drawnCard);
-    }
-
-    return {
-      ...state,
-      currentPlayer: nextPlayer,
-      turn: newTurn,
-      players: updatedPlayers,
-    };
-  };
-
-  const addVisualFeedback = useCallback((type, value, position) => {
-    const id = Date.now(); // Vytvoříme unikátní ID pro každou zpětnou vazbu
-    setVisualFeedbacks(prev => [...prev, { id, type, value, position }]);
-    
-    setTimeout(() => {
-      setVisualFeedbacks(prev => prev.filter(feedback => feedback.id !== id));
-    }, 2500);
-  }, []);
-
-  const addNotification = useCallback((message, type = 'info') => {
-    const id = notificationIdRef.current++;
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 5000); // Změněno z 3000 na 5000 pro delší zobrazení
-  }, []);
-
-  const playCard = (cardIndex) => (prevState) => {
-    const currentPlayerIndex = prevState.currentPlayer;
-    const currentPlayer = prevState.players[currentPlayerIndex];
-    const playedCard = currentPlayer.hand[cardIndex];
-
-    if (!playedCard || currentPlayer.mana < playedCard.manaCost) {
-      addNotification(`Nedostatek many pro zahrání karty ${playedCard.name}`, 'warning');
-      return prevState;
-    }
-
-    const newState = playCardCommon(prevState, currentPlayerIndex, cardIndex);
-
-    if (playedCard.type === 'spell') {
-      const spellPosition = { x: '50%', y: '50%' };
-      
-      switch (playedCard.effect) {
-        case 'Restore 8 health':
-          addVisualFeedback('heal', 8, { x: '50%', y: '80%' });
           break;
-        case 'Deal 6 damage':
-          addVisualFeedback('damage', 6, { x: '50%', y: '10%' });
+        case 'attack':
+          playAttackSound();
           break;
-        case 'Deal 3 damage':
-          addVisualFeedback('damage', 3, { x: '50%', y: '10%' });
-          break;
-        case 'Draw 2 cards':
-          addVisualFeedback('draw', 2, spellPosition);
+        case 'heroAbility':
+          playSpellSound();
           break;
         default:
-          addVisualFeedback('spell', playedCard.name, spellPosition);
+          break;
+      }
+
+      // Pokud je animace od protihráče, zobrazíme ji
+      if (gameState.playerIndex !== gameState.animation.playerIndex) {
+        setIsClosingAnimation(false);
+        setAnimation(gameState.animation);
+
+        // Spustíme fadeout 0.5s před koncem animace
+        const fadeOutTimer = setTimeout(() => {
+          setIsClosingAnimation(true);
+        }, 2500);
+
+        // Odstraníme animaci až po dokončení fadeout
+        const removeTimer = setTimeout(() => {
+          setAnimation(null);
+          setIsClosingAnimation(false);
+        }, 3000);
+
+        return () => {
+          clearTimeout(fadeOutTimer);
+          clearTimeout(removeTimer);
+        };
       }
     }
+  }, [gameState?.animation, gameState?.playerIndex, playCardSound, playSpellSound, playAttackSound]);
 
-    return checkGameOver(newState);
-  };
+  // Přidáme useEffect pro sledování změny tahu
+  useEffect(() => {
+    const isNewTurn = gameState?.currentPlayer === gameState?.playerIndex;
 
-  const attack = (attackerIndex, targetIndex, isHero = false, isAI = false) => (state) => {
-    const newState = { ...state };
-    const attacker = isAI ? newState.players[1].field[attackerIndex] : newState.players[0].field[attackerIndex];
-    let defender;
-
-    if (isHero) {
-      defender = isAI ? newState.players[0].hero : newState.players[1].hero;
-    } else {
-      defender = isAI ? newState.players[0].field[targetIndex] : newState.players[1].field[targetIndex];
+    if (isNewTurn) {
+      playTurnSound();
     }
+  }, [gameState?.currentPlayer, gameState?.playerIndex, playTurnSound]);
 
-    // Kontrola, zda útočník a obránce existují
-    if (!attacker || !defender) {
-      console.error('Útočník nebo obránce neexistuje:', { attacker, defender, attackerIndex, targetIndex, isHero, isAI });
-      return newState;  // Vrátíme nezměněný stav
+  useEffect(() => {
+    if (gameState) {
+      // Spustíme animaci pro začínajícího hráče
+      if (gameState.currentPlayer === gameState.playerIndex) {
+        setShowPlayerBubble(true);
+      } else {
+        setShowOpponentBubble(true);
+      }
     }
+  }, [gameState, gameState.playerIndex]);
 
-    const attackerPosition = isAI 
-      ? { x: `calc(50% + ${attackerIndex * 10}% - 20px)`, y: '25%' }
-      : { x: `calc(10% + ${attackerIndex * 10}% - 20px)`, y: '55%' };
-    const defenderPosition = isHero
-      ? { x: 'calc(50% - 20px)', y: isAI ? '75%' : '15%' }
-      : isAI
-        ? { x: `calc(10% + ${targetIndex * 10}% - 20px)`, y: '55%' }
-        : { x: `calc(50% + ${targetIndex * 10}% - 20px)`, y: '25%' };
+  // Upravíme handleEndTurn pro přehrání zvuku při použití hero ability
+  const handleHeroAbility = useCallback(() => {
+    onUseHeroAbility();
+  }, [onUseHeroAbility]);
 
-    defender.health -= attacker.attack;
-    addVisualFeedback('damage', attacker.attack, defenderPosition);
-    
-    if (!isHero) {
-      attacker.health -= defender.attack;
-      
-      // Přidáme zpoždění pro zobrazení poškození útočníka
+  // Upravíme handleSkipAnimation pro plynulé ukončení
+  const handleSkipAnimation = useCallback(() => {
+    setIsClosingAnimation(true);
+    setTimeout(() => {
+      setAnimation(null);
+      setIsClosingAnimation(false);
+    }, 500);
+  }, []);
+
+    // Přidáme funkci pro ukončení secret animace
+    const handleSkipSecretAnimation = useCallback(() => {
+      setIsClosingSecretAnimation(true);
       setTimeout(() => {
-        addVisualFeedback('damage', defender.attack, attackerPosition);
-      }, 100);
+        setSecretAnimation(null);
+        setIsClosingSecretAnimation(false);
+      }, 500);
+    }, []);
 
-      // Odstranění zničených jednotek
-      if (defender.health <= 0) {
-        if (isAI) {
-          newState.players[0].field = newState.players[0].field.filter((_, index) => index !== targetIndex);
-        } else {
-          newState.players[1].field = newState.players[1].field.filter((_, index) => index !== targetIndex);
-        }
-      }
-      if (attacker.health <= 0) {
-        if (isAI) {
-          newState.players[1].field = newState.players[1].field.filter((_, index) => index !== attackerIndex);
-        } else {
-          newState.players[0].field = newState.players[0].field.filter((_, index) => index !== attackerIndex);
-        }
-      }
+  // Přidáme useEffect pro sledování nových secret animací
+  useEffect(() => {
+    if (gameState.secretAnimation) {
+      // Pro debugování vypíšeme informace o vlastnictví
+      console.log('Secret animation triggered:', {
+        secretOwner: gameState.secretAnimation.owner,
+        playerIndex: gameState.playerIndex,
+        isOwner: gameState.secretAnimation.owner === gameState.playerIndex
+      });
+      
+      // Přehrajeme spell zvuk
+      playSpellSound();
+      
+      // Nastavíme secret animaci podle stavu hry
+      setSecretAnimation(gameState.secretAnimation);
+      
+      // Použijeme timeout pro automatické uzavření animace po 7 sekundách
+      const timer = setTimeout(() => {
+        handleSkipSecretAnimation();
+      }, 7000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.secretAnimation, playSpellSound]);
+
+
+
+  // Upravíme AnimationEffect
+  const AnimationEffect = useCallback(() => {
+    if (!animation) return null;
+
+    // Pokud je hráč na tahu, zobrazíme kompaktní verzi
+    const isActivePlayer = gameState.currentPlayer === gameState.playerIndex;
+
+    if (isActivePlayer) {
+      return (
+        <CompactAnimationContainer $isClosing={isClosingAnimation}>
+          <CompactAnimationContent>
+            <CompactAnimationText>
+              {animation.type === 'playCard'
+                ? `Played ${animation.card.name}`
+                : animation.type === 'heroAbility'
+                  ? `Used ${animation.hero.abilityName}`
+                  : `Attacked ${animation.isHeroTarget
+                    ? animation.target.name
+                    : animation.target.name}`}
+            </CompactAnimationText>
+            <CompactCardContainer>
+              {animation.type === 'playCard' && (
+                <div>
+                  <CardDisplay
+                    card={animation.card}
+                    isInHand={false}
+                    isDragging={false}
+                    gameState={gameState}
+                  />
+                </div>
+              )}
+              {animation.type === 'heroAbility' && (
+                <div>
+                  <AbilityAnimation>
+                    <HeroAbilityIcon
+                      src={heroAbilities[animation.hero.image]}
+                      alt={animation.hero.abilityName}
+                      $isHealing={animation.isHealing}
+                    />
+                  </AbilityAnimation>
+                </div>
+              )}
+              {animation.type === 'attack' && (
+                <>
+                  <div>
+                    <CardDisplay
+                      card={animation.card}
+                      isInHand={false}
+                      isDragging={false}
+                      gameState={gameState}
+                    />
+                  </div>
+                  <AnimationVS $isMobile={true}>⚔️</AnimationVS>
+                  <div>
+                    {animation.isHeroTarget ? (
+                      <HeroFrame $isMobile={true}>
+                        {animation.target.name}
+                      </HeroFrame>
+                    ) : (
+                      <CardDisplay
+                        card={animation.target}
+                        isInHand={false}
+                        isDragging={false}
+                        gameState={gameState}
+                      />
+                    )}
+                  </div>
+                </>
+              )}
+            </CompactCardContainer>
+          </CompactAnimationContent>
+        </CompactAnimationContainer>
+      );
     }
 
-    attacker.hasAttacked = true;
+    // Pro protihráče ponecháme původní velkou animaci
+    return (
+      <AnimationOverlay
+        onClick={handleSkipAnimation}
+        $isClosing={isClosingAnimation}
+      >
+        <AnimationContent $isClosing={isClosingAnimation}>
+          <AnimationText $isMobile={isMobile}>
+            {animation.type === 'heroAbility'
+              ? `${animation.player} used ${animation.hero.abilityName}`
+              : animation.type === 'playCard'
+                ? `${animation.player} played ${animation.card.name}`
+                : `${animation.player} attacked with ${animation.card.name} 
+                           ${animation.isHeroTarget
+                  ? animation.target.name
+                  : animation.target.name}`}
+          </AnimationText>
+          <AnimationCards>
+            {animation.type === 'heroAbility' ? (
+              <AbilityAnimation>
+                <HeroAbilityIcon
+                  src={heroAbilities[animation.hero.image]}
+                  alt={animation.hero.abilityName}
+                  $isHealing={animation.isHealing}
+                />
+              </AbilityAnimation>
+            ) : (
+              <AnimatedCard $animation={animation.type === 'playCard' ? 'flyInLeft' : 'attackAnimation'}>
+                <CardDisplay
+                  card={animation.card}
+                  isInHand={false}
+                  isDragging={false}
+                  gameState={gameState}
+                />
+              </AnimatedCard>
+            )}
+            {animation.type === 'attack' && (
+              <>
+                <AnimationVS $isMobile={isMobile}>VS</AnimationVS>
+                <AnimatedCard $animation="defendAnimation">
+                  {animation.isHeroTarget ? (
+                    <HeroFrame $isMobile={isMobile}>
+                      {animation.target.name}
+                    </HeroFrame>
+                  ) : (
+                    <CardDisplay
+                      card={animation.target}
+                      isInHand={false}
+                      isDragging={false}
+                      gameState={gameState}
+                    />
+                  )}
+                </AnimatedCard>
+              </>
+            )}
+          </AnimationCards>
+        </AnimationContent>
+        <SkipText>Click anywhere to skip</SkipText>
+      </AnimationOverlay>
+    );
+  }, [animation, isMobile, gameState, isClosingAnimation, handleSkipAnimation]);
 
-    // Kontrola konce hry
-    if (newState.players[1].hero.health <= 0) {
-      newState.gameOver = true;
-      newState.winner = 'Player';
-    } else if (newState.players[0].hero.health <= 0) {
-      newState.gameOver = true;
-      newState.winner = 'AI';
-    }
+  // Komponent pro zobrazení animace aktivace Secret karty
+  const SecretAnimationEffect = useCallback(() => {
+    if (!secretAnimation) return null;
 
-    return newState;
-  };
-
-  const checkGameOver = (state) => {
-    const player1Health = state.players[0].hero.health;
-    const player2Health = state.players[1].hero.health;
-
-    if (player1Health <= 0 || player2Health <= 0) {
-      return {
-        ...state,
-        gameOver: true,
-        winner: player1Health > 0 ? 'Player 1' : 'Player 2',
+    // Zjistíme, zda current player je owner sekretu
+    const isPlayerOwner = secretAnimation.owner === gameState.playerIndex;
+    const ownerText = isPlayerOwner ? 'Your' : 'Opponent\'s';
+    
+    // Vybereme vhodné emoji podle typu secret karty
+    const getSecretEmoji = (secretName) => {
+      switch (secretName.toLowerCase()) {
+        case 'counterspell': return '🧙‍♂️';
+        case 'explosive trap': return '💣';
+        case 'ambush': return '🕵️';
+        case 'soul guardian': return '👼';
+        default: return '🔮';
+      }
+    };
+    
+    // Vybereme vtipnou hlášku podle typu karty
+    const getFunnyQuote = (secretName) => {
+      switch (secretName.toLowerCase()) {
+        case 'counterspell':
+          return 'Magic meets magic! Your spell just got... cancelled!';
+        case 'explosive trap':
+          return 'BOOM! Who doesn\'t love explosions? (Except your minions...)';
+        case 'ambush':
+          return 'Surprise attack! Bet you didn\'t see that coming!';
+        case 'soul guardian':
+          return 'Divine protection activated! Your hero just got a guardian angel!';
+        default:
+          return 'The element of surprise is the most powerful card of all!';
+      }
+    };
+    
+    // Náhodné doplňkové emoji pro vylepšení vizuálu
+    const getRandomEmojis = (mainEmoji) => {
+      const additionalEmojis = {
+        '🧙‍♂️': ['✨', '📜', '⚡', '🌟'],
+        '💣': ['🔥', '💥', '⚡', '🧨'],
+        '🕵️': ['🗡️', '🏹', '🔪', '🥷'],
+        '👼': ['✨', '💫', '🌟', '😇'],
+        '🔮': ['✨', '💫', '🌟', '🎭']
       };
-    }
-
-    return state;
-  };
-
-  const endTurn = () => {
-    setGameState((prevState) => {
-      const nextPlayer = (prevState.currentPlayer + 1) % 2;
-      const updatedState = startNextTurn(prevState, nextPlayer);
-
-      // Pokud je na tahu AI, provedeme jeho tah
-      if (nextPlayer === 1 && prevState.isAIOpponent) {
-        return performAITurn(updatedState);
-      }
-
-      return updatedState;
-    });
-    setSelectedAttackerIndex(null);
-  };
-
-  const performAITurn = (state) => {
-    let updatedState = { ...state };
-    console.log(`AI začíná tah s ${updatedState.players[1].mana} manou.`);
-
-    // Nejprve použijeme The Coin, pokud je k dispozici a je to výhodné
-    const coinIndex = updatedState.players[1].hand.findIndex(card => card.name === 'The Coin');
-    if (coinIndex !== -1 && updatedState.players[1].mana < 10 && updatedState.players[1].hand.some(card => card.manaCost === updatedState.players[1].mana + 1)) {
-      updatedState = playCoin(1, updatedState);
-      console.log('AI použilo The Coin.');
-      console.log(`AI nyní má ${updatedState.players[1].mana} many.`);
-    }
-
-    // Rozdělíme karty na jednotky a kouzla
-    const units = updatedState.players[1].hand.filter(card => card.type === 'unit');
-    const spells = updatedState.players[1].hand.filter(card => card.type === 'spell');
-
-    // Seřadíme jednotky podle priority
-    const sortedUnits = units.sort((a, b) => {
-      if (a.hasTaunt && !b.hasTaunt) return -1;
-      if (!a.hasTaunt && b.hasTaunt) return 1;
-      return (b.attack / b.manaCost) - (a.attack / a.manaCost);
-    });
-
-    // Nejprve se pokusíme vyložit jednotky
-    sortedUnits.forEach((card) => {
-      if (card.manaCost <= updatedState.players[1].mana && updatedState.players[1].field.length < 7) {
-        console.log(`AI se pokouší vyložit jednotku: ${card.name}`);
-        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
-      }
-    });
-
-    // Pokud máme dostatek many a méně než 3 jednotky na poli, pokusíme se vyložit další jednotku
-    if (updatedState.players[1].mana >= 3 && updatedState.players[1].field.length < 3) {
-      const affordableUnit = sortedUnits.find(card => card.manaCost <= updatedState.players[1].mana);
-      if (affordableUnit) {
-        console.log(`AI se pokouší vyložit další jednotku: ${affordableUnit.name}`);
-        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(affordableUnit));
-      }
-    }
-
-    // Nyní zvážíme použití kouzel
-    spells.forEach((card) => {
-      // Použijeme kouzlo pouze pokud máme alespoň 2 jednotky na poli nebo je to kouzlo léčení a máme méně než 15 zdraví
-      if (card.manaCost <= updatedState.players[1].mana && 
-          (updatedState.players[1].field.length >= 2 || 
-           (card.effect.includes('Restore') && updatedState.players[1].hero.health < 15))) {
-        console.log(`AI se pokouší seslat kouzlo: ${card.name}`);
-        updatedState = playAICard(updatedState, updatedState.players[1].hand.indexOf(card));
-      }
-    });
-
-    // AI útočí
-    updatedState = performAIAttacks(updatedState);
-
-    // Předáme tah hráči
-    const nextPlayer = 0;
-    updatedState = startNextTurn(updatedState, nextPlayer);
-
-    console.log(`AI končí tah s ${updatedState.players[1].mana} manou.`);
-    return updatedState;
-  };
-
-  const playAICard = (state, cardIndex) => {
-    const card = state.players[1].hand[cardIndex];
-    console.log(`AI hraje kartu: ${card.name}`);
-    console.log(`AI má před zahráním ${state.players[1].mana} many.`);
+      
+      return additionalEmojis[mainEmoji] || ['✨', '💫', '🌟', '🎭'];
+    };
     
-    const newState = playCardCommon(state, 1, cardIndex);
+    const mainEmoji = getSecretEmoji(secretAnimation.secret.name);
+    const supportEmojis = getRandomEmojis(mainEmoji);
     
-    console.log(`AI má po zahrání ${newState.players[1].mana} many.`);
-    return checkGameOver(newState);
-  };
+    return (
+      <SecretAnimationContainer $isClosing={isClosingSecretAnimation} onClick={handleSkipSecretAnimation}>
+        <SecretAnimationBackground />
+        <SecretAnimationContent>
+          <SecretAnimationSmallIcons>{supportEmojis[0]}</SecretAnimationSmallIcons>
+          <SecretAnimationSmallIcons>{supportEmojis[1]}</SecretAnimationSmallIcons>
+          <SecretAnimationSmallIcons>{supportEmojis[2]}</SecretAnimationSmallIcons>
+          <SecretAnimationSmallIcons>{supportEmojis[3]}</SecretAnimationSmallIcons>
+          <SecretAnimationMainIcon>{mainEmoji}</SecretAnimationMainIcon>
+          <SecretAnimationTitle>Secret Revealed!</SecretAnimationTitle>
+          <SecretAnimationText>
+            {ownerText} secret card <span className="secret-name">{secretAnimation.secret.name}</span> has been activated!
+          </SecretAnimationText>
+          <SecretAnimationFunnyText>
+            {getFunnyQuote(secretAnimation.secret.name)}
+          </SecretAnimationFunnyText>
+          <SecretCardDisplay>
+            <CardDisplay
+              card={secretAnimation.secret}
+              isInHand={false}
+              isDragging={false}
+              gameState={gameState}
+            />
+          </SecretCardDisplay>
+          <SecretAnimationButton onClick={handleSkipSecretAnimation}>
+            Continue
+          </SecretAnimationButton>
+        </SecretAnimationContent>
+      </SecretAnimationContainer>
+    );
+  }, [secretAnimation, isClosingSecretAnimation, handleSkipSecretAnimation, gameState]);
 
-  const performAIAttacks = (state) => {
-    let updatedState = { ...state };
-    const aiField = updatedState.players[1].field;
-    const playerField = updatedState.players[0].field;
-    const playerHero = updatedState.players[0].hero;
+  // Upravíme renderování karet protivníka pro přidání refs
+  const renderOpponentField = useCallback(() => (
+    <FieldArea $isMobile={isMobile}>
+      {gameState.opponent.field.map((card, index) => (
+        <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
+          {(provided, snapshot) => (
+            <div
+              ref={(el) => {
+                provided.innerRef(el);
+                opponentFieldRefs.current[index] = el;
+              }}
+              {...provided.droppableProps}
+              style={{ position: 'relative' }}
+            >
+              <CardDisplay
+                card={card}
+                isTargetable={gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
+                  (gameState.opponent.field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
+              />
+              {snapshot.isDraggingOver && (
+                <DropZoneOverlay $type="attack" />
+              )}
+            </div>
+          )}
+        </Droppable>
+      ))}
+    </FieldArea>
+  ), [gameState.opponent.field, gameState.player.field, isMobile]);
 
-    console.log('AI začíná útočit.');
 
-    // Seřadíme jednotky AI podle priority útoku
-    const sortedAIUnits = aiField.sort((a, b) => {
-      if (a.hasAttacked !== b.hasAttacked) return a.hasAttacked ? 1 : -1;
-      return b.attack - a.attack;
-    });
 
-    sortedAIUnits.forEach((attacker, index) => {
-      if (!attacker.hasAttacked && !attacker.frozen) {
-        const target = chooseTarget(playerField, playerHero, attacker);
-        if (target) {
-          console.log(`AI útočí jednotkou ${attacker.name} (útok: ${attacker.attack}) na ${target.isHero ? 'hrdinu' : `jednotku ${playerField[target.index].name}`}`);
-          updatedState = attack(index, target.index, target.isHero, true)(updatedState);
-        }
-      }
-    });
-
-    console.log('AI dokončilo útok.');
-    return updatedState;
-  };
-
-  const chooseTarget = (playerField, playerHero, attacker) => {
-    const tauntUnits = playerField.filter(unit => unit.hasTaunt);
-    
-    if (tauntUnits.length > 0) {
-      // Útočíme na jednotku s Taunt, která může být zničena
-      const vulnerableTaunt = tauntUnits.find(unit => unit.health <= attacker.attack);
-      if (vulnerableTaunt) {
-        return { index: playerField.indexOf(vulnerableTaunt), isHero: false };
-      }
-      // Jinak útočíme na jednotku s Taunt s nejnižším zdravím
-      return { index: playerField.indexOf(tauntUnits.reduce((min, unit) => unit.health < min.health ? unit : min, tauntUnits[0])), isHero: false };
-    }
-
-    // Hledáme jednotku, kterou můžeme zničit
-    const vulnerableUnit = playerField.find(unit => unit.health <= attacker.attack);
-    if (vulnerableUnit) {
-      return { index: playerField.indexOf(vulnerableUnit), isHero: false };
-    }
-
-    // Pokud můžeme zničit hrdinu, uděláme to
-    if (playerHero.health <= attacker.attack) {
-      return { index: null, isHero: true };
-    }
-
-    // Útočíme na jednotku s nejvyšším útokem
-    if (playerField.length > 0) {
-      const highestAttackUnit = playerField.reduce((max, unit) => unit.attack > max.attack ? unit : max, playerField[0]);
-      return { index: playerField.indexOf(highestAttackUnit), isHero: false };
-    }
-
-    // Pokud není jiná možnost, útočíme na hrdinu
-    return { index: null, isHero: true };
-  };
-
-  const onDragEnd = (result) => {
+  // Vylepšený onDragEnd s logováním
+  const onDragEnd = useCallback((result) => {
     const { source, destination } = result;
+    if (!destination || !gameState) return;
 
-    if (!destination) {
+    console.log('Drag end:', {
+      source,
+      destination,
+      currentPlayer: gameState.currentPlayer,
+      playerIndex: gameState.playerIndex
+    });
+
+    if (gameState.currentPlayer !== gameState.playerIndex) {
+      setNotification('Not your turn!');
       return;
     }
 
-    setGameState((prevState) => {
-      const newState = { ...prevState };
-      const currentPlayer = newState.players[0];
-      const opponentPlayer = newState.players[1];
+    if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
+      const cardIndex = source.index;
+      const card = gameState.player.hand[cardIndex];
 
-      if (source.droppableId === 'hand' && destination.droppableId === 'playerField') {
-        // Logika pro hraní karty z ruky na pole
-        const cardIndex = source.index;
-        const card = currentPlayer.hand[cardIndex];
-        
-        if (card.type === 'spell') {
-          // Pokud je to kouzlo, zahrajeme ho přímo
-          return playCard(cardIndex)(newState);
-        } else if (card.type === 'unit') {
-          // Pokud je to jednotka, zahrajeme ji na pole
-          return playCard(cardIndex)(newState);
-        }
-      } else if (source.droppableId === 'hand' && (destination.droppableId === 'opponentHero' || destination.droppableId.startsWith('opponentCard-'))) {
-        // Pokus o útok kartou z ruky
-        addNotification('Nelze útočit kartou, která není vyložena na herním poli', 'warning');
-        return newState;
-      } else if (source.droppableId === 'playerField') {
-        const attackerIndex = source.index;
-        const attacker = currentPlayer.field[attackerIndex];
+      if (!card) return;
 
-        if (attacker.hasAttacked || attacker.frozen) {
-          return newState;
-        }
-
-        const opponentTauntUnits = opponentPlayer.field.filter(unit => unit.hasTaunt);
-
-        if (destination.droppableId === 'opponentHero') {
-          // Útok na hrdinu
-          if (opponentTauntUnits.length === 0) {
-            return attack(attackerIndex, null, true)(newState);
-          } else {
-            addNotification('Nelze útočit na hrdinu, když je na poli jednotka s Taunt', 'warning');
-            return newState;
-          }
-        } else if (destination.droppableId.startsWith('opponentCard-')) {
-          // Útok na nepřátelskou jednotku
-          const targetIndex = parseInt(destination.droppableId.split('-')[1]);
-          const targetUnit = opponentPlayer.field[targetIndex];
-          
-          if (opponentTauntUnits.length === 0 || targetUnit.hasTaunt) {
-            return attack(attackerIndex, targetIndex)(newState);
-          } else {
-            addNotification('Nelze útočit na tuto jednotku, když je na poli jednotka s Taunt', 'warning');
-            return newState;
-          }
-        }
+      if (card.manaCost > gameState.player.mana) {
+        setNotification('Not enough mana!');
+        return;
       }
 
-      return newState;
-    });
-  };
+      // Přidáme destinationIndex pro určení pozice, kam chceme kartu umístit
+      onPlayCard({
+        cardIndex,
+        destinationIndex: destination.index // Přidáme index cílové pozice
+      });
+    }
+    else if (source.droppableId === 'playerField') {
+      const attackerIndex = source.index;
+      const attacker = gameState.player.field[attackerIndex];
 
-  const renderClone = (provided, snapshot, rubric) => {
-    const card = gameState.players[0].hand[rubric.source.index];
+      console.log('Útok jednotkou:', {
+        attackerIndex,
+        attacker,
+        destination: destination.droppableId
+      });
+
+      if (!attacker || attacker.hasAttacked || attacker.frozen) {
+        setNotification('This unit cannot attack!');
+        return;
+      }
+
+      if (destination.droppableId === 'opponentHero') {
+        console.log('Útok na hrdinu');
+        onAttack({
+          attackerIndex,
+          targetIndex: null,
+          isHeroTarget: true
+        });
+      }
+      else if (destination.droppableId.startsWith('opponentCard-')) {
+        const targetIndex = parseInt(destination.droppableId.split('-')[1]);
+        console.log('Útok na jednotku:', { targetIndex });
+        onAttack({
+          attackerIndex,
+          targetIndex,
+          isHeroTarget: false
+        });
+      }
+    }
+  }, [gameState, onAttack, onPlayCard]);
+
+  // Upravíme renderClone pro bezpečné použití gameState
+  const renderClone = useCallback((provided, snapshot, rubric) => {
+    const card = gameState?.player?.hand[rubric.source.index];
+    if (!card) return null;
+
     return (
       <div
         ref={provided.innerRef}
@@ -1045,155 +1438,454 @@ function GameScene() {
           card={card}
           isInHand={true}
           isDragging={true}
+          gameState={gameState}
         />
       </div>
     );
+  }, [gameState]);
+
+
+  // Přidáme wrapper pro onEndTurn
+  const handleEndTurn = useCallback(() => {
+    // Pokud probíhá animace, zrušíme ji
+    if (animation) {
+      setIsClosingAnimation(true);
+      setTimeout(() => {
+        setAnimation(null);
+        setIsClosingAnimation(false);
+      }, 500);
+    }
+    onEndTurn();
+  }, [animation, onEndTurn]);
+
+
+
+  // Přidáme useEffect pro sledování stavu připojení
+  useEffect(() => {
+    const socket = socketService.socket;
+
+    const handleDisconnect = () => {
+      setIsDisconnected(true);
+      // Pokusíme se o reconnect
+      setTimeout(() => {
+        socket.connect();
+        socket.emit('attemptReconnect');
+      }, 1000);
+    };
+
+    const handleReconnect = () => {
+      setIsDisconnected(false);
+      setReconnectTimer(null);
+    };
+
+    const handleOpponentDisconnect = (data) => {
+      setReconnectTimer(data.remainingTime);
+    };
+
+    const handleOpponentReconnect = () => {
+      setReconnectTimer(null);
+    };
+
+    socket.on('disconnect', handleDisconnect);
+    socket.on('reconnectedToGame', handleReconnect);
+    socket.on('opponentDisconnected', handleOpponentDisconnect);
+    socket.on('opponentReconnected', handleOpponentReconnect);
+
+    return () => {
+      socket.off('disconnect', handleDisconnect);
+      socket.off('reconnectedToGame', handleReconnect);
+      socket.off('opponentDisconnected', handleOpponentDisconnect);
+      socket.off('opponentReconnected', handleOpponentReconnect);
+    };
+  }, []);
+
+  // Přidáme testovací funkce
+  const simulateDisconnect = () => {
+    socketService.socket.disconnect();
   };
 
+  const simulateReconnect = () => {
+    socketService.socket.connect();
+    socketService.socket.emit('attemptReconnect');
+  };
+
+  const OpponentHandArea = styled(HandArea)`
+    top: 10px;
+    bottom: auto;
+    transform: translateX(-50%) rotate(180deg);
+    z-index: unset;
+  `;
 
 
-  if (gameState.gameOver) {
+
+  // Přidáme efekt pro zobrazení "AI přemýšlí" notifikace
+  // useEffect(() => {
+  //   if (isAIGame && gameState.currentPlayer === 1) {
+  //     setNotification({
+  //       message: "AI is thinking...",
+  //       type: "info",
+  //       duration: 1500  // Notifikace zmizí po 1.5s
+  //     });
+  //   }
+  // }, [isAIGame, gameState.currentPlayer]);
+
+
+
+  // // Přidáme bezpečnostní kontroly pro gameState
+  // const safeGameState = useMemo(() => {
+  //   if (!gameState) return null;
+
+  //   return {
+  //     ...gameState,
+  //     player: gameState.player || {},
+  //     opponent: gameState.opponent || {},
+  //     currentPlayer: gameState.currentPlayer ?? -1,
+  //     playerIndex: gameState.playerIndex ?? -1
+  //   };
+  // }, [gameState]);
+
+  //   // Bezpečné získání jména protihráče
+  //   const opponentName = useMemo(() => {
+  //     if (isAIGame) return "AI Opponent";
+  //     return safeGameState.opponent?.username || "Opponent";
+  //   }, [isAIGame, safeGameState.opponent]);
+  
+  //   // Bezpečné získání stavu tahu
+  //   const isPlayerTurn = useMemo(() => {
+  //     return safeGameState.currentPlayer === safeGameState.playerIndex;
+  //   }, [safeGameState.currentPlayer, safeGameState.playerIndex])
+
+  const isPlayerTurn = gameState?.currentPlayer === gameState?.playerIndex;
+  // Přidáme výběr pozadí na základě gameId
+  const backgroundSelection = useMemo(() => {
+    if (!gameState?.gameId) return backgroundImage;
+    
+    const randomValue = getSeededRandom(gameState.gameId);
+    
+    // Rozdělíme interval 0-1 na tři části
+    if (randomValue < 0.33) {
+      return backgroundImage;
+    } else if (randomValue < 0.66) {
+      return backgroundImage2;
+    } else {
+      return backgroundImage3;
+    }
+  }, [gameState?.gameId]);
+
+  // Přidáme early return pro případ, že gameState není definován
+  if (!gameState || !gameState.player) {
     return (
-      <GameBoard>
-        <h1>Hra skončila!</h1>
-        <h2>Vítěz: {gameState.winner}</h2>
+      <GameBoard $background={backgroundSelection}>
+       <h1>Waiting for opponent...</h1>
       </GameBoard>
     );
   }
 
-  const opponentTauntUnits = gameState.players[1].field.filter((unit) => unit.hasTaunt);
-  const playerTauntUnits = gameState.players[0].field.filter((unit) => unit.hasTaunt);
+  // Přidáme early return pro konec hry
+  if (gameState.gameOver) {
+    const isWinner = gameState.winner === gameState.playerIndex;
+    const lastAnimation = animation; // Použijeme poslední animaci
+
+    return (
+      <GameBoard $background={backgroundSelection}>
+        <GameOverOverlay>
+          <GameOverContent>
+            <GameOverTitle>Game Over</GameOverTitle>
+            <GameOverMessage $isWinner={isWinner}>
+              {isWinner ? 'Victory!' : 'Defeat!'}
+            </GameOverMessage>
+            {!isWinner && lastAnimation && (
+              <DefeatDetails>
+                {lastAnimation.type === 'attack' ? (
+                  <>
+                    Defeated by{' '}
+                    <span className="defeat-card">{lastAnimation.card.name}</span>
+                    {lastAnimation.card.attack && (
+                      <> dealing <span className="damage">{lastAnimation.card.attack} damage</span></>
+                    )}
+                  </>
+                ) : lastAnimation.type === 'heroAbility' ? (
+                  <>
+                    Defeated by hero ability{' '}
+                    <span className="defeat-card">{lastAnimation.hero.abilityName}</span>
+                  </>
+                ) : lastAnimation.type === 'playCard' && lastAnimation.card.type === 'spell' ? (
+                  <>
+                    Defeated by spell{' '}
+                    <span className="defeat-card">{lastAnimation.card.name}</span>
+                  </>
+                ) : (
+                  'Defeated by opponent'
+                )}
+              </DefeatDetails>
+            )}
+            <PlayAgainButton onClick={() => window.location.reload()}>
+              Continue
+            </PlayAgainButton>
+          </GameOverContent>
+        </GameOverOverlay>
+        <BattleArea>
+        </BattleArea>
+      </GameBoard>
+    );
+  }
+
+
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <GameBoard>
-        <PlayerInfo>
-          <DeckAndManaContainer>
-            <DeckContainer>{gameState.players[1].deck.length}</DeckContainer>
-            <ManaInfo>🔮 {gameState.players[1].mana}</ManaInfo>
-          </DeckAndManaContainer>
-        </PlayerInfo>
+    <>
+      {/* Přidáme SecretAnimationEffect na nejvyšší úroveň */}
+      <SecretAnimationEffect />
+      
+      {showTestControls && (
+        <TestControls>
+          <TestButton onClick={simulateDisconnect}>
+            Simulate Disconnect
+          </TestButton>
+          <TestButton onClick={simulateReconnect}>
+            Simulate Reconnect
+          </TestButton>
+        </TestControls>
+      )}
 
-        <BattleArea>
-          <Droppable droppableId="opponentHero" direction="horizontal">
-            {(provided, snapshot) => (
-              <HeroArea
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                style={{
-                  background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.3)' : 'transparent',
-                }}
-              >
-                <HeroDisplay
-                  hero={gameState.players[1].hero}
-                  isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && gameState.players[1].field.every(card => !card.hasTaunt)}
+      {isDisconnected && (
+        <ReconnectOverlay>
+          <ReconnectMessage>
+            Connection lost. Attempting to reconnect...
+          </ReconnectMessage>
+        </ReconnectOverlay>
+      )}
+
+      {reconnectTimer && (
+        <ReconnectOverlay>
+          <ReconnectMessage>
+            Opponent disconnected. Waiting for reconnect...
+            <br />
+            Time remaining: {Math.ceil(reconnectTimer)} seconds
+          </ReconnectMessage>
+        </ReconnectOverlay>
+      )}
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <ScalableGameWrapper $scale={scale} $isMobile={isMobile}>
+          <GameBoard $background={backgroundSelection}>
+            <TurnIndicator $isPlayerTurn={isPlayerTurn}>
+              {isPlayerTurn ? 'Your Turn' : 'Opponent\'s Turn'}
+            </TurnIndicator>
+
+            <PlayerInfo $isMobile={isMobile}>
+              <DeckAndManaContainer>
+                <DeckContainer>
+                  {gameState.opponent?.deckSize || 0}
+                  <Tooltip $position="bottom">
+                    Cards in deck
+                  </Tooltip>
+                </DeckContainer>
+                <ManaInfo>
+                  💎 {gameState.opponent?.mana || 0}/{gameState.opponent?.maxMana || 0}
+                  <Tooltip $position="bottom">
+                    Mana crystals
+                  </Tooltip>
+                </ManaInfo>
+              </DeckAndManaContainer>
+            </PlayerInfo>
+
+            <OpponentHandArea
+              $isMobile={isMobile}
+              ref={opponentHandRef}
+            >
+              {gameState.opponent.hand.map((card, index) => (
+                <CardDisplay
+                  key={card.id}
+                  card={card}
+                  isInHand={true}
+                  isOpponentCard={true}
                 />
-                {provided.placeholder}
-              </HeroArea>
-            )}
-          </Droppable>
+              ))}
+            </OpponentHandArea>
 
-          <FieldArea>
-            {gameState.players[1].field.map((card, index) => (
-              <Droppable droppableId={`opponentCard-${index}`} key={card.id}>
+            <BattleArea>
+              <Droppable droppableId="opponentHero" direction="horizontal">
                 {(provided, snapshot) => (
-                  <div
+                  <HeroArea
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    style={{ position: 'relative' }}
+                  >
+                    <HeroSpeechBubble
+                      heroClass={gameState.opponent.hero.image}
+                      isPlayer={false}
+                      isVisible={showOpponentBubble}
+                      onAnimationComplete={() => {
+                        setShowOpponentBubble(false);
+                        if (gameState.currentPlayer === gameState.playerIndex) {
+                          setShowPlayerBubble(true);
+                        }
+                      }}
+                    />
+                    <HeroDisplay
+                      hero={gameState.opponent.hero}
+                      heroName={gameState.opponent.username}
+                      isTargetable={
+                        gameState.currentPlayer === gameState.playerIndex &&
+                        gameState.player.field.some(card => !card.hasAttacked && !card.frozen) &&
+                        gameState.opponent.field.every(card => !card.hasTaunt)
+                      }
+                      secrets={gameState.opponent.secrets}
+                    />
+                    {snapshot.isDraggingOver && (
+                      <DropZoneOverlay $type="hero" />
+                    )}
+                    {provided.placeholder}
+                  </HeroArea>
+                )}
+              </Droppable>
+
+              {renderOpponentField()}
+
+              <Droppable droppableId="playerField" direction="horizontal">
+                {(provided, snapshot) => (
+                  <FieldArea
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     style={{
-                      background: snapshot.isDraggingOver ? 'rgba(255, 0, 0, 0.5)' : 'transparent',
+                      position: 'relative',
+                      display: 'flex',
+                      gap: '10px',
+                      minHeight: '200px'
                     }}
                   >
-                    <CardDisplay
-                      card={card}
-                      isTargetable={gameState.players[0].field.some(card => !card.hasAttacked && !card.frozen) && (gameState.players[1].field.every(unit => !unit.hasTaunt) || card.hasTaunt)}
-                    />
+                    {gameState.player.field.map((card, index) => (
+                      <Draggable
+                        key={card.id}
+                        draggableId={card.id}
+                        index={index}
+                        isDragDisabled={!isPlayerTurn || card.hasAttacked || card.frozen}
+                      >
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <CardDisplay
+                              card={card}
+                              canAttack={isPlayerTurn && !card.hasAttacked && !card.frozen}
+                              isDragging={snapshot.isDragging}
+                              isPlayerTurn={isPlayerTurn}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
                     {provided.placeholder}
-                  </div>
+                    {snapshot.isDraggingOver && (
+                      <DropZoneOverlay $type="play" />
+                    )}
+                  </FieldArea>
                 )}
               </Droppable>
-            ))}
-          </FieldArea>
 
-          <Droppable droppableId="playerField" direction="horizontal">
-            {(provided, snapshot) => (
-              <FieldArea
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                style={{
-                  background: snapshot.isDraggingOver ? 'rgba(255, 215, 0, 0.3)' : 'transparent',
-                }}
+              <div style={{ position: "relative", top: "-50px" }}>
+                <HeroArea $isMobile={isMobile}>
+                  <div style={{ position: "absolute" }}></div>
+                  <HeroSpeechBubble
+                    heroClass={gameState.player.hero.image}
+                    isPlayer={true}
+                    isVisible={showPlayerBubble}
+                    onAnimationComplete={() => {
+                      setShowPlayerBubble(false);
+                      if (gameState.currentPlayer !== gameState.playerIndex) {
+                        setShowOpponentBubble(true);
+                      }
+                    }} />
+                  <HeroDisplay 
+                    hero={gameState.player.hero} 
+                    heroName={gameState.player.username} 
+                    isCurrentPlayer={true} 
+                    onUseAbility={handleHeroAbility} 
+                    currentMana={gameState.player.mana}
+                    secrets={gameState.player.secrets}
+                  />
+                </HeroArea>
+              </div>
+            </BattleArea>
+
+            <PlayerInfo $isPlayer={true} $isMobile={isMobile} $isBottom={true}>
+              <DeckAndManaContainer>
+                <DeckContainer>
+                  {gameState.player.deck}
+                  <Tooltip $position="top">
+                    Cards in deck
+                  </Tooltip>
+                </DeckContainer>
+                <ManaInfo>
+                  💎 {gameState.player.mana}/{gameState.player.maxMana}
+                  <Tooltip $position="top">
+                    Mana crystals
+                  </Tooltip>
+                </ManaInfo>
+              </DeckAndManaContainer>
+              <EndTurnButton
+                onClick={handleEndTurn}  // Použijeme nový wrapper místo přímého onEndTurn
+                disabled={gameState.currentPlayer !== gameState.playerIndex}
               >
-                {gameState.players[0].field.map((card, index) => (
-                  <Draggable key={card.id} draggableId={card.id} index={index} isDragDisabled={card.hasAttacked || card.frozen}>
-                    {(provided, snapshot) => (
-                      <div
-                        ref={provided.innerRef}
-                        {...provided.draggableProps}
-                        {...provided.dragHandleProps}
-                      >
-                        <CardDisplay
-                          card={card}
-                          canAttack={gameState.currentPlayer === 0 && !card.hasAttacked && !card.frozen}
-                          isDragging={snapshot.isDragging}
-                        />
-                      </div>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </FieldArea>
-            )}
-          </Droppable>
+                End turn
+              </EndTurnButton>
+            </PlayerInfo>
 
-          <HeroArea>
-            <HeroDisplay hero={gameState.players[0].hero} />
-          </HeroArea>
-        </BattleArea>
-
-        <PlayerInfo>
-          <DeckAndManaContainer>
-            <DeckContainer>{gameState.players[0].deck.length}</DeckContainer>
-            <ManaInfo>🔮 {gameState.players[0].mana}</ManaInfo>
-          </DeckAndManaContainer>
-          <EndTurnButton onClick={endTurn}>Ukončit tah</EndTurnButton>
-        </PlayerInfo>
-
-        <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
-          {(provided) => (
-            <HandArea
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-            >
-              {gameState.players[0].hand.map((card, index) => (
-                <Draggable key={card.id} draggableId={card.id} index={index}>
-                  {(provided, snapshot) => (
-                    <DraggableCardWrapper
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      style={{
-                        ...provided.draggableProps.style,
-                        opacity: snapshot.isDragging ? 0 : 1,
-                      }}
+            <Droppable droppableId="hand" direction="horizontal" renderClone={renderClone}>
+              {(provided) => (
+                <HandArea
+                  $isMobile={isMobile}
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                >
+                  {gameState.player.hand.map((card, index) => (
+                    <Draggable
+                      key={card.id}
+                      draggableId={card.id}
+                      index={index}
+                      isDragDisabled={!isPlayerTurn} // Zakážeme drag když není hráč na tahu
                     >
-                      <CardDisplay
-                        card={card}
-                        isInHand={true}
-                        isDragging={snapshot.isDragging}
-                      />
-                    </DraggableCardWrapper>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </HandArea>
-          )}
-        </Droppable>
-        <VisualFeedbackContainer feedbacks={visualFeedbacks} />
-        <Notification notifications={notifications} />
-      </GameBoard>
-    </DragDropContext>
+                      {(provided, snapshot) => (
+                        <DraggableCardWrapper
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            opacity: snapshot.isDragging ? 0 : 1,
+                          }}
+                        >
+                          <CardDisplay
+                            card={card}
+                            isInHand={true}
+                            isDragging={snapshot.isDragging}
+                            isPlayerTurn={isPlayerTurn}
+                            gameState={gameState}
+                          />
+                        </DraggableCardWrapper>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </HandArea>
+              )}
+            </Droppable>
+            <Notification message={notification} />
+            <CombatLog
+              logEntries={logEntries}
+              socket={socketService.socket}
+              playerUsername={gameState.player.username}
+              opponentUsername={gameState.opponent.username}
+            />
+            {/* Přidáme komponentu pro animace */}
+            <AnimationEffect />
+          </GameBoard>
+        </ScalableGameWrapper>
+      </DragDropContext>
+    </>
   );
 }
 
