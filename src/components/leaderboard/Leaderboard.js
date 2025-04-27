@@ -40,6 +40,24 @@ const Th = styled.th`
     text-transform: uppercase;
     letter-spacing: 1px;
     border-bottom: 2px solid ${theme.colors.primary};
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+
+    &:hover {
+        background: rgba(255, 215, 0, 0.2);
+    }
+
+    &.active {
+        color: ${theme.colors.text.primary};
+        background: rgba(255, 215, 0, 0.25);
+    }
+
+    .sort-icon {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 0.8em;
+    }
 `;
 
 const Td = styled.td`
@@ -95,6 +113,8 @@ function Leaderboard() {
     const [leaderboard, setLeaderboard] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [sortField, setSortField] = useState('rank');
+    const [sortDirection, setSortDirection] = useState('desc');
 
     useEffect(() => {
         const loadLeaderboard = async () => {
@@ -112,6 +132,56 @@ function Leaderboard() {
         loadLeaderboard();
     }, []);
 
+    const handleSort = (field) => {
+        // Pokud klikneme na stejný sloupec, změníme směr řazení
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            // Pro nový sloupec nastavíme výchozí směr řazení
+            setSortField(field);
+            // Pro většinu sloupců je výchozí směr sestupný, jen pro username použijeme vzestupný
+            setSortDirection(field === 'username' ? 'asc' : 'desc');
+        }
+    };
+
+    const getSortedData = () => {
+        if (!leaderboard) return [];
+
+        return [...leaderboard].sort((a, b) => {
+            // Speciální logika pro řazení podle win rate
+            if (sortField === 'winRate') {
+                const winRateA = a.total_games > 0 ? a.wins / (a.wins + a.losses) : 0;
+                const winRateB = b.total_games > 0 ? b.wins / (b.wins + b.losses) : 0;
+                
+                if (sortDirection === 'asc') {
+                    return winRateA - winRateB;
+                } else {
+                    return winRateB - winRateA;
+                }
+            }
+
+            // Pro ostatní sloupce
+            if (typeof a[sortField] === 'string') {
+                // Řazení řetězců
+                const compareResult = a[sortField].localeCompare(b[sortField]);
+                return sortDirection === 'asc' ? compareResult : -compareResult;
+            } else {
+                // Řazení čísel
+                if (sortDirection === 'asc') {
+                    return a[sortField] - b[sortField];
+                } else {
+                    return b[sortField] - a[sortField];
+                }
+            }
+        });
+    };
+
+    // Pomocná funkce pro zobrazení ikony řazení
+    const getSortIcon = (field) => {
+        if (sortField !== field) return null;
+        return <span className="sort-icon">{sortDirection === 'asc' ? '▲' : '▼'}</span>;
+    };
+
     if (loading) {
         return <LoadingSpinner>Loading leaderboard...</LoadingSpinner>;
     }
@@ -120,31 +190,54 @@ function Leaderboard() {
         return <div>{error}</div>;
     }
 
+    // Získání původních indexů pro rank (pořadí)
+    const originalRanks = {};
+    leaderboard.forEach((player, index) => {
+        originalRanks[player.username] = index + 1;
+    });
+
+    const sortedData = getSortedData();
+
     return (
         <LeaderboardContainer>
             <h2>Leaderboard</h2>
             <Table>
                 <thead>
                     <tr>
-                        <Th>Rank</Th>
-                        <Th>Player</Th>
-                        <Th>Points</Th>
-                        <Th>Wins</Th>
-                        <Th>Losses</Th>
-                        <Th>Win Rate</Th>
+                        <Th onClick={() => handleSort('rank')} className={sortField === 'rank' ? 'active' : ''}>
+                            Rank{getSortIcon('rank')}
+                        </Th>
+                        <Th onClick={() => handleSort('username')} className={sortField === 'username' ? 'active' : ''}>
+                            Player{getSortIcon('username')}
+                        </Th>
+                        <Th onClick={() => handleSort('rank')} className={sortField === 'rank' ? 'active' : ''}>
+                            Points{getSortIcon('rank')}
+                        </Th>
+                        <Th onClick={() => handleSort('wins')} className={sortField === 'wins' ? 'active' : ''}>
+                            Wins{getSortIcon('wins')}
+                        </Th>
+                        <Th onClick={() => handleSort('losses')} className={sortField === 'losses' ? 'active' : ''}>
+                            Losses{getSortIcon('losses')}
+                        </Th>
+                        <Th onClick={() => handleSort('winRate')} className={sortField === 'winRate' ? 'active' : ''}>
+                            Win Rate{getSortIcon('winRate')}
+                        </Th>
                     </tr>
                 </thead>
                 <tbody>
-                    {leaderboard.map((player, index) => {
+                    {sortedData.map((player) => {
                         const winRate = player.total_games > 0
                             ? ((player.wins / (player.wins + player.losses)) * 100).toFixed(1)
                             : '0.0';
 
+                        // Použití původního indexu pro rank
+                        const originalRank = originalRanks[player.username];
+
                         return (
                             <Tr key={player.username}>
                                 <Td>
-                                    <RankSpan rank={index + 1}>
-                                        {index + 1}
+                                    <RankSpan rank={originalRank}>
+                                        {originalRank}
                                     </RankSpan>
                                 </Td>
                                 <Td>{player.username}</Td>
