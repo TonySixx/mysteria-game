@@ -11,7 +11,7 @@ import { DeckList } from './deck/DeckList';
 import { deckService } from '../services/deckService';
 import DeckBuilder from './deck/DeckBuilder';
 import PropTypes from 'prop-types';
-import { FaVolumeUp, FaVolumeMute, FaExpand, FaCompress } from 'react-icons/fa';
+import { FaVolumeUp, FaVolumeMute, FaExpand, FaCompress, FaDiscord, FaSignOutAlt } from 'react-icons/fa';
 
 const MenuContainer = styled.div`
     min-height: 100vh;
@@ -503,7 +503,11 @@ const MusicToggleButton = styled(ControlButton)`
 `;
 
 const FullscreenButton = styled(ControlButton)`
-    right: 20px;
+    right: 20px; // Umístění vlevo od hudby
+`;
+
+const LogoutButton = styled(ControlButton)`
+    right: 140px; 
 `;
 
 // Přidáme nové styled komponenty pro AI tlačítko
@@ -783,6 +787,11 @@ function MainMenu({
         socketService.startAIGame();
     };
 
+    // Funkce pro otevření odkazu na Discord komunitu
+    const openDiscordCommunity = () => {
+        window.open('https://discord.gg/E7MM4ys6fb', '_blank');
+    };
+
     if (currentScreen === 'deck-builder') {
         return (
             <DeckBuilder 
@@ -795,15 +804,24 @@ function MainMenu({
 
     return (
         <MenuContainer>
+            {user && (
+                <LogoutButton
+                    onClick={onLogout}
+                    title="Logout"
+                    aria-label="Logout"
+                >
+                    <FaSignOutAlt size={24} />
+                </LogoutButton>
+            )}
             <MusicToggleButton 
                 onClick={onToggleMusic} 
-                title={isMusicEnabled ? 'Vypnout hudbu' : 'Zapnout hudbu'}
+                title={isMusicEnabled ? 'Disable Music' : 'Enable Music'}
             >
                 {isMusicEnabled ? <FaVolumeUp size={24} /> : <FaVolumeMute size={24} />}
             </MusicToggleButton>
             <FullscreenButton
                 onClick={toggleFullscreen}
-                title={isFullscreen ? 'Ukončit režim celé obrazovky' : 'Přepnout na celou obrazovku'}
+                title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
                 {isFullscreen ? <FaCompress size={24} /> : <FaExpand size={24} />}
             </FullscreenButton>
@@ -864,8 +882,8 @@ function MainMenu({
                                 >
                                     Leaderboard
                                 </Tab>
-                                <Tab onClick={onLogout}>
-                                    Logout
+                                <Tab onClick={openDiscordCommunity}>
+                                    <FaDiscord style={{marginRight: '8px'}} /> Community
                                 </Tab>
                             </TabContainer>
 
