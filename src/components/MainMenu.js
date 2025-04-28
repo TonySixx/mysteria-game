@@ -586,6 +586,13 @@ const GoldDisplay = styled.div`
     border: 2px solid ${theme.colors.border.golden};
     z-index: 9999;
     box-shadow: ${theme.shadows.golden};
+    cursor: pointer;
+    transition: all 0.3s;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 15px ${theme.colors.border.golden};
+    }
 
     span {
         color: ${theme.colors.gold};
@@ -889,7 +896,7 @@ function MainMenu({
                     >
                         <FaSignOutAlt size={24} />
                     </LogoutButton>
-                    <GoldDisplay>
+                    <GoldDisplay onClick={() => handleTabChange('store')}>
                         🪙 <span>{playerGold}</span> Gold
                     </GoldDisplay>
                 </>
