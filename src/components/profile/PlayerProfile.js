@@ -417,12 +417,12 @@ function PlayerProfile({ userId, onContentLoad }) {
                 >
                     <FaTrophy /> Challenges
                 </ProfileTab>
-                <ProfileTab
+                {/* <ProfileTab
                     $active={activeTab === 'store'}
                     onClick={() => handleTabChange('store')}
                 >
                     <FaStore /> Store
-                </ProfileTab>
+                </ProfileTab> */}
             </ProfileTabs>
 
             <TabContent 
