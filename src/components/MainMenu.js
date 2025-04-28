@@ -11,7 +11,10 @@ import { DeckList } from './deck/DeckList';
 import { deckService } from '../services/deckService';
 import DeckBuilder from './deck/DeckBuilder';
 import PropTypes from 'prop-types';
-import { FaVolumeUp, FaVolumeMute, FaExpand, FaCompress, FaDiscord, FaSignOutAlt } from 'react-icons/fa';
+import { FaVolumeUp, FaVolumeMute, FaExpand, FaCompress, FaDiscord, FaSignOutAlt, FaStore } from 'react-icons/fa';
+import supabaseService from '../services/supabaseService';
+import CardPackStore from './profile/CardPackStore';
+import CardPackOpening from './profile/CardPackOpening';
 
 const MenuContainer = styled.div`
     min-height: 100vh;
@@ -570,6 +573,27 @@ const ButtonsContainer = styled.div`
     margin: 30px 0;
 `;
 
+const GoldDisplay = styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: linear-gradient(135deg, ${theme.colors.secondary} 0%, ${theme.colors.backgroundLight} 100%);
+    border-radius: 8px;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    border: 2px solid ${theme.colors.border.golden};
+    z-index: 9999;
+    box-shadow: ${theme.shadows.golden};
+
+    span {
+        color: ${theme.colors.gold};
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+`;
+
 function MainMenu({ 
     user, 
     onGameStart, 
@@ -591,6 +615,9 @@ function MainMenu({
     const scrollToContent = useScrollToContent();
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isPlayingAI, setIsPlayingAI] = useState(false);
+    const [playerGold, setPlayerGold] = useState(0);
+    const [showPackOpening, setShowPackOpening] = useState(false);
+    const [openedCards, setOpenedCards] = useState([]);
 
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -756,6 +783,17 @@ function MainMenu({
         setIsLoading(true);
         setContentVisible(false);
 
+        // If we're switching from the profile tab, reload gold amount
+        // since the user might have made transactions there
+        if (activeTab === 'profile' && newTab !== 'profile') {
+            loadPlayerCurrency();
+        }
+        
+        // Always reload gold when switching to the store tab
+        if (newTab === 'store') {
+            loadPlayerCurrency();
+        }
+
         setTimeout(() => {
             setActiveTab(newTab);
             setIsLoading(false);
@@ -792,6 +830,44 @@ function MainMenu({
         window.open('https://discord.gg/E7MM4ys6fb', '_blank');
     };
 
+    // Add function to load player gold
+    const loadPlayerCurrency = async () => {
+        if (user) {
+            try {
+                const currency = await supabaseService.getPlayerCurrency(user.id);
+                setPlayerGold(currency.gold_amount);
+            } catch (error) {
+                console.error('Error loading currency:', error);
+            }
+        }
+    };
+
+    // Load currency when user changes
+    useEffect(() => {
+        if (user) {
+            loadPlayerCurrency();
+        }
+    }, [user]);
+
+    // Handle pack purchase
+    const handlePackPurchase = async (packId) => {
+        try {
+            const cards = await supabaseService.purchaseCardPack(user.id, packId);
+
+            const cardsArray = Array.isArray(cards) ? cards : JSON.parse(cards);
+
+            if (cardsArray && cardsArray.length > 0) {
+                setOpenedCards(cardsArray);
+                setShowPackOpening(true);
+                await loadPlayerCurrency();
+            } else {
+                throw new Error('Failed to get cards from pack');
+            }
+        } catch (error) {
+            console.error('Error purchasing pack:', error);
+        }
+    };
+
     if (currentScreen === 'deck-builder') {
         return (
             <DeckBuilder 
@@ -805,13 +881,18 @@ function MainMenu({
     return (
         <MenuContainer>
             {user && (
-                <LogoutButton
-                    onClick={onLogout}
-                    title="Logout"
-                    aria-label="Logout"
-                >
-                    <FaSignOutAlt size={24} />
-                </LogoutButton>
+                <>
+                    <LogoutButton
+                        onClick={onLogout}
+                        title="Logout"
+                        aria-label="Logout"
+                    >
+                        <FaSignOutAlt size={24} />
+                    </LogoutButton>
+                    <GoldDisplay>
+                        🪙 <span>{playerGold}</span> Gold
+                    </GoldDisplay>
+                </>
             )}
             <MusicToggleButton 
                 onClick={onToggleMusic} 
@@ -881,6 +962,12 @@ function MainMenu({
                                     onClick={() => handleTabChange('leaderboard')}
                                 >
                                     Leaderboard
+                                </Tab>
+                                                                <Tab 
+                                    $active={activeTab === 'store'} 
+                                    onClick={() => handleTabChange('store')}
+                                >
+                                    Store
                                 </Tab>
                                 <Tab onClick={openDiscordCommunity}>
                                     <FaDiscord style={{marginRight: '8px'}} /> Community
@@ -957,6 +1044,20 @@ function MainMenu({
                                     </div>
                                 )}
 
+                                {activeTab === 'store' && (
+                                    <div style={{margin: 'auto',maxWidth:800}}>
+                                        <CardPackStore
+                                            onPurchase={handlePackPurchase}
+                                            userId={user.id}
+                                            playerGold={playerGold}
+                                            onContentLoad={() => {
+                                                setContentVisible(true);
+                                                scrollToContent('tab-content', 100);
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
                                 {activeTab === 'leaderboard' && (
                                     <Leaderboard />
                                 )}
@@ -965,6 +1066,16 @@ function MainMenu({
                     )}
                 </div>
             </ContentWrapper>
+            
+            {showPackOpening && (
+                <CardPackOpening
+                    cards={openedCards}
+                    onClose={() => {
+                        setShowPackOpening(false);
+                        setOpenedCards([]);
+                    }}
+                />
+            )}
         </MenuContainer>
     );
 }
