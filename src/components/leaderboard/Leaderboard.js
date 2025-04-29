@@ -18,6 +18,13 @@ const LeaderboardContainer = styled.div`
         color: ${theme.colors.text.primary};
         text-shadow: ${theme.shadows.golden};
     }
+    
+    .total-players {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 1.2em;
+        color: ${theme.colors.text.secondary};
+    }
 `;
 
 const Table = styled.table`
@@ -111,6 +118,7 @@ const LoadingSpinner = styled.div`
 
 function Leaderboard() {
     const [leaderboard, setLeaderboard] = useState([]);
+    const [totalPlayers, setTotalPlayers] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [sortField, setSortField] = useState('rank');
@@ -118,9 +126,11 @@ function Leaderboard() {
 
     useEffect(() => {
         const loadLeaderboard = async () => {
+            setLoading(true);
             try {
-                const data = await supabaseService.getLeaderboard();
-                setLeaderboard(data);
+                const result = await supabaseService.getLeaderboard(sortField, sortDirection);
+                setLeaderboard(result.data);
+                setTotalPlayers(result.totalCount);
             } catch (error) {
                 setError('Failed to load leaderboard');
                 console.error(error);
@@ -130,7 +140,7 @@ function Leaderboard() {
         };
 
         loadLeaderboard();
-    }, []);
+    }, [sortField, sortDirection]);
 
     const handleSort = (field) => {
         // Pokud klikneme na stejný sloupec, změníme směr řazení
@@ -142,38 +152,6 @@ function Leaderboard() {
             // Pro většinu sloupců je výchozí směr sestupný, jen pro username použijeme vzestupný
             setSortDirection(field === 'username' ? 'asc' : 'desc');
         }
-    };
-
-    const getSortedData = () => {
-        if (!leaderboard) return [];
-
-        return [...leaderboard].sort((a, b) => {
-            // Speciální logika pro řazení podle win rate
-            if (sortField === 'winRate') {
-                const winRateA = a.total_games > 0 ? a.wins / (a.wins + a.losses) : 0;
-                const winRateB = b.total_games > 0 ? b.wins / (b.wins + b.losses) : 0;
-                
-                if (sortDirection === 'asc') {
-                    return winRateA - winRateB;
-                } else {
-                    return winRateB - winRateA;
-                }
-            }
-
-            // Pro ostatní sloupce
-            if (typeof a[sortField] === 'string') {
-                // Řazení řetězců
-                const compareResult = a[sortField].localeCompare(b[sortField]);
-                return sortDirection === 'asc' ? compareResult : -compareResult;
-            } else {
-                // Řazení čísel
-                if (sortDirection === 'asc') {
-                    return a[sortField] - b[sortField];
-                } else {
-                    return b[sortField] - a[sortField];
-                }
-            }
-        });
     };
 
     // Pomocná funkce pro zobrazení ikony řazení
@@ -190,17 +168,10 @@ function Leaderboard() {
         return <div>{error}</div>;
     }
 
-    // Získání původních indexů pro rank (pořadí)
-    const originalRanks = {};
-    leaderboard.forEach((player, index) => {
-        originalRanks[player.username] = index + 1;
-    });
-
-    const sortedData = getSortedData();
-
     return (
         <LeaderboardContainer>
             <h2>Leaderboard</h2>
+            <div className="total-players">Total Players: {totalPlayers}</div>
             <Table>
                 <thead>
                     <tr>
@@ -225,19 +196,19 @@ function Leaderboard() {
                     </tr>
                 </thead>
                 <tbody>
-                    {sortedData.map((player) => {
+                    {leaderboard.map((player, index) => {
                         const winRate = player.total_games > 0
                             ? ((player.wins / (player.wins + player.losses)) * 100).toFixed(1)
                             : '0.0';
 
-                        // Použití původního indexu pro rank
-                        const originalRank = originalRanks[player.username];
+                        // Position in the current sort view
+                        const displayPosition = index + 1;
 
                         return (
                             <Tr key={player.username}>
                                 <Td>
-                                    <RankSpan rank={originalRank}>
-                                        {originalRank}
+                                    <RankSpan rank={displayPosition}>
+                                        {displayPosition}
                                     </RankSpan>
                                 </Td>
                                 <Td>{player.username}</Td>

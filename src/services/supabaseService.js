@@ -218,17 +218,52 @@ class SupabaseService {
         };
     }
 
-    async getLeaderboard() {
+    async getLeaderboard(sortField = 'rank', sortDirection = 'desc') {
         try {
-            const { data, error } = await this.supabase
+            // First get the total count of players
+            const { count, error: countError } = await this.supabase
                 .from('profiles')
-                .select('username, rank, wins, losses,total_games')
-                .order('rank', { ascending: false })
-                .limit(100);
+                .select('*', { count: 'exact', head: true });
 
-            if (error) throw error;
+            if (countError) throw countError;
 
-            return data;
+            // Special handling for winRate which is calculated client-side
+            if (sortField === 'winRate') {
+                // Get all players (with a reasonable limit)
+                const { data, error } = await this.supabase
+                    .from('profiles')
+                    .select('username, rank, wins, losses, total_games')
+                    .limit(500); // Fetch more to ensure we have enough after sorting
+
+                if (error) throw error;
+
+                // Calculate win rate and sort client-side
+                const sortedData = data.map(player => {
+                    const totalGames = (player.wins + player.losses);
+                    const winRate = totalGames > 0 
+                        ? player.wins / totalGames 
+                        : 0;
+                    return { ...player, winRate };
+                }).sort((a, b) => {
+                    return sortDirection === 'asc' 
+                        ? a.winRate - b.winRate 
+                        : b.winRate - a.winRate;
+                }).slice(0, 100); // Limit to 100 after sorting
+
+                return { data: sortedData, totalCount: count };
+            } else {
+                // For all other fields, sort server-side
+                const ascending = sortDirection === 'asc';
+                const { data, error } = await this.supabase
+                    .from('profiles')
+                    .select('username, rank, wins, losses, total_games')
+                    .order(sortField, { ascending })
+                    .limit(100);
+
+                if (error) throw error;
+
+                return { data, totalCount: count };
+            }
         } catch (error) {
             console.error('Chyba při načítání žebříčku:', error.message);
             throw error;
