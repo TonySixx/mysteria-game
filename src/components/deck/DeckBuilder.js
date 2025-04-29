@@ -166,6 +166,9 @@ import secretCard from '../../assets/images/secret-card.png';
 import soulGuardian from '../../assets/images/soul-guardian.png';
 import phantomMirage from '../../assets/images/phantom-mirage.png';
 import spellReflector from '../../assets/images/spell-reflector.png';
+import mysticChronicler from '../../assets/images/mystic-chronicler.png';
+import celestialHealer from '../../assets/images/celestial-healer.png';
+import arcaneScholar from '../../assets/images/arcane-scholar.png';
 
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
@@ -325,7 +328,10 @@ export const cardImages = {
   'secretCard':secretCard,
   'soulGuardian':soulGuardian,
   'phantomMirage':phantomMirage,
-  'spellReflector':spellReflector
+  'spellReflector':spellReflector,
+  'mysticChronicler':mysticChronicler,
+  'celestialHealer':celestialHealer,
+  'arcaneScholar':arcaneScholar
 };
 
 const DeckBuilderContainer = styled(motion.div)`
