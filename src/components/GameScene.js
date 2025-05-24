@@ -19,7 +19,13 @@ import { useIsMobile } from './inGameComponents/useIsMobile';
 import CardDisplay from './inGameComponents/CardDisplay';
 import HeroDisplay from './inGameComponents/HeroDisplay';
 import { Tooltip } from './inGameComponents/Tooltip';
-import { AbilityAnimation, AnimatedCard, AnimationCards, AnimationContent, AnimationOverlay, AnimationText, AnimationVS, CompactAnimationContainer, CompactAnimationContent, CompactAnimationText, CompactCardContainer, HeroAbilityIcon, SkipText } from './inGameComponents/Animation';
+import { 
+  AbilityAnimation, AnimatedCard, AnimationCards, AnimationContent, AnimationOverlay, AnimationText, AnimationVS, 
+  CompactAnimationContainer, CompactAnimationContent, CompactAnimationText, CompactCardContainer, HeroAbilityIcon, SkipText,
+  AttackPhaseContainer, ChargingCard, DefendingCard, ClashExplosion, ShatteringCard,
+  SpellCastingArea, MagicCircle, LightningBolt, SpellBurst,
+  SummonArea, FloatingCard, GoldenParticles, ParticleField, Particle
+} from './inGameComponents/Animation';
 import { HeroFrame } from './inGameComponents/HeroComponent';
 
 
@@ -906,7 +912,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
     return () => window.removeEventListener('resize', calculateScale);
   }, [isMobile]);
 
-  // Upravíme useEffect pro zpracování animací a zvuků
+  // Enhanced useEffect for processing spectacular animations and sounds
   useEffect(() => {
     if (gameState?.animation) {
       // Přehrajeme zvuk podle typu animace bez ohledu na to, kdo ji vyvolal
@@ -933,16 +939,21 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
         setIsClosingAnimation(false);
         setAnimation(gameState.animation);
 
+        // Delší doba pro komplexní animace
+        const animationDuration = gameState.animation.type === 'attack' ? 4000 : 
+                                  gameState.animation.type === 'playCard' && gameState.animation.card.type === 'spell' ? 3500 :
+                                  gameState.animation.type === 'heroAbility' ? 3000 : 2500;
+
         // Spustíme fadeout 0.5s před koncem animace
         const fadeOutTimer = setTimeout(() => {
           setIsClosingAnimation(true);
-        }, 2500);
+        }, animationDuration - 500);
 
         // Odstraníme animaci až po dokončení fadeout
         const removeTimer = setTimeout(() => {
           setAnimation(null);
           setIsClosingAnimation(false);
-        }, 3000);
+        }, animationDuration);
 
         return () => {
           clearTimeout(fadeOutTimer);
@@ -1022,7 +1033,12 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
 
 
 
-  // Upravíme AnimationEffect
+  // Helper function to check if a card was destroyed
+  const isCardDestroyed = useCallback((card) => {
+    return card && card.health <= 0;
+  }, []);
+
+  // Enhanced AnimationEffect with spectacular animations
   const AnimationEffect = useCallback(() => {
     if (!animation) return null;
 
@@ -1055,11 +1071,11 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
               )}
               {animation.type === 'heroAbility' && (
                 <div>
-                  <AbilityAnimation>
+                  <AbilityAnimation $heroType={animation.hero.image}>
                     <HeroAbilityIcon
                       src={heroAbilities[animation.hero.image]}
                       alt={animation.hero.abilityName}
-                      $isHealing={animation.isHealing}
+                      $heroType={animation.hero.image}
                     />
                   </AbilityAnimation>
                 </div>
@@ -1097,7 +1113,196 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
       );
     }
 
-    // Pro protihráče ponecháme původní velkou animaci
+    // Spectacular full-screen animations for opponent actions
+    const renderSpectacularAnimation = () => {
+      switch (animation.type) {
+        case 'attack':
+          return (
+            <AttackPhaseContainer>
+              <ChargingCard>
+                <CardDisplay
+                  card={animation.card}
+                  isInHand={false}
+                  isDragging={false}
+                  gameState={gameState}
+                />
+              </ChargingCard>
+              
+              <ClashExplosion />
+              
+              {animation.isHeroTarget ? (
+                <DefendingCard>
+                  <HeroFrame $isMobile={isMobile}>
+                    {animation.target.name}
+                  </HeroFrame>
+                </DefendingCard>
+              ) : (
+                isCardDestroyed(animation.target) ? (
+                  <ShatteringCard>
+                    <CardDisplay
+                      card={animation.target}
+                      isInHand={false}
+                      isDragging={false}
+                      gameState={gameState}
+                    />
+                  </ShatteringCard>
+                ) : (
+                  <DefendingCard>
+                    <CardDisplay
+                      card={animation.target}
+                      isInHand={false}
+                      isDragging={false}
+                      gameState={gameState}
+                    />
+                  </DefendingCard>
+                )
+              )}
+              
+              {/* Particle effects */}
+              <ParticleField>
+                {Array.from({length: 8}).map((_, i) => (
+                  <Particle
+                    key={i}
+                    $size={`${4 + Math.random() * 4}px`}
+                    $color="rgba(255, 100, 0, 0.8)"
+                    $duration={`${1.5 + Math.random()}s`}
+                    $delay={`${Math.random() * 0.5}s`}
+                    style={{
+                      left: `${45 + Math.random() * 10}%`,
+                      top: `${45 + Math.random() * 10}%`,
+                    }}
+                  />
+                ))}
+              </ParticleField>
+            </AttackPhaseContainer>
+          );
+
+        case 'playCard':
+          if (animation.card.type === 'spell') {
+            return (
+              <SpellCastingArea>
+                <MagicCircle $size="300px" $color="rgba(0, 150, 255, 0.8)" />
+                <MagicCircle $size="200px" $color="rgba(100, 200, 255, 0.6)" />
+                <MagicCircle $size="100px" $color="rgba(150, 220, 255, 0.4)" />
+                
+                <SpellBurst />
+                
+                {Array.from({length: 3}).map((_, i) => (
+                  <LightningBolt
+                    key={i}
+                    style={{
+                      left: `${30 + i * 20}%`,
+                      animationDelay: `${i * 0.2}s`
+                    }}
+                  />
+                ))}
+                
+                <div style={{ position: 'relative', zIndex: 10 }}>
+                  <CardDisplay
+                    card={animation.card}
+                    isInHand={false}
+                    isDragging={false}
+                    gameState={gameState}
+                  />
+                </div>
+              </SpellCastingArea>
+            );
+          } else {
+            // Unit summoning
+            return (
+              <SummonArea>
+                <GoldenParticles />
+                <FloatingCard>
+                  <CardDisplay
+                    card={animation.card}
+                    isInHand={false}
+                    isDragging={false}
+                    gameState={gameState}
+                  />
+                </FloatingCard>
+                
+                {/* Golden particles */}
+                <ParticleField>
+                  {Array.from({length: 12}).map((_, i) => (
+                    <Particle
+                      key={i}
+                      $size={`${2 + Math.random() * 3}px`}
+                      $color="rgba(255, 215, 0, 0.8)"
+                      $duration={`${2 + Math.random()}s`}
+                      $delay={`${Math.random() * 1}s`}
+                      style={{
+                        left: `${20 + Math.random() * 60}%`,
+                        top: `${20 + Math.random() * 60}%`,
+                      }}
+                    />
+                  ))}
+                </ParticleField>
+              </SummonArea>
+            );
+          }
+
+        case 'heroAbility':
+          return (
+            <div style={{ position: 'relative', width: '400px', height: '300px' }}>
+              {/* Hero-specific magical effects */}
+              {animation.hero.image === 'Mage' && (
+                <>
+                  <MagicCircle $size="250px" $color="rgba(255, 0, 0, 0.8)" />
+                  <MagicCircle $size="150px" $color="rgba(255, 100, 0, 0.6)" />
+                </>
+              )}
+              
+              {animation.hero.image === 'Priest' && (
+                <>
+                  <MagicCircle $size="250px" $color="rgba(0, 255, 0, 0.8)" />
+                  <MagicCircle $size="150px" $color="rgba(150, 255, 150, 0.6)" />
+                </>
+              )}
+              
+              {animation.hero.image === 'Seer' && (
+                <>
+                  <MagicCircle $size="250px" $color="rgba(255, 0, 255, 0.8)" />
+                  <MagicCircle $size="150px" $color="rgba(255, 150, 255, 0.6)" />
+                </>
+              )}
+
+              <AbilityAnimation $heroType={animation.hero.image}>
+                <HeroAbilityIcon
+                  src={heroAbilities[animation.hero.image]}
+                  alt={animation.hero.abilityName}
+                  $heroType={animation.hero.image}
+                />
+              </AbilityAnimation>
+              
+              {/* Ability-specific particles */}
+              <ParticleField>
+                {Array.from({length: 10}).map((_, i) => (
+                  <Particle
+                    key={i}
+                    $size={`${3 + Math.random() * 4}px`}
+                    $color={
+                      animation.hero.image === 'Mage' ? 'rgba(255, 0, 0, 0.8)' :
+                      animation.hero.image === 'Priest' ? 'rgba(0, 255, 0, 0.8)' :
+                      animation.hero.image === 'Seer' ? 'rgba(255, 0, 255, 0.8)' :
+                      'rgba(255, 215, 0, 0.8)'
+                    }
+                    $duration={`${1.5 + Math.random()}s`}
+                    $delay={`${Math.random() * 0.8}s`}
+                    style={{
+                      left: `${30 + Math.random() * 40}%`,
+                      top: `${30 + Math.random() * 40}%`,
+                    }}
+                  />
+                ))}
+              </ParticleField>
+            </div>
+          );
+
+        default:
+          return null;
+      }
+    };
+
     return (
       <AnimationOverlay
         onClick={handleSkipAnimation}
@@ -1108,56 +1313,18 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
             {animation.type === 'heroAbility'
               ? `${animation.player} used ${animation.hero.abilityName}`
               : animation.type === 'playCard'
-                ? `${animation.player} played ${animation.card.name}`
-                : `${animation.player} attacked with ${animation.card.name} 
-                           ${animation.isHeroTarget
-                  ? animation.target.name
-                  : animation.target.name}`}
+                ? `${animation.player} ${animation.card.type === 'spell' ? 'cast' : 'summoned'} ${animation.card.name}`
+                : `${animation.player} attacked with ${animation.card.name}${animation.isHeroTarget 
+                  ? ` targeting ${animation.target.name}` 
+                  : ` against ${animation.target.name}`}${isCardDestroyed(animation.target) ? ' - Card destroyed!' : ''}`}
           </AnimationText>
-          <AnimationCards>
-            {animation.type === 'heroAbility' ? (
-              <AbilityAnimation>
-                <HeroAbilityIcon
-                  src={heroAbilities[animation.hero.image]}
-                  alt={animation.hero.abilityName}
-                  $isHealing={animation.isHealing}
-                />
-              </AbilityAnimation>
-            ) : (
-              <AnimatedCard $animation={animation.type === 'playCard' ? 'flyInLeft' : 'attackAnimation'}>
-                <CardDisplay
-                  card={animation.card}
-                  isInHand={false}
-                  isDragging={false}
-                  gameState={gameState}
-                />
-              </AnimatedCard>
-            )}
-            {animation.type === 'attack' && (
-              <>
-                <AnimationVS $isMobile={isMobile}>VS</AnimationVS>
-                <AnimatedCard $animation="defendAnimation">
-                  {animation.isHeroTarget ? (
-                    <HeroFrame $isMobile={isMobile}>
-                      {animation.target.name}
-                    </HeroFrame>
-                  ) : (
-                    <CardDisplay
-                      card={animation.target}
-                      isInHand={false}
-                      isDragging={false}
-                      gameState={gameState}
-                    />
-                  )}
-                </AnimatedCard>
-              </>
-            )}
-          </AnimationCards>
+          
+          {renderSpectacularAnimation()}
         </AnimationContent>
         <SkipText>Click anywhere to skip</SkipText>
       </AnimationOverlay>
     );
-  }, [animation, isMobile, gameState, isClosingAnimation, handleSkipAnimation]);
+  }, [animation, isMobile, gameState, isClosingAnimation, handleSkipAnimation, isCardDestroyed]);
 
   // Komponent pro zobrazení animace aktivace Secret karty
   const SecretAnimationEffect = useCallback(() => {
