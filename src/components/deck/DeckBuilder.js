@@ -182,6 +182,9 @@ import elendralisVideo from '../../assets/videos/elendralis.mp4';
 import legionCommanderVideo from '../../assets/videos/legion-commander.mp4';
 import fireDragonVideo from '../../assets/videos/fire-dragon.mp4';
 import sacredDragonVideo from '../../assets/videos/sacred-dragon.mp4';
+import silenceAssassinVideo from '../../assets/videos/silence-assassin.mp4';
+import radiantProtectorVideo from '../../assets/videos/radiant-protector.mp4';
+import bloodCultistVideo from '../../assets/videos/blood-cultist.mp4';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -358,6 +361,10 @@ export const cardVideos = {
   'legionCommander': legionCommanderVideo,
   'fireDragon': fireDragonVideo,
   'sacredDragon': sacredDragonVideo,
+  'silenceAssassin': silenceAssassinVideo,
+  'radiantProtector': radiantProtectorVideo,
+  'bloodCultist': bloodCultistVideo,
+
 };
 
 const DeckBuilderContainer = styled(motion.div)`
