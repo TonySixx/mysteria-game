@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaArrowLeft, FaSave, FaQuestionCircle } from 'react-icons/fa';
 import { deckService } from '../../services/deckService';
@@ -170,6 +170,18 @@ import mysticChronicler from '../../assets/images/mystic-chronicler.png';
 import celestialHealer from '../../assets/images/celestial-healer.png';
 import arcaneScholar from '../../assets/images/arcane-scholar.png';
 
+// Importujeme video
+import ancientColossusVideo from '../../assets/videos/ancient-colossus.mp4';
+import cursedImpVideo from '../../assets/videos/cursed-imp.mp4';
+import spiritGuardianVideo from '../../assets/videos/spirit-guardian.mp4';
+import mysticChroniclerVideo from '../../assets/videos/mystic-chronicler.mp4';
+import zoxusVideo from '../../assets/videos/zoxus.mp4';
+import ancientProtectorVideo from '../../assets/videos/ancient-protector.mp4';
+import divineSquireVideo from '../../assets/videos/divine-squire.mp4';
+import elendralisVideo from '../../assets/videos/elendralis.mp4';
+import legionCommanderVideo from '../../assets/videos/legion-commander.mp4';
+import fireDragonVideo from '../../assets/videos/fire-dragon.mp4';
+import sacredDragonVideo from '../../assets/videos/sacred-dragon.mp4';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -332,6 +344,20 @@ export const cardImages = {
   'mysticChronicler':mysticChronicler,
   'celestialHealer':celestialHealer,
   'arcaneScholar':arcaneScholar
+};
+
+export const cardVideos = {
+  'ancientColossus': ancientColossusVideo,
+  'cursedImp': cursedImpVideo,
+  'spiritGuardian': spiritGuardianVideo,
+  'mysticChronicler': mysticChroniclerVideo,
+  'zoxus': zoxusVideo,
+  'ancientProtector': ancientProtectorVideo,
+  'divineSquire': divineSquireVideo,
+  'elendralis': elendralisVideo,
+  'legionCommander': legionCommanderVideo,
+  'fireDragon': fireDragonVideo,
+  'sacredDragon': sacredDragonVideo,
 };
 
 const DeckBuilderContainer = styled(motion.div)`
@@ -532,12 +558,21 @@ const ManaCost = styled.div`
     z-index: 1;
 `;
 
-const CardImage = styled.div`
+const mediaStyle = css`
     height: 140px;
-    background: url(${props => cardImages[props.$image] || ''}) center/cover;
     border-radius: 4px;
     border: 1px solid ${props => CARD_RARITY[props.rarity]?.color || '#808080'};
     margin: 0 -5px 5px -5px;
+`;
+
+const CardImage = styled.div`
+    ${mediaStyle}
+    background: url(${props => cardImages[props.$image] || ''}) center/cover;
+`;
+
+const CardVideo = styled.video`
+    ${mediaStyle}
+    object-fit: cover;
 `;
 
 const CardName = styled.h4`
@@ -1395,13 +1430,35 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             $owned={ownedCards[card.id] && ownedCards[card.id] > 0}
+                            onMouseEnter={e => {
+                                const video = e.currentTarget.querySelector('video');
+                                if (video) {
+                                    video.play();
+                                }
+                            }}
+                            onMouseLeave={e => {
+                                const video = e.currentTarget.querySelector('video');
+                                if (video) {
+                                    video.pause();
+                                }
+                            }}
                         >
                             <ManaCost>{card.mana_cost}</ManaCost>
                             
-                            <CardImage 
-                                $image={card.image}
-                                rarity={card.rarity.toUpperCase()}
-                            />
+                            {cardVideos[card.image] ? (
+                                <CardVideo
+                                    rarity={card.rarity.toUpperCase()}
+                                    src={cardVideos[card.image]}
+                                    loop
+                                    muted
+                                    playsInline
+                                />
+                            ) : (
+                                <CardImage 
+                                    $image={card.image}
+                                    rarity={card.rarity.toUpperCase()}
+                                />
+                            )}
                             
                             <CardName rarity={card.rarity.toUpperCase()}>
                                 {card.name}

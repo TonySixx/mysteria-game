@@ -136,6 +136,17 @@ export const CardImage = styled.img`
   flex-shrink: 0;
 `;
 
+export const CardVideo = styled.video`
+  width: 100%;
+  aspect-ratio: 1.5;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 2px;
+  min-height: ${props => (props.$isMobile ? '45%' : '50%')};
+  height: ${props => (props.$isMobile ? '45%' : '50%')};
+  flex-shrink: 0;
+`;
+
 // Upravte TauntLabel pro mobilní zobrazení
 export const TauntLabel = styled.div`
   position: absolute;
