@@ -1,8 +1,8 @@
 import { memo } from "react";
-import { CardBack, CardComponent, CardContent, CardDescription, CardImage, SecretLabel, CardName, CardStats, DivineShieldOverlay, FrozenOverlay, ManaCost, RarityGem, TauntLabel, CardVideo } from "./CardComponent";
+import { CardBack, CardComponent, CardContent, CardDescription, CardImage, SecretLabel, CardName, CardStats, DivineShieldOverlay, FrozenOverlay, ManaCost, RarityGem, TauntLabel } from "./CardComponent";
 import cardBackImage from '../../assets/images/card-back.png';
 import { useIsMobile } from "./useIsMobile";
-import { cardImages, cardVideos } from "../deck/DeckBuilder";
+import { cardImages } from "../deck/DeckBuilder";
 
 // Upravte CardDisplay komponentu
 const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand, isDragging, isOpponentCard, gameState }) => {
@@ -24,7 +24,6 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
     }
   
     const cardImage = cardImages[card.image] || cardBackImage;
-    const cardVideo = cardVideos[card.image];
   
     let effectText = card.effect;
   
@@ -43,18 +42,6 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
         $isFrozen={card.frozen}
         $rarity={card.rarity}
         $isMobile={isMobile}
-        onMouseEnter={e => {
-            const video = e.currentTarget.querySelector('video');
-            if (video) {
-                video.play();
-            }
-        }}
-        onMouseLeave={e => {
-            const video = e.currentTarget.querySelector('video');
-            if (video) {
-                video.pause();
-            }
-        }}
       >
         <ManaCost
           $isMobile={isMobile}
@@ -65,30 +52,15 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
           {card.manaCost + (isSpellWithIncreasedCost ? spellBreakerCount : 0)}
         </ManaCost>
         <RarityGem $rarity={card.rarity} $isMobile={isMobile} />
-        {cardVideo ? (
-          <CardVideo
-            $isMobile={isMobile}
-            src={cardVideo}
-            loop
-            muted
-            playsInline
-            poster={cardImage}
-            style={{
-              borderRadius: '4px',
-              border: '1px solid #000000'
-            }}
-          />
-        ) : (
-          <CardImage
-            $isMobile={isMobile}
-            style={{
-              borderRadius: '4px',
-              border: '1px solid #000000'
-            }}
-            src={cardImage}
-            alt={card.name}
-          />
-        )}
+        <CardImage
+          $isMobile={isMobile}
+          style={{
+            borderRadius: '4px',
+            border: '1px solid #000000'
+          }}
+          src={cardImage}
+          alt={card.name}
+        />
         {card.hasTaunt && <TauntLabel $isMobile={isMobile}>Taunt</TauntLabel>}
         {card.type === 'secret' && <SecretLabel $isMobile={isMobile}>Secret</SecretLabel>}
         {card.hasDivineShield && <DivineShieldOverlay $isInHand={isInHand} />}
