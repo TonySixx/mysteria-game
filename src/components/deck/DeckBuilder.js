@@ -1452,6 +1452,7 @@ const DeckBuilder = ({ onBack, userId, editingDeck = null }) => {
                                     loop
                                     muted
                                     playsInline
+                                    poster={cardImages[card.image]}
                                 />
                             ) : (
                                 <CardImage 

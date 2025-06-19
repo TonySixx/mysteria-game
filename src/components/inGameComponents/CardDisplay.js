@@ -72,6 +72,7 @@ const CardDisplay = memo(({ card, canAttack, isTargetable, isSelected, isInHand,
             loop
             muted
             playsInline
+            poster={cardImage}
             style={{
               borderRadius: '4px',
               border: '1px solid #000000'
