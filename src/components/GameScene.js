@@ -1125,6 +1125,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                   isInHand={false}
                   isDragging={false}
                   gameState={gameState}
+                  isAnimating={true}
                 />
               </ChargingCard>
               
@@ -1144,6 +1145,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                       isInHand={false}
                       isDragging={false}
                       gameState={gameState}
+                      isAnimating={true}
                     />
                   </ShatteringCard>
                 ) : (
@@ -1153,6 +1155,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                       isInHand={false}
                       isDragging={false}
                       gameState={gameState}
+                      isAnimating={true}
                     />
                   </DefendingCard>
                 )
@@ -1203,6 +1206,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                     isInHand={false}
                     isDragging={false}
                     gameState={gameState}
+                    isAnimating={true}
                   />
                 </div>
               </SpellCastingArea>
@@ -1218,6 +1222,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
                     isInHand={false}
                     isDragging={false}
                     gameState={gameState}
+                    isAnimating={true}
                   />
                 </FloatingCard>
                 
@@ -1399,6 +1404,7 @@ function GameScene({ gameState, onPlayCard, onAttack, onEndTurn, onUseHeroAbilit
               isInHand={false}
               isDragging={false}
               gameState={gameState}
+              isAnimating={true}
             />
           </SecretCardDisplay>
           <SecretAnimationButton onClick={handleSkipSecretAnimation}>
