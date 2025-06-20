@@ -185,6 +185,15 @@ import sacredDragonVideo from '../../assets/videos/sacred-dragon.mp4';
 import silenceAssassinVideo from '../../assets/videos/silence-assassin.mp4';
 import radiantProtectorVideo from '../../assets/videos/radiant-protector.mp4';
 import bloodCultistVideo from '../../assets/videos/blood-cultist.mp4';
+import chaosLordVideo from '../../assets/videos/chaos-lord.mp4';
+import freezingDragonVideo from '../../assets/videos/freezing-dragon.mp4';
+import manaLeechVideo from '../../assets/videos/mana-leech.mp4';
+import mindTheftVideo from '../../assets/videos/mind-theft.mp4';
+import phoenixVideo from '../../assets/videos/phoenix.mp4';
+import soulExchangeVideo from '../../assets/videos/soul-exchange.mp4';
+import timeWeaverVideo from '../../assets/videos/time-weaver.mp4';
+import twilightGuardianVideo from '../../assets/videos/twilight-guardian.mp4';
+import wiseOracleVideo from '../../assets/videos/wise-oracle.mp4';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -364,6 +373,15 @@ export const cardVideos = {
   'silenceAssassin': silenceAssassinVideo,
   'radiantProtector': radiantProtectorVideo,
   'bloodCultist': bloodCultistVideo,
+  'chaosLord': chaosLordVideo,
+  'freezingDragon': freezingDragonVideo,
+  'manaLeech': manaLeechVideo,
+  'mindTheft': mindTheftVideo,
+  'phoenix': phoenixVideo,
+  'soulExchange': soulExchangeVideo,
+  'timeWeaver': timeWeaverVideo,
+  'twilightGuardian': twilightGuardianVideo,
+  'wiseOracle': wiseOracleVideo,
 
 };
 
