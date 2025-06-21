@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import GameScene from './components/GameScene';
 import socketService from './services/socketService';
 import supabaseService from './services/supabaseService';
+import pingService from './services/pingService';
 import MainMenu from './components/MainMenu';
 import ConnectionStatus from './components/ConnectionStatus';
 import GlobalStyles from './styles/GlobalStyles';
@@ -78,6 +79,9 @@ function App() {
                     }
                 }
                 setIsInitialized(true);
+                
+                // Spustíme ping service pro udržení serveru aktivního
+                pingService.start();
             } catch (error) {
                 console.error('Chyba při inicializaci aplikace:', error);
                 setConnectionStatus({
@@ -105,6 +109,8 @@ function App() {
 
         return () => {
             authListener?.subscription?.unsubscribe();
+            // Zastavíme ping service při unmount komponenty
+            pingService.stop();
         };
     }, []);
 
