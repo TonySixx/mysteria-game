@@ -169,6 +169,9 @@ import spellReflector from '../../assets/images/spell-reflector.png';
 import mysticChronicler from '../../assets/images/mystic-chronicler.png';
 import celestialHealer from '../../assets/images/celestial-healer.png';
 import arcaneScholar from '../../assets/images/arcane-scholar.png';
+import mysticReversal from '../../assets/images/mystic-reversal.png';
+import arcaneBerserker from '../../assets/images/arcane-berserker.png';
+import runicWarden from '../../assets/images/runic-warden.png';
 
 // Importujeme video
 import ancientColossusVideo from '../../assets/videos/ancient-colossus.mp4';
@@ -355,7 +358,10 @@ export const cardImages = {
   'spellReflector':spellReflector,
   'mysticChronicler':mysticChronicler,
   'celestialHealer':celestialHealer,
-  'arcaneScholar':arcaneScholar
+  'arcaneScholar':arcaneScholar,
+  'mysticReversal':mysticReversal,
+  'runicWarden':runicWarden,
+  'arcaneBerserker':arcaneBerserker
 };
 
 export const cardVideos = {
