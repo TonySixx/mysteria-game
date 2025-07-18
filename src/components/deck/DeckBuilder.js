@@ -172,6 +172,7 @@ import arcaneScholar from '../../assets/images/arcane-scholar.png';
 import mysticReversal from '../../assets/images/mystic-reversal.png';
 import arcaneBerserker from '../../assets/images/arcane-berserker.png';
 import runicWarden from '../../assets/images/runic-warden.png';
+import hellfire from '../../assets/images/hellfire.png';  
 
 // Importujeme video
 import ancientColossusVideo from '../../assets/videos/ancient-colossus.mp4';
@@ -361,7 +362,8 @@ export const cardImages = {
   'arcaneScholar':arcaneScholar,
   'mysticReversal':mysticReversal,
   'runicWarden':runicWarden,
-  'arcaneBerserker':arcaneBerserker
+  'arcaneBerserker':arcaneBerserker,
+  'hellfire':hellfire
 };
 
 export const cardVideos = {
