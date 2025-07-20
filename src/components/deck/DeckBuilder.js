@@ -198,6 +198,7 @@ import soulExchangeVideo from '../../assets/videos/soul-exchange.mp4';
 import timeWeaverVideo from '../../assets/videos/time-weaver.mp4';
 import twilightGuardianVideo from '../../assets/videos/twilight-guardian.mp4';
 import wiseOracleVideo from '../../assets/videos/wise-oracle.mp4';
+import arcaneBerserkerVideo from  '../../assets/videos/arcane-berserker.mp4';
 
 // Vytvoříme stejnou mapu obrázků jako v GameScene
 export const cardImages = {
@@ -390,6 +391,7 @@ export const cardVideos = {
   'timeWeaver': timeWeaverVideo,
   'twilightGuardian': twilightGuardianVideo,
   'wiseOracle': wiseOracleVideo,
+  'arcaneBerserker':arcaneBerserkerVideo
 
 };
 
